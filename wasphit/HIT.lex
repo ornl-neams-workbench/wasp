@@ -81,7 +81,7 @@ NORMAL_OBJCT_STRING   [^\. \n\[\]\=\#\&][^ \n\[\]\=\#\&]*
 VALUE_STRING {NORMAL_VALUE_STRING}
 ARRAY_STRING {NORMAL_ARRAY_STRING}|{ASSIGN}
 OBJCT_STRING {PERIOD_OBJCT_STRING}|{NORMAL_OBJCT_STRING}
-PARAM_STRING [^ \'\"\=\n\t\r\[\]\#\&\;]+
+PARAM_STRING [^ \'\"\=\n\t\r\[\]\#\&\;]*[^ \'\"\=\n\t\r\[\]\#\&\;\:]
 RBRACKET \]
 SEMICOLON ;
 TOP_OBJECT_TERM \[" "*\]

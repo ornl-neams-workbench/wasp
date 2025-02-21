@@ -5780,6 +5780,12 @@ TEST(HITInterpreter, override_assigns)
   array1 = '11 12 13'
   array2 := '21 22 23'
   array3 :override= '31 32 33'
+  param4:=40
+  array4:='41 42 43'
+  foo1::param5 := 50
+  foo2::array5 := '51 52 53'
+  bar1::param6:=60
+  bar2::array6:='61 62 63'
 []
 )INPUT";
 
@@ -5825,6 +5831,42 @@ TEST(HITInterpreter, override_assigns)
 /obj/array3/value )"  + std::to_string(wasp::VALUE)           + R"( (32)
 /obj/array3/value )"  + std::to_string(wasp::VALUE)           + R"( (33)
 /obj/array3/'      )" + std::to_string(wasp::QUOTE)           + R"( (')
+/obj/param4       )"  + std::to_string(wasp::KEYED_VALUE)     + R"( OVERRIDE=ON
+/obj/param4/decl   )" + std::to_string(wasp::DECL)            + R"( (param4)
+/obj/param4/:=    )"  + std::to_string(wasp::OVERRIDE_ASSIGN) + R"( (:=)
+/obj/param4/value )"  + std::to_string(wasp::VALUE)           + R"( (40)
+/obj/array4       )"  + std::to_string(wasp::ARRAY)           + R"( OVERRIDE=ON
+/obj/array4/decl   )" + std::to_string(wasp::DECL)            + R"( (array4)
+/obj/array4/:=    )"  + std::to_string(wasp::OVERRIDE_ASSIGN) + R"( (:=)
+/obj/array4/'      )" + std::to_string(wasp::QUOTE)           + R"( (')
+/obj/array4/value )"  + std::to_string(wasp::VALUE)           + R"( (41)
+/obj/array4/value )"  + std::to_string(wasp::VALUE)           + R"( (42)
+/obj/array4/value )"  + std::to_string(wasp::VALUE)           + R"( (43)
+/obj/array4/'      )" + std::to_string(wasp::QUOTE)           + R"( (')
+/obj/foo1::param5 )"       + std::to_string(wasp::KEYED_VALUE)     + R"( OVERRIDE=ON
+/obj/foo1::param5/decl  )" + std::to_string(wasp::DECL)            + R"( (foo1::param5)
+/obj/foo1::param5/:= )"    + std::to_string(wasp::OVERRIDE_ASSIGN) + R"( (:=)
+/obj/foo1::param5/value )" + std::to_string(wasp::VALUE)           + R"( (50)
+/obj/foo2::array5 )"       + std::to_string(wasp::ARRAY)           + R"( OVERRIDE=ON
+/obj/foo2::array5/decl  )" + std::to_string(wasp::DECL)            + R"( (foo2::array5)
+/obj/foo2::array5/:= )"    + std::to_string(wasp::OVERRIDE_ASSIGN) + R"( (:=)
+/obj/foo2::array5/'  )"    + std::to_string(wasp::QUOTE)           + R"( (')
+/obj/foo2::array5/value )" + std::to_string(wasp::VALUE)           + R"( (51)
+/obj/foo2::array5/value )" + std::to_string(wasp::VALUE)           + R"( (52)
+/obj/foo2::array5/value )" + std::to_string(wasp::VALUE)           + R"( (53)
+/obj/foo2::array5/'  )"    + std::to_string(wasp::QUOTE)           + R"( (')
+/obj/bar1::param6 )"       + std::to_string(wasp::KEYED_VALUE)     + R"( OVERRIDE=ON
+/obj/bar1::param6/decl  )" + std::to_string(wasp::DECL)            + R"( (bar1::param6)
+/obj/bar1::param6/:= )"    + std::to_string(wasp::OVERRIDE_ASSIGN) + R"( (:=)
+/obj/bar1::param6/value )" + std::to_string(wasp::VALUE)           + R"( (60)
+/obj/bar2::array6 )"       + std::to_string(wasp::ARRAY)           + R"( OVERRIDE=ON
+/obj/bar2::array6/decl  )" + std::to_string(wasp::DECL)            + R"( (bar2::array6)
+/obj/bar2::array6/:= )"    + std::to_string(wasp::OVERRIDE_ASSIGN) + R"( (:=)
+/obj/bar2::array6/'  )"    + std::to_string(wasp::QUOTE)           + R"( (')
+/obj/bar2::array6/value )" + std::to_string(wasp::VALUE)           + R"( (61)
+/obj/bar2::array6/value )" + std::to_string(wasp::VALUE)           + R"( (62)
+/obj/bar2::array6/value )" + std::to_string(wasp::VALUE)           + R"( (63)
+/obj/bar2::array6/'  )"    + std::to_string(wasp::QUOTE)           + R"( (')
 /obj/term         )"  + std::to_string(wasp::OBJECT_TERM)     + R"( ([])
 )";
 

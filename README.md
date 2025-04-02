@@ -1,7 +1,7 @@
-# Package Overview 
+# Package Overview
 The Workbench Analysis Sequence Processor (WASP) was developed to streamline lexing, parsing, access, validation, and analysis of ascii text files.
 
-The foundation of WASP resides on the parse tree data structure where each node in the tree represents the syntax of the input document. Nodes can parent nodes with children. 
+The foundation of WASP resides on the parse tree data structure where each node in the tree represents the syntax of the input document. Nodes can parent nodes with children.
 Nodes that have no children are known as *terminal* or *leaf nodes* and represent Tokens (string, number, delimiter, etc.) in the text file.
 
 The fast lexical analyzer generator (flex - https://www.gnu.org/software/flex/) and GNU Bison parser generator (https://www.gnu.org/software/bison/) are extensively used for lexing and parsing.
@@ -11,13 +11,14 @@ The fast lexical analyzer generator (flex - https://www.gnu.org/software/flex/) 
 1. [Components](#components) - the primary packages in WASP
     * [Core](/waspcore/README.md#core-package)
     * [Expr](/waspexpr/README.md#expression-engine)
-    * [HIVE](/wasphive/README.md#hive) 
+    * [HIVE](/wasphive/README.md#hive)
     * [SIREN](/waspsiren/README.md#sequence-input-retrieval-engine-siren)
     * [SON](/waspson/README.md#standard-object-notation-son)
     * [DDI](/waspddi/README.md#definition-driven-interpreter)
     * [EDDI](/waspeddi/README.md#eddi-input-interpreter)
     * [HALITE](/wasphalite/README.md#halite-engine)
     * [LSP](/wasplsp/README.md#language-server-protocol)
+    * [Plot](/waspplot/README.md#CustomPlot)
     * [Utils](/wasputils/README.md#command-line-utilities)
     * [Python](/wasppy/README.md#wasp-python-interfaces-wasppy)
 2. [Getting Started](#getting-started) - code compilation requirements and instructions
@@ -71,18 +72,18 @@ The fast lexical analyzer generator (flex - https://www.gnu.org/software/flex/) 
         * [InputType Assistance Details](/wasphive/README.md#inputtype-assistance-details)
         * [InputVariants Assistance Details](/wasphive/README.md#inputvariants-assistance-details)
         * [InputDefault Assistance Details](/wasphive/README.md#inputdefault-assistance-details)
-        * [Description Assistance Details](/wasphive/README.md#description-assistance-details) 
-6. [SIREN](/waspsiren/README.md#sequence-input-retrieval-engine-siren) - Simple Input Retrieval ENgine (SIREN) 
+        * [Description Assistance Details](/wasphive/README.md#description-assistance-details)
+6. [SIREN](/waspsiren/README.md#sequence-input-retrieval-engine-siren) - Simple Input Retrieval ENgine (SIREN)
     * [Selecting Nodes](/waspsiren/README.md#selecting-nodes)
     * [Selection Predicates](/waspsiren/README.md#predicates)
     * [Selecting Unknown Nodes](/waspsiren/README.md#selecting-unknown-nodes)
 7. [SON](/waspson/README.md#standard-object-notation-son) - Standard Object Notation (SON) for general input data entry
-8. [DDI](/waspddi/README.md#definition-driven-interpreter) - Definition Driven Interpreter (DDI) for reduced input data entry  
-9. [EDDI](/waspeddi/README.md#extra-definition-driven-interpreter) - Extra Definition Driven Interpreter (EDDI) for reduced input data entry  
-10. [HALITE](/wasphalite/README.md#halite-engine) - HierarchicAL Input Template Engine (HALITE) 
+8. [DDI](/waspddi/README.md#definition-driven-interpreter) - Definition Driven Interpreter (DDI) for reduced input data entry
+9. [EDDI](/waspeddi/README.md#extra-definition-driven-interpreter) - Extra Definition Driven Interpreter (EDDI) for reduced input data entry
+10. [HALITE](/wasphalite/README.md#halite-engine) - HierarchicAL Input Template Engine (HALITE)
     * [Template Evaluation Summary](/wasphalite/README.md#template-evaluation-summary)
     * [Attributes and Expressions](/wasphalite/README.md#attributes-and-expressions)
-        * [Intrinsic Attributes](/wasphalite/README.md#intrinsic-attributes)  
+        * [Intrinsic Attributes](/wasphalite/README.md#intrinsic-attributes)
         * [Silent Attributes](/wasphalite/README.md#silent-attributes)
         * [Optional Attributes](/wasphalite/README.md#optional-attributes)
         * [Attribute Patterns](/wasphalite/README.md#attribute-patterns)
@@ -99,12 +100,13 @@ The fast lexical analyzer generator (flex - https://www.gnu.org/software/flex/) 
             * [File Import using an Object](/wasphalite/README.md#file-import-using-an-object)
             * [Iterative File Import using an Array](/wasphalite/README.md#iterative-file-import-using-an-array-or-ranges)
     * [Conditional Blocks](/wasphalite/README.md#conditional-blocks)
-11. [INI](/waspson/README.md#standard-object-notation-son) - configuration file format 
+11. [INI](/waspson/README.md#standard-object-notation-son) - configuration file format
 12. [LSP](/wasplsp/README.md#language-server-protocol) - Language Server Protocol support
     * [WASP Language Server](/wasplsp/README.md#wasp-language-server)
     * [Client](/wasplsp/README.md#client)
     * [LSPInterpreter](/wasplsp/README.md#lspinterpreter)
-13. [Utils](/wasputils/README.md#command-line-utilities) - utilities for command line file interaction (listing, validating, selecting, etc.)
+13. [Plot] (/waspplot/README.md#CustomPlot) - Plot data structure and serialization
+14. [Utils](/wasputils/README.md#command-line-utilities) - utilities for command line file interaction (listing, validating, selecting, etc.)
     * [File Listing Utilities](/wasputils/README.md#file-listing-utilities)
     * [File Component Selection Utilities](/wasputils/README.md#file-component-selection-utilities)
     * [XML Utilities](/wasputils/README.md#xml-utilities)
@@ -118,12 +120,12 @@ The fast lexical analyzer generator (flex - https://www.gnu.org/software/flex/) 
 # Components
 WASP is composed of the following primary components:
 
-1. [__Core__](/waspcore/README.md#core-package): the waspcore package contains most necessary data structures and interface classes needed to interact with text files. 
+1. [__Core__](/waspcore/README.md#core-package): the waspcore package contains most necessary data structures and interface classes needed to interact with text files.
     * StringPool: a string storage optimization class where ascii data are stored in a contiguous memory block where each string is null terminated and indexed.
     * TokenPool: a token/word storage optimization class where Token information (string data via StringPool, file location) are stored. Line and column are calculated on-the-fly via token file offset and file line offset.
-    * TreeNodePool: a TreeNode storage class where TreeNode information (token, name, parent, type, children, etc.) are stored. 
+    * TreeNodePool: a TreeNode storage class where TreeNode information (token, name, parent, type, children, etc.) are stored.
     * Interpreter: an interface and high-level implementation class which facilitates specific grammar, lexer, and parser state information and parse tree storage
-    * wasp_node: enumerated token/node types used to aid in identifying context and intent. 
+    * wasp_node: enumerated token/node types used to aid in identifying context and intent.
     * utils: contains utility functions useful for string processing and tree visiting.
     * wasp_bug: contains software quality assurance and development aids that can be preprocessed out of deployments.
         * design by contract - insist, require, ensure, assert, check, remember.
@@ -133,20 +135,20 @@ WASP is composed of the following primary components:
     * Basic mathematical operators
         * multiplication '*'
         * division '/'
-        * addition '+' 
+        * addition '+'
         * subtraction '-'
-        * boolean ('<','<=','==','!=', etc.) 
+        * boolean ('<','<=','==','!=', etc.)
         * exponentiation '\^'
     * Scalar variable assignment, reference, and creation: known variable can be referenced and updated, or new variables created during expression evaluation.
     * Mathematical functions
 3. [__HIT__](https://mooseframework.inl.gov/framework_development/sanity_checking.html): the [wasphit package](/wasphit/README.md) contains lexer, parser, and tree node view for the hit grammar.
-4. [__HIVE__](/wasphive/README.md#hive): the Hierarchical Input Validation Engine contains algorithms for validating a parse tree using a document schema/definition file, the flexible scalar and referential rules - supporting 
+4. [__HIVE__](/wasphive/README.md#hive): the Hierarchical Input Validation Engine contains algorithms for validating a parse tree using a document schema/definition file, the flexible scalar and referential rules - supporting
     * element occurrence,
     * value,
     * child uniqueness and choice,
     * existence,
     * sum,
-    * predicated sum, etc.  
+    * predicated sum, etc.
 5. [__JSON__](http://www.json.org/): the waspjson package contains a lexer, as well as a parser for the JSON grammar (http://www.json.org/).
 6. [__SIREN__](/waspsiren/README.md#sequence-input-retrieval-engine-siren): the Sequence Input Retrieval Engine (SIREN) contains a lexer, parser, and evaluation logic for tree node lookup; the flexible tree node lookup mechanism supports
     * absolute and relative wild-carded names and value, or
@@ -154,11 +156,11 @@ WASP is composed of the following primary components:
 7. [__SON__](/waspson/README.md#standard-object-notation-son): the Standard Object Notation (SON) - waspson package contains the lexer, parser, and tree node view for the SON grammar; the flexible, structured, input entry mechanism supports
     * blocks, objects, arrays, and keyed values, as well as
     * identified objects, arrays, and keyed values.
-8. [__DDI__](waspddi/README.md#definition-driven-interpreter): the Definition-Driven Interpreter (DDI) contains a lexer, a parser, and an interpreter for the lightweight input format. 
+8. [__DDI__](waspddi/README.md#definition-driven-interpreter): the Definition-Driven Interpreter (DDI) contains a lexer, a parser, and an interpreter for the lightweight input format.
     * Hierarchical Input format with very little syntax.
-9. [__EDDI__](waspeddi/README.md#eddi-input-interpreter): the Extra Definition Driven Interpreter (EDDI) contains a lexer, a parser, and an interpreter for the lightweight input format. 
+9. [__EDDI__](waspeddi/README.md#eddi-input-interpreter): the Extra Definition Driven Interpreter (EDDI) contains a lexer, a parser, and an interpreter for the lightweight input format.
     * Hierarchical Input format with little syntax representing blocks, lists, sections, and scalar data.
-    * Allows input field annotation which greatly enhances input validation capabilities 
+    * Allows input field annotation which greatly enhances input validation capabilities
 10. [__HALITE__](/wasphalite/README.md#halite-engine): the Hierarchical Input Template Expansion engine provides a data-driven means of expanding patterned input.
     * Supports attribute and expression evaluations.
     * Supports template imports.
@@ -172,12 +174,12 @@ WASP is composed of the following primary components:
     * XML: translates a given text file into XML with data and location information.
 14. [__Python__](/wasppy/README.md) - Python extention providing access to WASP interpreters.
 
-# Getting Started    
+# Getting Started
 For individuals wanting to compile the code from source, below are the tested requirements and configurations.
 
 
 ## Requirements
-* C/CXX compiler (See repository .gitlab-ci.yml for build configurations)  
+* C/CXX compiler (See repository .gitlab-ci.yml for build configurations)
     * GCC-4.8 tested on Linux or Mac OS
     * LLVM-7.0.2 tested on Mac OS
     * Visual Studio 2022 for Windows
@@ -245,7 +247,7 @@ cmake \
  -D CMAKE_CXX_COMPILER:STRING=g++ \
  -VV \
  $*
- 
+
 ```
 
 > WaspPy (Python bindings) can be generated by adding the `-DWASP_ENABLE_SWIG=ON` flag to the existing usable configuration script. Swig-4.1 is required.

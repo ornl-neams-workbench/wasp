@@ -137,11 +137,22 @@ TEST(Value, constructors)
     }
     {
         Value v(1);
+        ASSERT_FALSE(v.is_size_t());
         ASSERT_TRUE(v.is_int());
         ASSERT_TRUE(v.is_number());
         ASSERT_EQ(1, v.to_int());
         ASSERT_EQ(1.0, v.to_double());
         ASSERT_EQ(Value::TYPE_INTEGER, v.type());
+    }
+    {
+        Value v(std::size_t(1));
+        ASSERT_FALSE(v.is_int());
+        ASSERT_TRUE(v.is_size_t());
+        ASSERT_TRUE(v.is_number());
+        ASSERT_EQ(1, v.to_int());
+        ASSERT_EQ(1, v.to_size_t());
+        ASSERT_EQ(1.0, v.to_double());
+        ASSERT_EQ(Value::TYPE_SIZE_T, v.type());
     }
     {
         Value v(1.1);
@@ -157,6 +168,15 @@ TEST(Value, constructors)
         ASSERT_TRUE(v.is_string());
         ASSERT_FALSE(v.is_number());
         ASSERT_EQ("ted", v.to_string());
+        ASSERT_EQ(Value::TYPE_STRING, v.type());
+    }
+    { // test that forced conversion is functional
+        Value v("1024");
+        ASSERT_TRUE(v.is_string());
+        ASSERT_FALSE(v.is_number());
+        ASSERT_EQ(1024, v.to_size_t());
+        ASSERT_EQ(1024, v.to_int());
+        ASSERT_EQ(1024.0, v.to_double());
         ASSERT_EQ(Value::TYPE_STRING, v.type());
     }
     {
@@ -277,14 +297,10 @@ TEST(DataObject, methods)
     ASSERT_TRUE(o["ted"].as_object().contains("fred"));
     ASSERT_EQ(Value::TYPE_STRING, o["ted"]["fred"].type());
     ASSERT_EQ("teds brother", o["ted"]["fred"].to_string());
-    {
-        DataArray a;
-        for (int i = 0; i < 10; ++i)
-        {
-            a.push_back(i);
-        }
-        o["ted"]["arabic numbers"] = a;
-    }
+
+    // use initializer list
+    o["ted"]["arabic numbers"] = DataArray({0,1,2,3,4,5,6,7,8,9});
+
     ASSERT_TRUE(o["ted"].to_object()->contains("arabic numbers"));
     ASSERT_TRUE(o["ted"].as_object().contains("arabic numbers"));
     DataArray* a    = o["ted"]["arabic numbers"].to_array();

@@ -153,6 +153,22 @@ class WASP_PUBLIC Server
                                           symbolsResponse );
     }
 
+    /** handle extension request by adding response to provided reference
+     * @param extensionMethod - name for current extension request method
+     * @param extensionRequest - const reference to request to be handled
+     * @param extensionResponse - reference to object that will be filled
+     * @return - true if request successfully handled with response built
+     */
+    bool handleExtensionRequest(
+                    const std::string & extensionMethod   ,
+                    const DataObject  & extensionRequest  ,
+                          DataObject  & extensionResponse )
+    {
+        return Impl.handleExtensionRequest( extensionMethod   ,
+                                            extensionRequest  ,
+                                            extensionResponse );
+    }
+
     /** handle didclose notification - no response expected
      * @param didCloseNotification - const reference to notification
      * @return - true if notification was successfully handled

@@ -5,6 +5,7 @@
 #include <sstream>
 #include <ostream>
 #include <map>
+#include <set>
 #include "wasplsp/LSP.h"
 #include "wasplsp/Connection.h"
 #include "waspcore/Object.h"
@@ -113,6 +114,17 @@ class WASP_PUBLIC ServerImpl
     bool handleSymbolsRequest(
                     const wasp::DataObject & symbolsRequest  ,
                           wasp::DataObject & symbolsResponse );
+
+    /** handle extension request by adding response to provided reference
+     * @param extensionMethod - name for current extension request method
+     * @param extensionRequest - const reference to request to be handled
+     * @param extensionResponse - reference to object that will be filled
+     * @return - true if request successfully handled with response built
+     */
+    bool handleExtensionRequest(
+                    const std::string      & extensionMethod   ,
+                    const wasp::DataObject & extensionRequest  ,
+                          wasp::DataObject & extensionResponse );
 
     /** handle didclose notification - no response expected
      * @param didCloseNotification - const reference to notification
@@ -267,6 +279,19 @@ class WASP_PUBLIC ServerImpl
     virtual bool gatherDocumentSymbols(
                           wasp::DataArray & documentSymbols ) = 0;
 
+    /** gather extension responses - may be overridden on derived servers
+     * @param extensionResponses - data array of custom responses to fill
+     * @param extensionMethod - name for current extension request method
+     * @param line - zero-based line to use for logic of custom extension
+     * @param character - zero-based column for logic of custom extension
+     * @return - true if request successfully handled with response built
+     */
+    virtual bool gatherExtensionResponses(
+                    wasp::DataArray   & /* extensionResponses */ ,
+                    const std::string & /* extensionMethod    */ ,
+                    int                 /* line               */ ,
+                    int                 /* character          */ ) { return true; }
+
     /** read from connection into object - to be implemented on derived servers
      * @param object - reference to object to be read into
      * @return - true if the read from the connection completed successfully
@@ -322,6 +347,24 @@ class WASP_PUBLIC ServerImpl
     void enableSymbols()
     {
         this->server_capabilities[m_doc_symbol_provider] = true;
+    }
+
+    /** Enable custom extension capability on server of given method name
+     * @param method_name - capabilities/extensionsProvider/<method_name>
+     */
+    void enableExtension(const std::string & method_name)
+    {
+        if (!this->server_capabilities.contains(m_extensions_provider))
+            this->server_capabilities[m_extensions_provider] = DataObject();
+        this->server_capabilities[m_extensions_provider][method_name] = true;
+    }
+
+    /** Check if connected server supports provided extension method name
+     * @param method_name - method name to check with server capabilities
+     */
+    bool clientSupportsExtension(const std::string & method_name)
+    {
+        return this->client_extension_methods.count(method_name);
     }
 
     /** provide reference to stringstream of all server errors */
@@ -389,6 +432,11 @@ class WASP_PUBLIC ServerImpl
      * @brief client_snippet_support - client supports snippets as completion
      */
     bool client_snippet_support;
+
+    /**
+     * @brief client_extension_methods - client supported extension methods
+     */
+    std::set<std::string> client_extension_methods;
 };
 
 } // namespace lsp

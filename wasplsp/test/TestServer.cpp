@@ -620,5 +620,74 @@ bool TestServer::gatherDocumentSymbols(
     return pass;
 }
 
+bool TestServer::gatherExtensionResponses(
+                      wasp::DataArray   & extensionResponses ,
+                      const std::string & extensionMethod    ,
+                      int                 line               ,
+                      int                 character          )
+{
+    DataObject extension_response;
+
+    // create extension 01 responses for unit testing
+    if (extensionMethod == "testMethod01")
+    {
+        if (this->document_path == "test/document/uri/string" &&
+            line == 3 && character == 4)
+        {
+            // DataObject extension_response;
+
+            extension_response["field_01"] = "word_01";
+            extension_response["field_02"] = 111111111;
+            extension_response["field_03"] = 1111.1111;
+            extensionResponses.push_back(extension_response);
+
+            extension_response["field_01"] = "word_02";
+            extension_response["field_02"] = 222222222;
+            extension_response["field_03"] = 2222.2222;
+            extensionResponses.push_back(extension_response);
+
+            extension_response["field_01"] = "word_03";
+            extension_response["field_02"] = 333333333;
+            extension_response["field_03"] = 3333.3333;
+            extensionResponses.push_back(extension_response);
+        }
+    }
+
+    // create extension 02 responses for unit testing
+    else if (extensionMethod == "testMethod02")
+    {
+        if (this->document_path == "test/document/uri/string" &&
+            line == 6 && character == 7)
+        {
+            DataArray extension_array_01;
+            extension_array_01.push_back("aaa");
+            extension_array_01.push_back("bbb");
+            extension_array_01.push_back("ccc");
+            extension_array_01.push_back("ddd");
+
+            DataArray extension_array_02;
+            extension_array_02.push_back(11111);
+            extension_array_02.push_back(22222);
+            extension_array_02.push_back(33333);
+            extension_array_02.push_back(44444);
+
+            DataArray extension_array_03;
+            extension_array_03.push_back(11.11);
+            extension_array_03.push_back(22.22);
+            extension_array_03.push_back(33.33);
+            extension_array_03.push_back(44.44);
+
+            extension_response["name"] = "title";
+            extension_response["kind"] = "lined";
+            extension_response["xval"] = extension_array_01;
+            extension_response["yval"] = extension_array_02;
+            extension_response["stdv"] = extension_array_03;
+            extensionResponses.push_back(extension_response);
+        }
+    }
+
+    return true;
+}
+
 } // namespace lsp
 } // namespace wasp

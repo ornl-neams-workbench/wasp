@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include <sstream>
 #include <thread>
+#include <string>
 
 namespace wasp {
 namespace lsp  {
@@ -46,6 +47,13 @@ TEST(integrate, test_initialize)
     textdoc_caps[m_comp] = complete_caps;
     client_caps[m_text_document] = textdoc_caps;
 
+    // notify server about client extension capabilities in initialize call
+    // set capabilities/extensions/testMethod01 = true
+    // set capabilities/extensions/testMethod02 = true
+    client_caps[m_extensions] = DataObject();
+    client_caps[m_extensions]["testMethod01"] = true;
+    client_caps[m_extensions]["testMethod02"] = true;
+
     DataObject  response_object;
     int         response_request_id;
     DataObject  response_capabilities;
@@ -75,7 +83,7 @@ TEST(integrate, test_initialize)
                                             response_capabilities ) );
 
     ASSERT_EQ ( client_request_id , response_request_id          );
-    ASSERT_EQ ( (size_t) 6        , response_capabilities.size() );
+    ASSERT_EQ ( (std::size_t) 7   , response_capabilities.size() );
 
     ASSERT_TRUE(response_capabilities[m_text_doc_sync][m_open_close].is_bool());
     ASSERT_TRUE(response_capabilities[m_text_doc_sync][m_open_close].to_bool());
@@ -99,6 +107,15 @@ TEST(integrate, test_initialize)
 
     ASSERT_TRUE(response_capabilities[m_hover_provider].is_bool());
     ASSERT_TRUE(response_capabilities[m_hover_provider].to_bool());
+
+    ASSERT_TRUE(response_capabilities[m_extensions_provider].is_object());
+    ASSERT_EQ((std::size_t) 2, response_capabilities[m_extensions_provider].size());
+
+    ASSERT_TRUE(response_capabilities[m_extensions_provider]["testMethod01"].is_bool());
+    ASSERT_TRUE(response_capabilities[m_extensions_provider]["testMethod01"].to_bool());
+
+    ASSERT_TRUE(response_capabilities[m_extensions_provider]["testMethod02"].is_bool());
+    ASSERT_TRUE(response_capabilities[m_extensions_provider]["testMethod02"].to_bool());
 }
 
 TEST(integrate, test_initialized)
@@ -718,6 +735,106 @@ TEST(integrate, test_symbols)
     ASSERT_EQ ( 33                                , o3_selection_start_character );
     ASSERT_EQ ( 30                                , o3_selection_end_line        );
     ASSERT_EQ ( 35                                , o3_selection_end_character   );
+}
+
+TEST(integrate, test_extension_01)
+{
+    // extension 01 - build object / stream to server / get response / test
+
+    DataObject  client_object;
+    int         client_request_id =  test_request_id;
+    std::string extension_method  = "testMethod01";
+    std::string document_uri      = "test/document/uri/string";
+    int         line              =  3;
+    int         character         =  4;
+
+    DataObject        response_object;
+    int               response_request_id;
+    DataArray         extension_responses;
+    std::stringstream client_errors;
+
+    ASSERT_TRUE( buildExtensionRequest( client_object     ,
+                                        client_errors     ,
+                                        extension_method  ,
+                                        client_request_id ,
+                                        document_uri      ,
+                                        line              ,
+                                        character         ) );
+
+    ASSERT_TRUE( test_connection->write( client_object , client_errors ) );
+
+    test_request_id++;
+
+    ASSERT_TRUE( test_connection->read( response_object , client_errors ) );
+
+    ASSERT_TRUE( dissectExtensionResponse( response_object      ,
+                                           client_errors        ,
+                                           response_request_id  ,
+                                           extension_responses  ) );
+
+    ASSERT_EQ ( client_request_id , response_request_id           );
+    ASSERT_EQ ( (std::size_t) 3   , extension_responses.size()    );
+    ASSERT_EQ ( (std::size_t) 3   , extension_responses[2].size() );
+
+    std::string response_3_field_01 = extension_responses[2]["field_01"].to_string();
+    int         response_3_field_02 = extension_responses[2]["field_02"].to_int();
+    double      response_3_field_03 = extension_responses[2]["field_03"].to_double();
+
+    ASSERT_EQ ( "word_03" , response_3_field_01 );
+    ASSERT_EQ ( 333333333 , response_3_field_02 );
+    ASSERT_EQ ( 3333.3333 , response_3_field_03 );
+}
+
+TEST(integrate, test_extension_02)
+{
+    // extension 02 - build object / stream to server / get response / test
+
+    DataObject  client_object;
+    int         client_request_id =  test_request_id;
+    std::string extension_method  = "testMethod02";
+    std::string document_uri      = "test/document/uri/string";
+    int         line              =  6;
+    int         character         =  7;
+
+    DataObject        response_object;
+    int               response_request_id;
+    DataArray         extension_responses;
+    std::stringstream client_errors;
+
+    ASSERT_TRUE( buildExtensionRequest( client_object     ,
+                                        client_errors     ,
+                                        extension_method  ,
+                                        client_request_id ,
+                                        document_uri      ,
+                                        line              ,
+                                        character         ) );
+
+    ASSERT_TRUE( test_connection->write( client_object , client_errors ) );
+
+    test_request_id++;
+
+    ASSERT_TRUE( test_connection->read( response_object , client_errors ) );
+
+    ASSERT_TRUE( dissectExtensionResponse( response_object      ,
+                                           client_errors        ,
+                                           response_request_id  ,
+                                           extension_responses  ) );
+
+    ASSERT_EQ ( client_request_id , response_request_id           );
+    ASSERT_EQ ( (std::size_t) 1   , extension_responses.size()    );
+    ASSERT_EQ ( (std::size_t) 5   , extension_responses[0].size() );
+
+    std::string response_1_name   = extension_responses[0]["name"].to_string();
+    std::string response_1_kind   = extension_responses[0]["kind"].to_string();
+    std::string response_1_xval_4 = extension_responses[0]["xval"][3].to_string();
+    int         response_1_yval_4 = extension_responses[0]["yval"][3].to_int();
+    double      response_1_stdv_4 = extension_responses[0]["stdv"][3].to_double();
+
+    ASSERT_EQ ( "title" , response_1_name   );
+    ASSERT_EQ ( "lined" , response_1_kind   );
+    ASSERT_EQ ( "ddd"   , response_1_xval_4 );
+    ASSERT_EQ ( 44444   , response_1_yval_4 );
+    ASSERT_EQ ( 44.44   , response_1_stdv_4 );
 }
 
 TEST(integrate, test_didclose)

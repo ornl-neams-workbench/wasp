@@ -10,6 +10,16 @@ void ClientImpl::enableSnippetSupport()
     this->support_snippets = true;
 }
 
+void ClientImpl::enableExtension(const std::string & method_name)
+{
+    this->client_extension_methods.insert(method_name);
+}
+
+bool ClientImpl::serverSupportsExtension(const std::string & method_name)
+{
+  return this->server_extension_methods.count(method_name);
+}
+
 bool ClientImpl::connect( Connection::SP connection )
 {
     bool pass = true;
@@ -111,7 +121,6 @@ bool ClientImpl::doInitialize()
     DataObject client_object;
     DataObject client_capabilities;
 
-
     // set the client capabilities hierarchical document symbols to true
 
     client_capabilities[m_text_document] = DataObject();
@@ -120,6 +129,7 @@ bool ClientImpl::doInitialize()
 
     client_capabilities[m_text_document][m_document_symbol][m_hierarchical_symbols] = true;
 
+    // turn on client snippet capability in initialize if it was enabled
     if (this->support_snippets)
     {
         // populate CompletionClientCapabilities/textDocument/completionItem/snippetSupport
@@ -127,6 +137,13 @@ bool ClientImpl::doInitialize()
         client_capabilities[m_text_document][m_comp][m_compitem] = DataObject();
         client_capabilities[m_text_document][m_comp][m_compitem][m_snip] = this->support_snippets;
     }
+
+    // turn on any client extension capability in initialize that was enabled
+    // set capabilities/extensions/<method_name> = true
+    if (!this->client_extension_methods.empty())
+        client_capabilities[m_extensions] = DataObject();
+    for (const std::string & method_name : this->client_extension_methods)
+        client_capabilities[m_extensions][method_name] = true;
 
     // set client response type to NONE before clearing out current response
 
@@ -162,6 +179,24 @@ bool ClientImpl::doInitialize()
         this->response_type = INITIALIZE;
 
         this->is_initialized = true;
+
+        // dissect stored initialize response into server capabilities object
+        int        response_request_id;
+        DataObject server_capabilities;
+        bool       pass = true;
+        pass &= dissectInitializeResponse( *this->response     ,
+                                           this->errors        ,
+                                           response_request_id ,
+                                           server_capabilities );
+
+       // cache extension method names announced in server capabilities from
+        // capabilities/extensionsProvider/<method_name> = true
+        if (server_capabilities.contains(m_extensions_provider) &&
+            server_capabilities[m_extensions_provider].is_object())
+            for (const auto & c : *(server_capabilities[m_extensions_provider].to_object()))
+                if (c.second.is_bool() && c.second.to_bool())
+                    this->server_extension_methods.insert(c.first);
+
     }
 
     return pass;
@@ -1257,6 +1292,132 @@ bool ClientImpl::getFormattingAt( int                index      ,
                                    formatting.new_text        );
 
     return pass;
+}
+
+bool ClientImpl::doExtensionMethod( const std::string & extension_method ,
+                                    int                 line             ,
+                                    int                 character        )
+{
+    if ( this->already_in_call ) return false;
+
+    // turn on client already_in_call state so another call will not interfere
+
+    InsideClientCall scoped_guard ( this->already_in_call );
+
+    if ( !this->is_connected )
+    {
+        this->errors << m_error_prefix << "Client not connected" << std::endl;
+
+        return false;
+    }
+
+    if ( !this->is_initialized )
+    {
+        this->errors << m_error_prefix << "Connection not initialized" << std::endl;
+
+        return false;
+    }
+
+    if ( !this->is_document_open )
+    {
+        this->errors << m_error_prefix << "Document not open" << std::endl;
+
+        return false;
+    }
+
+    // check if connected server supports extension method before continuing
+
+    if ( !this->serverSupportsExtension(extension_method) )
+    {
+        return false;
+    }
+
+    bool pass = true;
+
+    // increment the request id which should increase for each lsp request
+
+    this->incrementRequestID();
+
+    DataObject client_object;
+
+    // set client response type to NONE before clearing out current response
+
+    this->response_type = NONE;
+
+    this->response = std::make_shared<DataObject>();
+
+    // build extension request object
+
+    pass &= buildExtensionRequest( client_object       ,
+                                   this->errors        ,
+                                   extension_method    ,
+                                   this->request_id    ,
+                                   this->document_path ,
+                                   line                ,
+                                   character           );
+
+    // write extension request to the connection and wait and read response
+
+    pass &= connection->write( client_object , this->errors );
+
+    pass &= connection->read( *(this->response) , this->errors );
+
+    // check to see if the server response was an error
+
+    pass &= checkErrorResponse( *(this->response) , this->errors );
+
+    wasp_check( verifyExtensionResponse( *(this->response) ) );
+
+    // if everything passed - set the client response_type enum to EXTENSION
+
+    if ( pass )
+    {
+        this->response_type = EXTENSION;
+    }
+
+    this->already_in_call = false;
+
+    return pass;
+}
+
+int ClientImpl::getExtensionResponseSize()
+{
+    int size = 0;
+
+    // if response_type is EXTENSION - return size of the extension array
+
+    if ( this->response_type == EXTENSION )
+    {
+        size = getExtensionResponseArray(*this->response)->size();
+    }
+
+    return size;
+}
+
+bool ClientImpl::getExtensionResponseAt( int          index             ,
+                                         DataObject & extension_response )
+
+{
+    if ( this->response_type != EXTENSION )
+    {
+        this->errors << m_error_prefix << "No extension responses currently stored" << std::endl;
+
+        return false;
+    }
+
+    if ( index >= this->getExtensionResponseSize() )
+    {
+        this->errors << m_error_prefix << "Extension responses index out of bounds" << std::endl;
+
+        return false;
+    }
+
+    // if reponse type is EXTENSION and the given index is not out of range
+    // then get the extensions array and fill the object at the given index
+
+    extension_response = *getExtensionResponseArray(*this->response)->at(index).to_object();
+
+    return true;
 }
 
 } // namespace lsp

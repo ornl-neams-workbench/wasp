@@ -3,6 +3,7 @@
 
 #include <string>
 #include <sstream>
+#include <set>
 #include "wasplsp/LSP.h"
 #include "wasplsp/Connection.h"
 #include "wasplsp/SymbolIterator.h"
@@ -31,11 +32,20 @@ class WASP_PUBLIC ClientImpl
 
     typedef std::shared_ptr<wasp::lsp::ClientImpl> SP;
 
-    /** Enable client snippet capability.
-     * I.e., toggles true completionClientCapabilities/textDocument/completionItem/snippetSupport
-     * for initial client capability communication to the server
+    /** Enable client snippet capability in server initialize by toggling true
+     * completionClientCapabilities/textDocument/completionItem/snippetSupport
      */
     void enableSnippetSupport();
+
+    /** Enable client extension capability of given name in server initialize
+     * @param method_name - sets capabilities/extensions/<method_name> = true
+     */
+    void enableExtension(const std::string & method_name);
+
+    /** Check if connected server supports provided extension method name
+     * @param method_name - method name to check with server capabilities
+     */
+    bool serverSupportsExtension(const std::string & method_name);
 
     /** set the client's connection shared_ptr to the provided connection
      * @return - true if not already connection and successfully set
@@ -246,6 +256,28 @@ class WASP_PUBLIC ClientImpl
     bool getFormattingAt( int                           index      ,
                           wasp::lsp::clientFormatting & formatting );
 
+    /** build extension request / write to connection / get back response
+     * @param line - zero-based input line number to use for this request
+     * @param character - zero-based input column to use for this request
+     * @return - true if build / write / response read handled successful
+     * @return - true if successful request build / write / response read
+     */
+    bool doExtensionMethod( const std::string & extension_method ,
+                            int                 line             ,
+                            int                 character        );
+
+    /** get size of result currently stored if EXTENSION is response type
+     * @return - size of result list if current response is expected type
+     */
+    int getExtensionResponseSize();
+
+    /** get extension response stored at given index if EXTENSION is type
+     * @param extension_response - object to fill with extension response
+     * @return - true if response type is EXTENSION and index is in range
+     */
+    bool getExtensionResponseAt( int                index             ,
+                                 wasp::DataObject & extension_response );
+
     /** check if the client is properly connected for reading / writing
      * @return - true if the client is properly connected for reading / writing
      */
@@ -381,6 +413,16 @@ class WASP_PUBLIC ClientImpl
       bool support_snippets;
 
       /**
+       * @brief client_extension_methods - extension methods enabled on client
+       */
+      std::set<std::string> client_extension_methods;
+
+      /**
+       * @brief server_extension_methods - extension methods enabled on server
+       */
+      std::set<std::string> server_extension_methods;
+
+      /**
        * @brief enum list indicating the currently stored response type
        */
       enum {
@@ -392,6 +434,7 @@ class WASP_PUBLIC ClientImpl
         REFERENCES ,
         FORMATTING ,
         SYMBOLS    ,
+        EXTENSION  ,
         SHUTDOWN   ,
         NONE
       } response_type;

@@ -20,6 +20,10 @@ bool objectToRPCString( DataObject   & object ,
 
     std::stringstream body;
 
+    // increase precision of json stream to avoid writing imprecise floats
+
+    body.precision(15);
+
     // create the packed json rpc body from the object
 
     object.pack_json(body);
@@ -262,7 +266,6 @@ bool dissectRangeObject( const DataObject      & object          ,
                                    errors        ,
                                    end_line      ,
                                    end_character );
-
 
     // check that the range end line / char are not before the start line / char
 
@@ -1010,6 +1013,132 @@ bool dissectSymbolsRequest( const DataObject   & object     ,
     uri = text_document[m_uri].to_string();
 
     return pass;
+}
+
+bool buildExtensionRequest( DataObject        & object           ,
+                            std::ostream      & errors           ,
+                            const std::string & extension_method ,
+                            int                 request_id       ,
+                            const std::string & uri              ,
+                            int                 line             ,
+                            int                 character        )
+{
+    bool pass = true;
+
+    // build the position object for the extension request
+
+    DataObject position;
+    pass &= buildPositionObject( position  ,
+                                 errors    ,
+                                 line      ,
+                                 character );
+
+    DataObject text_document;
+    text_document[m_uri] = uri;
+
+    DataObject params;
+    params[m_position]      = position;
+    params[m_text_document] = text_document;
+
+    // set object's params, id, and method name
+
+    object[m_params] = params;
+    object[m_id]     = request_id;
+    object[m_method] = extension_method;
+
+    return pass;
+}
+
+bool dissectExtensionRequest( const DataObject   & object     ,
+                                    std::ostream & errors     ,
+                                    int          & request_id ,
+                                    std::string  & uri        ,
+                                    int          & line       ,
+                                    int          & character  )
+{
+    bool pass = true;
+
+    wasp_check( object.contains(m_method) && object[m_method].is_string() );
+
+    wasp_check( object.contains(m_id) && object[m_id].is_int() );
+
+    request_id = object[m_id].to_int();
+
+    wasp_check( object.contains(m_params) && object[m_params].is_object() );
+
+    const DataObject& params = *(object[m_params].to_object());
+
+    wasp_check( params.contains(m_text_document) && params[m_text_document].is_object() );
+
+    const DataObject& text_document = *(params[m_text_document].to_object());
+
+    wasp_check( text_document.contains(m_uri) && text_document[m_uri].is_string() );
+
+    uri = text_document[m_uri].to_string();
+
+    // dissect the line and char from the extension request position object
+
+    wasp_check( params.contains(m_position) && params[m_position].is_object() );
+
+    const DataObject& position = *(params[m_position].to_object());
+
+    pass &= dissectPositionObject( position  ,
+                                   errors    ,
+                                   line      ,
+                                   character );
+
+    return pass;
+}
+
+bool buildExtensionResponse( DataObject        & object              ,
+                             std::ostream      & errors              ,
+                             int                 request_id          ,
+                             const DataArray   & extension_responses )
+{
+    bool pass = true;
+    DataObject result;
+
+    // set object's result and id
+    object[m_result] = extension_responses;
+    object[m_id]     = request_id;
+
+    return pass;
+}
+
+bool dissectExtensionResponse( const wasp::DataObject & object              ,
+                                     std::ostream     & errors              ,
+                                     int              & request_id          ,
+                                     wasp::DataArray  & extension_responses )
+{
+    bool pass = true;
+
+    wasp_check( object.contains(m_id) && object[m_id].is_int() );
+
+    request_id = object[m_id].to_int();
+
+    wasp_check( object.contains(m_result) && object[m_result].is_array() );
+
+    extension_responses = *(object[m_result].to_array());
+
+    return pass;
+}
+
+bool verifyExtensionResponse( const DataObject & object )
+{
+    bool pass = true;
+
+    pass &= object.contains(m_id) && object[m_id].is_int();
+
+    pass &= object.contains(m_result) && object[m_result].is_array();
+
+    return pass;
+}
+
+DataArray * getExtensionResponseArray( const DataObject & object )
+{
+    wasp_check( object.contains(m_result) && object[m_result].is_array() );
+
+    return object[m_result].to_array();
 }
 
 bool buildDidCloseNotification( DataObject        & object ,

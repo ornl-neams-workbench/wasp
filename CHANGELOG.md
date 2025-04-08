@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ### Added
+- Ability for downstream servers and clients to add and use custom LSP extensions
 - Ability to precede '=' in HIT syntax with optional ':' or ':override' specifier
 - Convenience function is_override to check HIT key values for override specifier
 - Python extension binding for wasplsp with server and connection implementations

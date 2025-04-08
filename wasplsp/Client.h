@@ -18,6 +18,22 @@ class WASP_PUBLIC Client
 
     ~Client(){}
 
+    /** Enable client snippet capability in server initialize by toggling true
+     * completionClientCapabilities/textDocument/completionItem/snippetSupport
+     */
+    void enableSnippetSupport()
+    {
+        return Impl.enableSnippetSupport();
+    }
+
+    /** Enable client extension capability of given name in server initialize
+     * @param method_name - sets capabilities/extensions/<method_name> = true
+     */
+    void enableExtension( const std::string & method_name )
+    {
+        return Impl.enableExtension( method_name );
+    }
+
     /** set the client's connection shared_ptr to the provided connection
      * @return - true if not already connection and successfully set
      */
@@ -323,6 +339,40 @@ class WASP_PUBLIC Client
     {
         return Impl.getFormattingAt( index      ,
                                      formatting );
+    }
+
+    /** build extension request / write to connection / get back response
+     * @param line - zero-based input line number to use for this request
+     * @param character - zero-based input column to use for this request
+     * @return - true if build / write / response read handled successful
+     * @return - true if successful request build / write / response read
+     */
+    bool doExtensionMethod( const std::string & extension_method ,
+                            int                 line             ,
+                            int                 character       )
+    {
+        return Impl.doExtensionMethod( extension_method ,
+                                       line             ,
+                                       character        );
+    }
+
+    /** get size of result currently stored if EXTENSION is response type
+     * @return - size of result list if current response is expected type
+     */
+    int getExtensionResponseSize()
+    {
+        return Impl.getExtensionResponseSize();
+    }
+
+    /** get extension response stored at given index if EXTENSION is type
+     * @param extension_response - object to fill with extension response
+     * @return - true if response type is EXTENSION and index is in range
+     */
+    bool getExtensionResponseAt( int                index             ,
+                                 wasp::DataObject & extension_response )
+    {
+        return Impl.getExtensionResponseAt( index              ,
+                                            extension_response );
     }
 
     /** check if the client is properly connected for reading / writing

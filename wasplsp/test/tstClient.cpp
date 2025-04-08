@@ -5,10 +5,13 @@
 #include "wasplsp/LSP.h"
 #include "wasplsp/Connection.h"
 #include "wasplsp/SymbolIterator.h"
+#include "waspcore/Object.h"
 #include "gtest/gtest.h"
 #include <thread>
 #include <vector>
 #include <sstream>
+#include <string>
+
 namespace wasp {
 namespace lsp  {
 
@@ -26,6 +29,12 @@ TEST(client, launch_server_thread_and_connnect_client)
     server_thread = std::thread( &Server<TestServer>::run , &test_server );
 
     ASSERT_FALSE( test_client.isConnected() );
+
+    // notify server about client extension capabilities in initialize call
+    // set capabilities/extensions/testMethod01 = true
+    // set capabilities/extensions/testMethod02 = true
+    test_client.enableExtension("testMethod01");
+    test_client.enableExtension("testMethod02");
 
     ASSERT_TRUE ( test_client.connect( test_server.getConnection() ) );
 
@@ -769,6 +778,136 @@ TEST(client, document_symbols_and_responses)
 )INPUT";
 
     ASSERT_EQ ( expected_paths.str() , paths.str() );
+}
+
+TEST(client, extension_request_and_response_01)
+{
+    // extension 01 request
+
+    std::string extension_method  = "testMethod01";
+    int         line              =  3;
+    int         character         =  4;
+
+    ASSERT_TRUE ( test_client.doExtensionMethod( extension_method ,
+                                                 line             ,
+                                                 character        ) );
+    test_request_id++;
+
+    ASSERT_TRUE ( test_client.getConnection()->getServerErrors().empty() );
+
+    ASSERT_TRUE ( test_client.getErrors().empty() );
+
+    ASSERT_EQ   ( test_request_id - 1 , test_client.getPreviousRequestID() );
+
+    // extension 01 response
+
+    ASSERT_EQ   ( 3 , test_client.getExtensionResponseSize() );
+
+    for (int index = 0; index < test_client.getExtensionResponseSize(); index++)
+    {
+        DataObject extension_response;
+
+        ASSERT_TRUE ( test_client.getExtensionResponseAt( index , extension_response ) );
+
+        if ( index == 0 )
+        {
+            ASSERT_EQ ( (std::size_t) 3 , extension_response.size());
+
+            ASSERT_TRUE ( extension_response["field_01"].is_string() );
+            ASSERT_TRUE ( extension_response["field_02"].is_int()    );
+            ASSERT_TRUE ( extension_response["field_03"].is_double() );
+
+            ASSERT_EQ ( "word_01" , extension_response["field_01"].to_string() );
+            ASSERT_EQ ( 111111111 , extension_response["field_02"].to_int()    );
+            ASSERT_EQ ( 1111.1111 , extension_response["field_03"].to_double() );
+        }
+        else if ( index == 1 )
+        {
+            ASSERT_EQ ( (std::size_t) 3 , extension_response.size());
+
+            ASSERT_TRUE ( extension_response["field_01"].is_string() );
+            ASSERT_TRUE ( extension_response["field_02"].is_int()    );
+            ASSERT_TRUE ( extension_response["field_03"].is_double() );
+
+            ASSERT_EQ ( "word_02" , extension_response["field_01"].to_string() );
+            ASSERT_EQ ( 222222222 , extension_response["field_02"].to_int()    );
+            ASSERT_EQ ( 2222.2222 , extension_response["field_03"].to_double() );
+        }
+        else if ( index == 2 )
+        {
+            ASSERT_EQ ( (std::size_t) 3 , extension_response.size());
+
+            ASSERT_TRUE ( extension_response["field_01"].is_string() );
+            ASSERT_TRUE ( extension_response["field_02"].is_int()    );
+            ASSERT_TRUE ( extension_response["field_03"].is_double() );
+
+            ASSERT_EQ ( "word_03" , extension_response["field_01"].to_string() );
+            ASSERT_EQ ( 333333333 , extension_response["field_02"].to_int()    );
+            ASSERT_EQ ( 3333.3333 , extension_response["field_03"].to_double() );
+        }
+    }
+}
+
+TEST(client, extension_request_and_response_02)
+{
+    // extension 02 request
+
+    std::string extension_method  = "testMethod02";
+    int         line              =  6;
+    int         character         =  7;
+
+    ASSERT_TRUE ( test_client.doExtensionMethod( extension_method ,
+                                                 line             ,
+                                                 character        ) );
+    test_request_id++;
+
+    ASSERT_TRUE ( test_client.getConnection()->getServerErrors().empty() );
+
+    ASSERT_TRUE ( test_client.getErrors().empty() );
+
+    ASSERT_EQ   ( test_request_id - 1 , test_client.getPreviousRequestID() );
+
+    // extension 02 response
+
+    ASSERT_EQ   ( 1 , test_client.getExtensionResponseSize() );
+
+    DataObject extension_response;
+
+    ASSERT_TRUE ( test_client.getExtensionResponseAt( 0 , extension_response ) );
+
+    ASSERT_EQ ( (std::size_t) 5 , extension_response.size());
+
+    ASSERT_TRUE ( extension_response["name"].is_string() );
+    ASSERT_TRUE ( extension_response["kind"].is_string() );
+    ASSERT_TRUE ( extension_response["xval"].is_array()  );
+    ASSERT_TRUE ( extension_response["yval"].is_array()  );
+    ASSERT_TRUE ( extension_response["stdv"].is_array()  );
+
+    DataArray* xval = extension_response["xval"].to_array();
+    DataArray* yval = extension_response["yval"].to_array();
+    DataArray* stdv = extension_response["stdv"].to_array();
+
+    ASSERT_EQ ( (std::size_t) 4 , xval->size() );
+    ASSERT_EQ ( (std::size_t) 4 , yval->size() );
+    ASSERT_EQ ( (std::size_t) 4 , stdv->size() );
+
+    ASSERT_EQ ( "title" , extension_response["name"].to_string() );
+    ASSERT_EQ ( "lined" , extension_response["kind"].to_string() );
+
+    ASSERT_EQ ( "aaa" , xval->at(0).to_string() );
+    ASSERT_EQ ( "bbb" , xval->at(1).to_string() );
+    ASSERT_EQ ( "ccc" , xval->at(2).to_string() );
+    ASSERT_EQ ( "ddd" , xval->at(3).to_string() );
+
+    ASSERT_EQ ( 11111 , yval->at(0).to_int() );
+    ASSERT_EQ ( 22222 , yval->at(1).to_int() );
+    ASSERT_EQ ( 33333 , yval->at(2).to_int() );
+    ASSERT_EQ ( 44444 , yval->at(3).to_int() );
+
+    ASSERT_EQ ( 11.11 , stdv->at(0).to_double() );
+    ASSERT_EQ ( 22.22 , stdv->at(1).to_double() );
+    ASSERT_EQ ( 33.33 , stdv->at(2).to_double() );
+    ASSERT_EQ ( 44.44 , stdv->at(3).to_double() );
 }
 
 TEST(client, document_close)

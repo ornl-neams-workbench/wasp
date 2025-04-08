@@ -29,6 +29,8 @@ class WASP_PUBLIC TestServer : public ServerImpl
         this->enableFormatting();
         this->enableHover();
         this->enableSymbols();
+        this->enableExtension("testMethod01");
+        this->enableExtension("testMethod02");
     }
 
     /** get read / write connection - specific to this server implemention
@@ -113,6 +115,19 @@ class WASP_PUBLIC TestServer : public ServerImpl
      */
     bool gatherDocumentSymbols(
                           DataArray & documentSymbols );
+
+    /** gather extension responses - specific to this server implemention
+     * @param extensionResponses - data array of custom responses to fill
+     * @param extensionMethod - name for current extension request method
+     * @param line - zero-based line to use for logic of custom extension
+     * @param character - zero-based column for logic of custom extension
+     * @return - true if request successfully handled with response built
+     */
+    bool gatherExtensionResponses(
+                          wasp::DataArray   & extensionResponses ,
+                          const std::string & extensionMethod    ,
+                          int                 line               ,
+                          int                 character          );
 
     /** read from connection into object - specific to this server's connection
      * @param object - reference to object to be read into

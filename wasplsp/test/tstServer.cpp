@@ -4,6 +4,7 @@
 #include "waspcore/Object.h"
 #include "gtest/gtest.h"
 #include <sstream>
+#include <string>
 
 namespace wasp {
 namespace lsp  {
@@ -65,6 +66,10 @@ TEST(server, handle_initialize)
     ,"definitionProvider" : true
     ,"documentFormattingProvider" : true
     ,"documentSymbolProvider" : true
+    ,"extensionsProvider" : {
+      "testMethod01" : true
+      ,"testMethod02" : true
+    }
     ,"hoverProvider" : true
     ,"textDocumentSync" : {
       "change" : 1
@@ -919,6 +924,139 @@ TEST(server, handle_symbols)
     ASSERT_EQ ( json_expected.str() , json.str() );
 }
 
+TEST(server, handle_extension_01)
+{
+    DataObject        extensionRequest;
+    std::stringstream errors;
+
+    // extension 01 test parameters
+
+    int         client_request_id =  test_request_id;
+    std::string extension_method  = "testMethod01";
+    std::string document_path     = "test/document/uri/string";
+    int         line              =  3;
+    int         character         =  4;
+
+    // build extension 01 request with the test parameters
+
+    ASSERT_TRUE(buildExtensionRequest( extensionRequest  ,
+                                       errors            ,
+                                       extension_method  ,
+                                       client_request_id ,
+                                       document_path     ,
+                                       line              ,
+                                       character         ));
+
+    DataObject extensionResponse;
+
+    // handle the built extension 01 request with the test_server
+
+    ASSERT_TRUE(test_server.handleExtensionRequest( extension_method,
+                                                    extensionRequest  ,
+                                                    extensionResponse ));
+    test_request_id++;
+
+    // check the formatted json from the test_server's response object
+
+    std::stringstream json;
+    json.precision(15);
+    extensionResponse.format_json(json);
+
+    std::stringstream json_expected;
+    json_expected << R"INPUT({
+  "id" : 8
+  ,"result" : [
+    {
+    "field_01" : "word_01"
+    ,"field_02" : 111111111
+    ,"field_03" : 1111.1111
+  }
+    ,{
+    "field_01" : "word_02"
+    ,"field_02" : 222222222
+    ,"field_03" : 2222.2222
+  }
+    ,{
+    "field_01" : "word_03"
+    ,"field_02" : 333333333
+    ,"field_03" : 3333.3333
+  }
+  ]
+})INPUT";
+
+    ASSERT_EQ ( json_expected.str() , json.str() );
+}
+
+TEST(server, handle_extension_02)
+{
+    DataObject        extensionRequest;
+    std::stringstream errors;
+
+    // extension 02 test parameters
+
+    int         client_request_id =  test_request_id;
+    std::string extension_method  = "testMethod02";
+    std::string document_path     = "test/document/uri/string";
+    int         line              =  6;
+    int         character         =  7;
+
+    // build extension 02 request with the test parameters
+
+    ASSERT_TRUE(buildExtensionRequest( extensionRequest  ,
+                                       errors            ,
+                                       extension_method  ,
+                                       client_request_id ,
+                                       document_path     ,
+                                       line              ,
+                                       character         ));
+
+    DataObject extensionResponse;
+
+    // handle the built extension 02 request with the test_server
+
+    ASSERT_TRUE(test_server.handleExtensionRequest( extension_method,
+                                                    extensionRequest  ,
+                                                    extensionResponse ));
+    test_request_id++;
+
+    // check the formatted json from the test_server's response object
+
+    std::stringstream json;
+    json.precision(15);
+    extensionResponse.format_json(json);
+
+    std::stringstream json_expected;
+    json_expected << R"INPUT({
+  "id" : 9
+  ,"result" : [
+    {
+    "kind" : "lined"
+    ,"name" : "title"
+    ,"stdv" : [
+      11.11
+      ,22.22
+      ,33.33
+      ,44.44
+    ]
+    ,"xval" : [
+      "aaa"
+      ,"bbb"
+      ,"ccc"
+      ,"ddd"
+    ]
+    ,"yval" : [
+      11111
+      ,22222
+      ,33333
+      ,44444
+    ]
+  }
+  ]
+})INPUT";
+
+    ASSERT_EQ ( json_expected.str() , json.str() );
+}
+
 TEST(server, handle_didclose)
 {
     DataObject        didCloseNotification;
@@ -969,7 +1107,7 @@ TEST(server, handle_shutdown)
 
     std::stringstream json_expected;
     json_expected << R"INPUT({
-  "id" : 8
+  "id" : 10
   ,"result" : {}
 })INPUT";
 

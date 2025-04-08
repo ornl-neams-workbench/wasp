@@ -453,6 +453,82 @@ bool dissectSymbolsRequest( const wasp::DataObject & object ,
                                   int          & request_id ,
                                   std::string  & uri        );
 
+/** build extension request object from parameters with input information
+ * @param object - reference to data object that will be built of request
+ * @param errors - reference to stream to add any possible error messages
+ * @param extension_method - name given to custom server extension method
+ * @param request_id - id of client request to match response from server
+ * @param uri - well formed URI path for input document from this request
+ * @param line - zero-based line number of document for extension request
+ * @param character - zero-based column of document for extension request
+ * @return - true if request object successfully built without any errors
+ */
+WASP_PUBLIC
+bool buildExtensionRequest( wasp::DataObject  & object           ,
+                            std::ostream      & errors           ,
+                            const std::string & extension_method ,
+                            int                 request_id       ,
+                            const std::string & uri              ,
+                            int                 line             ,
+                            int                 character        );
+
+/** dissect custom extension request object data into provided parameters
+ * @param object - const reference to request data that will be dissected
+ * @param errors - reference to stream to add any possible error messages
+ * @param request_id - id of client request to match response from server
+ * @param uri - well formed URI path for input document from this request
+ * @param line - zero-based line number of document for extension request
+ * @param character - zero-based column of document for extension request
+ * @return - true if request was dissected into parameters without errors
+ */
+WASP_PUBLIC
+bool dissectExtensionRequest( const wasp::DataObject & object     ,
+                                    std::ostream     & errors     ,
+                                    int              & request_id ,
+                                    std::string      & uri        ,
+                                    int              & line       ,
+                                    int              & character  );
+
+/** build extension response object from array of results with request id
+ * @param object - reference to response data object that will get filled
+ * @param errors - reference to stream to add any possible error messages
+ * @param request_id - id of client request to match response from server
+ * @param extension_responses - data array of results for response object
+ * @return - true if reference to response object was filled successfully
+ */
+WASP_PUBLIC
+bool buildExtensionResponse( wasp::DataObject & object              ,
+                             std::ostream     & errors              ,
+                             int                request_id          ,
+                             const DataArray  & extension_responses );
+
+/** dissect extension response object into array of result and request id
+ * @param object - const reference to object for response being dissected
+ * @param errors - reference to stream to add any possible error messages
+ * @param request_id - id of client request to match response from server
+ * @param extension_responses - reference for results array to get filled
+ * @return - true if response was dissected to results without any errors
+ */
+WASP_PUBLIC
+bool dissectExtensionResponse( const wasp::DataObject & object              ,
+                                     std::ostream     & errors              ,
+                                     int              & request_id          ,
+                                     wasp::DataArray  & extension_responses );
+
+/** verify if provided object structure is correct for extension response
+ * @param object - const reference to object for response to get verified
+ * @return - true if structure of object is proper for extension response
+ */
+WASP_PUBLIC
+bool verifyExtensionResponse( const wasp::DataObject & object );
+
+/** return data array pointer to custom extension method response objects
+ * @param object - parent object for which array pointer will be returned
+ * @return - data array pointer to response objects from custom extension
+ */
+WASP_PUBLIC
+wasp::DataArray * getExtensionResponseArray( const wasp::DataObject & object );
+
 /** build didclose notification object from the provided parameters
  * @param object - reference to data object that will be built
  * @param errors - reference to stream to fill with any possible errors
@@ -1317,6 +1393,8 @@ static const char m_doc_format_provider[]   = "documentFormattingProvider";
 static const char m_definition_provider[]   = "definitionProvider";
 static const char m_references_provider[]   = "referencesProvider";
 static const char m_hover_provider[]        = "hoverProvider";
+static const char m_extensions_provider[]   = "extensionsProvider";
+static const char m_extensions[]            = "extensions";
 static const int  m_change_full             =  1;
 static const int  m_change_incr             =  2;
 static const int  m_text_format_plaintext   =  1;

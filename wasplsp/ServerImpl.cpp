@@ -92,16 +92,22 @@ bool ServerImpl::run()
         }
 
         // if request method is unknown then send back error and keep going
+        // unless method is supported by client then call extension handler
 
         else if ( objectHasRequestId(input_object) )
         {
-            this->errors << m_error_prefix
-                         << "Server request has unsupported method: "
-                         << "\"" << method_name << "\"" << std::endl;
-
-            buildErrorResponse( output_object            ,
-                                m_method_not_found_error ,
-                                this->errors.str()       );
+            if ( !this->clientSupportsExtension(method_name) )
+            {
+                this->errors << m_error_prefix
+                             << "Server request has unsupported method: "
+                             << "\"" << method_name << "\"" << std::endl;
+                buildErrorResponse( output_object            ,
+                                    m_method_not_found_error ,
+                                    this->errors.str()       );
+            }
+            else pass &= this->handleExtensionRequest( method_name   ,
+                                                       input_object  ,
+                                                       output_object );
         }
 
         // if anything failed in the process, then build an error response
@@ -170,6 +176,14 @@ bool ServerImpl::handleInitializeRequest(
             }
         }
     }
+
+    // cache extension method names announced in client capabilities from
+    // capabilities/extensions/<method_name> = true
+    if (client_capabilities.contains(m_extensions) &&
+        client_capabilities[m_extensions].is_object())
+        for (const auto & c : *(client_capabilities[m_extensions].to_object()))
+            if (c.second.is_bool() && c.second.to_bool())
+                this->client_extension_methods.insert(c.first);
 
     // build initialize response object
 
@@ -635,6 +649,57 @@ bool ServerImpl::handleSymbolsRequest(
                                   this->errors            ,
                                   this->client_request_id ,
                                   document_symbols        );
+
+    return pass;
+}
+
+bool ServerImpl::handleExtensionRequest(
+                const std::string      & extensionMethod   ,
+                const wasp::DataObject & extensionRequest  ,
+                      wasp::DataObject & extensionResponse )
+{
+    if (!this->is_initialized)
+    {
+        this->errors << m_error_prefix << "Server needs to be initialized" << std::endl;
+        return false;
+    }
+
+    bool pass = true;
+
+    std::string document_path;
+    int         line;
+    int         character;
+
+    // dissect extension request object
+    pass &= dissectExtensionRequest( extensionRequest        ,
+                                     this->errors            ,
+                                     this->client_request_id ,
+                                     document_path           ,
+                                     line                    ,
+                                     character               );
+
+    if (!this->document_versions.count(document_path))
+    {
+        this->errors << m_error_prefix << "Server has not opened '" << document_path << "'" << std::endl;
+        return false;
+    }
+
+    // set current document path on server to input path for this operation
+    this->document_path = document_path;
+
+    DataArray extension_responses;
+
+    // call server specific method to gather the extension responses
+    pass &= this->gatherExtensionResponses( extension_responses ,
+                                            extensionMethod     ,
+                                            line                ,
+                                            character           );
+
+    // build extension response object
+    pass &= buildExtensionResponse( extensionResponse       ,
+                                    this->errors            ,
+                                    this->client_request_id ,
+                                    extension_responses     );
 
     return pass;
 }

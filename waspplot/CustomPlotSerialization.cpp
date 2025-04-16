@@ -1,4 +1,4 @@
-// customplot_serialization.cpp
+// CustomPlotSerialization.cpp
 #include "waspplot/CustomPlotSerialization.h"
 
 namespace wasp
@@ -151,55 +151,81 @@ DataObject serializeCustomPlot(const CustomPlot& plot)
 CustomPlot::Color deserializeColor(const DataObject& obj)
 {
     CustomPlot::Color color;
-    color.red(obj["red"].to_int());
-    color.green(obj["green"].to_int());
-    color.blue(obj["blue"].to_int());
-    color.alpha(obj["alpha"].to_int());
+    if (obj.contains("red"))
+        color.red(obj["red"].to_int());
+    if (obj.contains("green"))
+        color.green(obj["green"].to_int());
+    if (obj.contains("blue"))
+        color.blue(obj["blue"].to_int());
+    if (obj.contains("alpha"))
+        color.alpha(obj["alpha"].to_int());
     return color;
 }
 
 CustomPlot::Font deserializeFont(const DataObject& obj)
 {
     CustomPlot::Font font;
-    font.family(obj["family"].to_string());
-    font.pointsize(obj["pointsize"].to_int());
-    font.bold(obj["bold"].to_bool());
-    font.italic(obj["italic"].to_bool());
-    font.underline(obj["underline"].to_bool());
-    font.strikeout(obj["strikeout"].to_bool());
+    if (obj.contains("family"))
+        font.family(obj["family"].to_string());
+    if (obj.contains("pointsize"))
+        font.pointsize(obj["pointsize"].to_int());
+    if (obj.contains("bold"))
+        font.bold(obj["bold"].to_bool());
+    if (obj.contains("italic"))
+        font.italic(obj["italic"].to_bool());
+    if (obj.contains("underline"))
+        font.underline(obj["underline"].to_bool());
+    if (obj.contains("strikeout"))
+        font.strikeout(obj["strikeout"].to_bool());
     return font;
 }
 
 CustomPlot::Title deserializeTitle(const DataObject& obj)
 {
     CustomPlot::Title title;
-    title.text(obj["text"].to_string());
-    title.visible(obj["visible"].to_bool());
-    title.font()  = deserializeFont(*obj["font"].to_object());
-    title.color() = deserializeColor(*obj["color"].to_object());
+    if (obj.contains("text"))
+        title.text(obj["text"].to_string());
+    if (obj.contains("visible"))
+        title.visible(obj["visible"].to_bool());
+    if (obj.contains("font"))
+        title.font() = deserializeFont(*obj["font"].to_object());
+    if (obj.contains("color"))
+        title.color() = deserializeColor(*obj["color"].to_object());
     return title;
 }
 
 CustomPlot::Legend deserializeLegend(const DataObject& obj)
 {
     CustomPlot::Legend legend;
-    legend.visible(obj["visible"].to_bool());
-    legend.font() = deserializeFont(*obj["font"].to_object());
+    if (obj.contains("visible"))
+        legend.visible(obj["visible"].to_bool());
+    if (obj.contains("font"))
+        legend.font() = deserializeFont(*obj["font"].to_object());
     return legend;
 }
 
 CustomPlot::Axis deserializeAxis(const DataObject& obj)
 {
     CustomPlot::Axis axis;
-    axis.label(obj["label"].to_string());
-    axis.visible(obj["visible"].to_bool());
-    axis.scaleType(CustomPlot::scaleType(obj["scaleType"].to_string()));
-    axis.labelType(CustomPlot::labelType(obj["labelType"].to_string()));
-    axis.rangeMin(obj["rangeMin"].to_double());
-    axis.rangeMax(obj["rangeMax"].to_double());
-    axis.labelColor()    = deserializeColor(*obj["labelColor"].to_object());
-    axis.labelFont()     = deserializeFont(*obj["labelFont"].to_object());
-    axis.tickLabelFont() = deserializeFont(*obj["tickLabelFont"].to_object());
+    if (obj.contains("label"))
+        axis.label(obj["label"].to_string());
+    if (obj.contains("visible"))
+        axis.visible(obj["visible"].to_bool());
+    if (obj.contains("scaleType"))
+        axis.scaleType(CustomPlot::scaleType(obj["scaleType"].to_string()));
+    if (obj.contains("labelType"))
+        axis.labelType(CustomPlot::labelType(obj["labelType"].to_string()));
+    if (obj.contains("rangeMin"))
+        axis.rangeMin(obj["rangeMin"].to_double());
+    if (obj.contains("rangeMax"))
+        axis.rangeMax(obj["rangeMax"].to_double());
+    if (obj.contains("labelColor"))
+        axis.labelColor() = deserializeColor(*obj["labelColor"].to_object());
+    if (obj.contains("labelFont"))
+        axis.labelFont() = deserializeFont(*obj["labelFont"].to_object());
+    if (obj.contains("tickLabelFont"))
+        axis.tickLabelFont() =
+            deserializeFont(*obj["tickLabelFont"].to_object());
     return axis;
 }
 
@@ -211,22 +237,33 @@ std::shared_ptr<CustomPlot::Series> deserializeSeries(const DataObject& obj)
     if (type == "Graph")
     {
         auto graph = std::make_shared<CustomPlot::Graph>();
-        graph->areaOpacity(obj["areaOpacity"].to_int());
-        graph->errorType(CustomPlot::errorType(obj["errorType"].to_string()));
-        graph->lineStyle(CustomPlot::lineStyle(obj["lineStyle"].to_string()));
-        graph->lineWeight(obj["lineWeight"].to_int());
-        graph->scatterShape(
-            CustomPlot::scatterShape(obj["scatterShape"].to_string()));
-        graph->scatterSize(obj["scatterSize"].to_double());
-
-        for (auto& d : *obj["keysUncertaintyLow"].to_array())
-            graph->keysUncertaintyLow().push_back(d.to_double());
-        for (auto& d : *obj["keysUncertaintyHigh"].to_array())
-            graph->keysUncertaintyHigh().push_back(d.to_double());
-        for (auto& d : *obj["valuesUncertaintyLow"].to_array())
-            graph->valuesUncertaintyLow().push_back(d.to_double());
-        for (auto& d : *obj["valuesUncertaintyHigh"].to_array())
-            graph->valuesUncertaintyHigh().push_back(d.to_double());
+        if (obj.contains("areaOpacity"))
+            graph->areaOpacity(obj["areaOpacity"].to_int());
+        if (obj.contains("errorType"))
+            graph->errorType(
+                CustomPlot::errorType(obj["errorType"].to_string()));
+        if (obj.contains("lineStyle"))
+            graph->lineStyle(
+                CustomPlot::lineStyle(obj["lineStyle"].to_string()));
+        if (obj.contains("lineWeight"))
+            graph->lineWeight(obj["lineWeight"].to_int());
+        if (obj.contains("scatterShape"))
+            graph->scatterShape(
+                CustomPlot::scatterShape(obj["scatterShape"].to_string()));
+        if (obj.contains("scatterSize"))
+            graph->scatterSize(obj["scatterSize"].to_double());
+        if (obj.contains("keysUncertaintyLow"))
+            for (auto& d : *obj["keysUncertaintyLow"].to_array())
+                graph->keysUncertaintyLow().push_back(d.to_double());
+        if (obj.contains("keysUncertaintyHigh"))
+            for (auto& d : *obj["keysUncertaintyHigh"].to_array())
+                graph->keysUncertaintyHigh().push_back(d.to_double());
+        if (obj.contains("valuesUncertaintyLow"))
+            for (auto& d : *obj["valuesUncertaintyLow"].to_array())
+                graph->valuesUncertaintyLow().push_back(d.to_double());
+        if (obj.contains("valuesUncertaintyHigh"))
+            for (auto& d : *obj["valuesUncertaintyHigh"].to_array())
+                graph->valuesUncertaintyHigh().push_back(d.to_double());
 
         series = graph;
     }
@@ -237,16 +274,19 @@ std::shared_ptr<CustomPlot::Series> deserializeSeries(const DataObject& obj)
     else if (type == "ColorMap")
     {
         auto cmap = std::make_shared<CustomPlot::ColorMap>();
-        cmap->gradient(CustomPlot::gradientPreset(obj["gradient"].to_string()));
+        if (obj.contains("gradient"))
+            cmap->gradient(
+                CustomPlot::gradientPreset(obj["gradient"].to_string()));
 
         std::vector<std::vector<double>> matrix;
-        for (auto& rowVal : *obj["data"].to_array())
-        {
-            std::vector<double> row;
-            for (auto& colVal : *rowVal.to_array())
-                row.push_back(colVal.to_double());
-            matrix.push_back(row);
-        }
+        if (obj.contains("data"))
+            for (auto& rowVal : *obj["data"].to_array())
+            {
+                std::vector<double> row;
+                for (auto& colVal : *rowVal.to_array())
+                    row.push_back(colVal.to_double());
+                matrix.push_back(row);
+            }
         cmap->data(matrix);
 
         series = cmap;
@@ -256,13 +296,18 @@ std::shared_ptr<CustomPlot::Series> deserializeSeries(const DataObject& obj)
         return nullptr;
     }
 
-    series->name(obj["name"].to_string());
-    series->keyAxis(obj["keyAxis"].to_int());
-    series->valueAxis(obj["valueAxis"].to_int());
-    for (auto& k : *obj["keys"].to_array())
-        series->keys().push_back(k.to_double());
-    for (auto& v : *obj["values"].to_array())
-        series->values().push_back(v.to_double());
+    if (obj.contains("name"))
+        series->name(obj["name"].to_string());
+    if (obj.contains("keyAxis"))
+        series->keyAxis(obj["keyAxis"].to_int());
+    if (obj.contains("valueAxis"))
+        series->valueAxis(obj["valueAxis"].to_int());
+    if (obj.contains("keys"))
+        for (auto& k : *obj["keys"].to_array())
+            series->keys().push_back(k.to_double());
+    if (obj.contains("values"))
+        for (auto& v : *obj["values"].to_array())
+            series->values().push_back(v.to_double());
 
     return series;
 }
@@ -270,19 +315,26 @@ std::shared_ptr<CustomPlot::Series> deserializeSeries(const DataObject& obj)
 std::shared_ptr<CustomPlot> deserializeCustomPlot(const DataObject& obj)
 {
     std::shared_ptr<CustomPlot> plot = std::make_shared<CustomPlot>();
-    plot->title() = deserializeTitle(*obj["title"].to_object());
-    plot->legend() = deserializeLegend(*obj["legend"].to_object());
-    plot->x1Axis() = deserializeAxis(*obj["x1Axis"].to_object());
-    plot->x2Axis() = deserializeAxis(*obj["x2Axis"].to_object());
-    plot->y1Axis() = deserializeAxis(*obj["y1Axis"].to_object());
-    plot->y2Axis() = deserializeAxis(*obj["y2Axis"].to_object());
+    if (obj.contains("title"))
+        plot->title() = deserializeTitle(*obj["title"].to_object());
+    if (obj.contains("legend"))
+        plot->legend() = deserializeLegend(*obj["legend"].to_object());
+    if (obj.contains("x1Axis"))
+        plot->x1Axis() = deserializeAxis(*obj["x1Axis"].to_object());
+    if (obj.contains("x2Axis"))
+        plot->x2Axis() = deserializeAxis(*obj["x2Axis"].to_object());
+    if (obj.contains("y1Axis"))
+        plot->y1Axis() = deserializeAxis(*obj["y1Axis"].to_object());
+    if (obj.contains("y2Axis"))
+        plot->y2Axis() = deserializeAxis(*obj["y2Axis"].to_object());
 
-    for (const auto& s : *obj["series"].to_array())
-    {
-        auto series = deserializeSeries(*s.to_object());
-        if (series)
-            plot->series().push_back(series);
-    }
+    if (obj.contains("series"))
+        for (const auto& s : *obj["series"].to_array())
+        {
+            auto series = deserializeSeries(*s.to_object());
+            if (series)
+                plot->series().push_back(series);
+        }
     return plot;
 }
 

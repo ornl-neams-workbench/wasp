@@ -185,7 +185,7 @@ TEST(CustomPlotSerializationTest, GraphHandlesEmptyUncertainty)
     EXPECT_TRUE(g2->keysUncertaintyLow().empty());
 }
 // TODO add gaurds to deserialization logic to use default structures
-TEST(CustomPlotSerializationTest, DISABLED_MissingOptionalFieldsHandledGracefully)
+TEST(CustomPlotSerializationTest, MissingOptionalFieldsHandledGracefully)
 {
     DataObject graphObj;
     graphObj["type"]   = "Graph";
@@ -202,8 +202,108 @@ TEST(CustomPlotSerializationTest, DISABLED_MissingOptionalFieldsHandledGracefull
 
     EXPECT_EQ(graph->name(), "Incomplete Graph");
     EXPECT_EQ(graph->keys().size(), 2);
-    EXPECT_EQ(graph->lineStyle(), CustomPlot::lsNone);  // Default enum
+    EXPECT_EQ(graph->lineStyle(), CustomPlot::lsLine);  // Default enum
     EXPECT_TRUE(graph->keysUncertaintyLow().empty());   // Defaults
+}
+
+
+TEST(CustomPlotSerializationTest, DeserializePartialTitle) {
+    DataObject titleObj;
+    titleObj["text"] = "Minimal Title";
+    titleObj["visible"] = true;
+
+    CustomPlot::Title title = deserializeTitle(titleObj);
+    EXPECT_EQ(title.text(), "Minimal Title");
+    EXPECT_TRUE(title.visible());
+    EXPECT_EQ(title.font().pointsize(), 13); // default
+    EXPECT_EQ(title.font().family(), "");   // default
+    EXPECT_EQ(title.font().bold(), false);
+    EXPECT_EQ(title.color().red(), 0);      // default
+    EXPECT_EQ(title.color().alpha(), 255);    // default
+}
+
+TEST(CustomPlotSerializationTest, DeserializePartialAxis) {
+    DataObject axisObj;
+    axisObj["label"] = "Axis Label";
+    axisObj["visible"] = true;
+
+    CustomPlot::Axis axis = deserializeAxis(axisObj);
+    EXPECT_EQ(axis.label(), "Axis Label");
+    EXPECT_TRUE(axis.visible());
+    EXPECT_EQ(axis.scaleType(), CustomPlot::stLinear); // default
+    EXPECT_EQ(axis.labelType(), CustomPlot::ltNumber); // default
+    EXPECT_FALSE(axis.hasRangeMin());
+    EXPECT_FALSE(axis.hasRangeMax());
+    EXPECT_EQ(axis.labelFont().pointsize(), 13);        // default
+    EXPECT_EQ(axis.labelColor().alpha(), 255);           // default
+}
+
+TEST(CustomPlotSerializationTest, DeserializePartialGraph) {
+    DataObject graphObj;
+    graphObj["type"] = "Graph";
+    graphObj["name"] = "Basic Graph";
+    graphObj["keys"] = DataArray{1.0, 2.0};
+    graphObj["values"] = DataArray{10.0, 20.0};
+
+    auto series = deserializeSeries(graphObj);
+    auto graph = std::dynamic_pointer_cast<CustomPlot::Graph>(series);
+    ASSERT_TRUE(graph);
+    EXPECT_EQ(graph->name(), "Basic Graph");
+    EXPECT_EQ(graph->keys().size(), 2);
+    EXPECT_EQ(graph->values().at(1), 20.0);
+    EXPECT_EQ(graph->errorType(), CustomPlot::etNone); // default
+    EXPECT_EQ(graph->lineStyle(), CustomPlot::lsLine); // default
+    EXPECT_EQ(graph->scatterSize(), 6.0);              // default
+    EXPECT_TRUE(graph->keysUncertaintyLow().empty());
+}
+
+TEST(CustomPlotSerializationTest, DeserializeUnknownSeriesType) {
+    DataObject obj;
+    obj["type"] = "Unknown";
+    obj["name"] = "Mystery";
+
+    auto series = deserializeSeries(obj);
+    EXPECT_EQ(series, nullptr);
+}
+
+TEST(CustomPlotSerializationTest, DeserializePartialCustomPlot) {
+    DataObject plotObj;
+    plotObj["title"] = DataObject{{"text", "Plot with Only Title"}};
+    plotObj["series"] = DataArray{
+        DataObject{{"type", "Bar"}, {"name", "Bar Only"}}
+    };
+
+    std::shared_ptr<CustomPlot> plot = deserializeCustomPlot(plotObj);
+    EXPECT_EQ(plot->title().text(), "Plot with Only Title");
+    ASSERT_EQ(plot->series().size(), 1);
+    EXPECT_EQ(plot->series()[0]->name(), "Bar Only");
+}
+
+TEST(CustomPlotSerializationTest, MalformedAxisDataType) {
+    DataObject axisObj;
+    axisObj["label"] = 123;  // Invalid type
+    axisObj["rangeMin"] = "not-a-number"; //
+
+    EXPECT_NO_THROW({
+        CustomPlot::Axis axis = deserializeAxis(axisObj);
+        EXPECT_EQ(axis.label(), "123"); // type is converted
+        EXPECT_TRUE(axis.hasRangeMin());
+        EXPECT_EQ(0.0, axis.rangeMin());
+    });
+}
+
+TEST(CustomPlotSerializationTest, MalformedSeriesDataIgnored) {
+    DataObject graphObj;
+    graphObj["type"] = "Graph";
+    graphObj["name"] = "Faulty";
+    graphObj["keys"] =  DataArray{1.0, "oops"};  // Mixed types
+
+    EXPECT_NO_THROW({
+        auto series = deserializeSeries(graphObj);
+        ASSERT_TRUE(series);
+        EXPECT_EQ(series->name(), "Faulty");
+        EXPECT_GE(series->keys().size(), 1);
+    });
 }
 
 }  // namespace wasp

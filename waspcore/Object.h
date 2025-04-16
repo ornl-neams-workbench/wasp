@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "waspcore/decl.h"
 
@@ -224,6 +225,16 @@ class WASP_PUBLIC DataObject
   public:
     DataObject();
     DataObject(const DataObject& orig);
+
+    DataObject(const std::pair<std::string,Value>& p)
+    {
+      this->insert(p);
+    }
+
+    DataObject(std::initializer_list<std::pair<std::string,Value>>l)
+    {
+      for (auto d : l) this->insert(d);
+    }
     ~DataObject();
 
     size_t size() const;

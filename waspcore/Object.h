@@ -171,8 +171,7 @@ class WASP_PUBLIC DataArray
     DataArray();
     DataArray(const DataArray& orig);
     ~DataArray();
-    template<typename T>
-    DataArray(std::initializer_list<T>l)
+    DataArray(std::initializer_list<Value>l)
     {
       for( auto d : l) this->push_back(d);
     }

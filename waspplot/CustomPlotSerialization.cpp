@@ -101,6 +101,9 @@ DataObject serializeSeries(const std::shared_ptr<CustomPlot::Series>& series)
         values.push_back(v);
     obj["keys"]   = keys;
     obj["values"] = values;
+    obj["pen"]    = serializePen(series->pen());
+    obj["selectedbrush"] = serializeBrush(series->selectedBrush());
+    obj["selectedpen"] = serializePen(series->selectedPen());
 
     if (auto graph = std::dynamic_pointer_cast<CustomPlot::Graph>(series))
     {
@@ -368,6 +371,12 @@ std::shared_ptr<CustomPlot::Series> deserializeSeries(const DataObject& obj)
 
     if (obj.contains("name"))
         series->name(obj["name"].to_string());
+    if (obj.contains("pen"))
+        series->pen() = deserializePen(*obj["pen"].to_object());
+    if (obj.contains("selectedbrush"))
+        series->selectedBrush() = deserializeBrush(*obj["selectedbrush"].to_object());
+    if (obj.contains("selectedpen"))
+        series->pen() = deserializePen(*obj["selectedpen"].to_object());
     if (obj.contains("keyAxis"))
         series->keyAxis(obj["keyAxis"].to_int());
     if (obj.contains("valueAxis"))

@@ -43,6 +43,33 @@ DataObject serializeLegend(const CustomPlot::Legend& legend)
     obj["font"]    = serializeFont(legend.font());
     return obj;
 }
+DataObject serializeBrush(const CustomPlot::Brush& brush)
+{
+    DataObject obj;
+    obj["style"] = CustomPlot::brushStyle(brush.style());
+    obj["color"] = serializeColor(brush.color());
+    return obj;
+}
+DataObject serializePen(const CustomPlot::Pen& pen)
+{
+    DataObject obj;
+    obj["width"] = pen.width();
+    obj["style"] = CustomPlot::penStyle(pen.style());
+    obj["capStyle"] = CustomPlot::penCapStyle(pen.capStyle());
+    obj["joinStyle"] = CustomPlot::penJoinStyle(pen.joinStyle());
+    obj["brush"] = serializeBrush(pen.brush());
+    return obj;
+}
+
+DataObject serializeGrid(const CustomPlot::Grid& grid)
+{
+    DataObject obj;
+    obj["visible"] = grid.visible();
+    obj["subGridVisible"] = grid.subGridVisible();
+    obj["pen"] = serializePen(grid.pen());
+    obj["subGridPen"] = serializePen(grid.subGridPen());
+    return obj;
+}
 
 DataObject serializeAxis(const CustomPlot::Axis& axis)
 {
@@ -53,6 +80,7 @@ DataObject serializeAxis(const CustomPlot::Axis& axis)
     obj["labelType"]     = CustomPlot::labelType(axis.labelType());
     obj["rangeMin"]      = axis.rangeMin();
     obj["rangeMax"]      = axis.rangeMax();
+    obj["grid"]          = serializeGrid(axis.grid());
     obj["labelColor"]    = serializeColor(axis.labelColor());
     obj["labelFont"]     = serializeFont(axis.labelFont());
     obj["tickLabelFont"] = serializeFont(axis.tickLabelFont());
@@ -204,6 +232,46 @@ CustomPlot::Legend deserializeLegend(const DataObject& obj)
     return legend;
 }
 
+CustomPlot::Brush deserializeBrush(const DataObject& obj)
+{
+    CustomPlot::Brush brush;
+    if (obj.contains("style"))
+        brush.style(CustomPlot::brushStyle(obj["style"].to_string()));
+    if (obj.contains("color"))
+        brush.color() = deserializeColor(*obj["color"].to_object());
+    return brush;
+}
+
+CustomPlot::Pen deserializePen(const DataObject& obj)
+{
+    CustomPlot::Pen pen;
+    if (obj.contains("width"))
+        pen.width(obj["width"].to_int());
+    if (obj.contains("style"))
+        pen.style(CustomPlot::penStyle(obj["style"].to_string()));
+    if (obj.contains("capStyle"))
+        pen.capStyle(CustomPlot::penCapStyle(obj["capStyle"].to_string()));
+    if (obj.contains("joinStyle"))
+        pen.joinStyle(CustomPlot::penJoinStyle(obj["joinStyle"].to_string()));
+    if (obj.contains("brush"))
+        pen.brush() = deserializeBrush(*obj["brush"].to_object());
+    return pen;
+}
+
+CustomPlot::Grid deserializeGrid(const DataObject& obj)
+{
+    CustomPlot::Grid grid;
+    if (obj.contains("visible"))
+        grid.visible(obj["visible"].to_bool());
+    if (obj.contains("subGridVisible"))
+        grid.subGridVisible(obj["subGridVisible"].to_bool());
+    if (obj.contains("pen"))
+        grid.pen() = deserializePen(*obj["pen"].to_object());
+    if (obj.contains("subGridPen"))
+        grid.subGridPen() = deserializePen(*obj["subGridPen"].to_object());
+    return grid;
+}
+
 CustomPlot::Axis deserializeAxis(const DataObject& obj)
 {
     CustomPlot::Axis axis;
@@ -219,6 +287,8 @@ CustomPlot::Axis deserializeAxis(const DataObject& obj)
         axis.rangeMin(obj["rangeMin"].to_double());
     if (obj.contains("rangeMax"))
         axis.rangeMax(obj["rangeMax"].to_double());
+    if (obj.contains("grid"))
+        axis.grid() = deserializeGrid(*obj["grid"].to_object());
     if (obj.contains("labelColor"))
         axis.labelColor() = deserializeColor(*obj["labelColor"].to_object());
     if (obj.contains("labelFont"))

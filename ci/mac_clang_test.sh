@@ -1,15 +1,15 @@
 mkdir build
 cd build
 
-git clone https://code.ornl.gov/warroom/miniconda.git
-
-bash miniconda/Miniconda3-latest-MacOSX-x86_64.sh -b -p ${PWD}/miniconda3
+#git clone https://code.ornl.gov/warroom/miniconda.git
+curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
+bash ./Miniconda3-latest-MacOSX-arm64.sh -b -p ${PWD}/miniconda3
 eval "$(${PWD}/miniconda3/bin/conda shell.bash hook 2> /dev/null)"
 conda env create -f ../ci/env.yml
 conda activate wasp_ci
-pip install delocate
+pip install delocate build
 
-cmake -DBUILDNAME="$(uname -s)-AppleClang-8-Debug-${CI_COMMIT_REF_NAME}" \
+cmake -DBUILDNAME="$(uname -s)-Debug-${CI_COMMIT_REF_NAME}" \
       -DCMAKE_BUILD_TYPE=DEBUG \
       -DWASP_ENABLE_SWIG=ON \
       -Dwasp_ENABLE_TESTS=ON \
@@ -41,9 +41,9 @@ cmake -DBUILDNAME="$(uname -s)-AppleClang-8-Bundle-${CI_COMMIT_REF_NAME}" \
       -Dwasp_ENABLE_CPACK_PACKAGING:BOOL=ON \
       ..
 
+make -j 8 package
 delocate-wheel -w ${CI_PROJECT_DIR}/build/wasppy/dist ${CI_PROJECT_DIR}/build/wasppy/dist/ornl_wasp*.whl
 
-make -j 8 package
 ls -l ./
 
 # Copy bundle parts up to parent directory to avoid artifact

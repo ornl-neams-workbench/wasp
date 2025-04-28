@@ -237,6 +237,13 @@ IF ( wasp_ENABLE_waspjson )
       NOEXESUFFIX
       INSTALLABLE
     )
+    IF(WIN32 AND BUILD_SHARED_LIBS)
+        SET(_target ddivalidjson)
+        ADD_CUSTOM_COMMAND( TARGET ${_target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:${_target}> $<TARGET_FILE_DIR:${_target}>
+            COMMAND_EXPAND_LISTS
+        )
+    ENDIF ()
 ENDIF()
 ##---------------------------------------------------------------------------##
 ##                   end of utils/CMakeLists.txt

@@ -1,5 +1,5 @@
 from __future__ import print_function
-import subprocess, os, json
+import  os, json
 from subprocess import Popen, PIPE
 import xml.etree.ElementTree as ET
 

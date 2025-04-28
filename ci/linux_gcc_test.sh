@@ -24,6 +24,7 @@ ecc cmake -DBUILDNAME="$(uname -s)-GCC-4.8.5-Release-${CI_COMMIT_REF_NAME}" \
       -DCMAKE_BUILD_TYPE=RELEASE \
       -Dwasp_ENABLE_TESTS=ON \
       -DWASP_ENABLE_SWIG=ON \
+      -DPython3_EXECUTABLE=`which python`\
       -DBUILD_SHARED_LIBS:BOOL=ON \
       -Dwasp_ENABLE_ALL_PACKAGES=ON \
       -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/g++ \
@@ -50,6 +51,7 @@ ecc cmake -DBUILDNAME="$(uname -s)-GCC-4.8.5-Bundle-${CI_COMMIT_REF_NAME}" \
       -Dwasp_ENABLE_TESTS:BOOL=OFF \
       -Dwasp_ENABLE_SWIG=ON \
       -Dwasp_ENABLE_ALL_PACKAGES:BOOL=ON \
+      -DPython3_EXECUTABLE=`which python`\
       -Dwasp_ENABLE_testframework:BOOL=OFF \
       -Dwasp_ENABLE_googletest:BOOL=OFF \
       -Dwasp_ENABLE_wasppy:BOOL=ON \
@@ -60,9 +62,9 @@ ecc cmake -DBUILDNAME="$(uname -s)-GCC-4.8.5-Bundle-${CI_COMMIT_REF_NAME}" \
       -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/gcc \
       ..
 
-auditwheel repair -w ${CI_PROJECT_DIR}/build/wasppy/dist --plat manylinux_2_34_x86_64 ${CI_PROJECT_DIR}/build/wasppy/dist/ornl_wasp*.whl
-
 ecc make -j 8 package
+
+auditwheel repair -w ${CI_PROJECT_DIR}/build/wasppy/dist --plat manylinux_2_34_x86_64 ${CI_PROJECT_DIR}/build/wasppy/dist/ornl_wasp*.whl
 
 # Copy bundle parts up to parent directory to avoid artifact
 # having build directory

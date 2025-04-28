@@ -12,10 +12,12 @@ Miniconda3-latest-Windows-x86_64.exe /S /D=%MINI_ROOT%
 CALL %cd%\miniconda3\Scripts\activate.bat
 CALL conda env create -f ..\ci\env.yml
 CALL conda activate wasp_ci
+for /f "delims=" %%i in ('where python') do set PYTHON_exe=%%i
 
 cmake -DBUILD_SHARED_LIBS=ON ^
       -DBUILDNAME="VS2013-Shared-Release-%CI_COMMIT_REF_NAME%" ^
       -DCMAKE_BUILD_TYPE:STRING=RELEASE ^
+      -DPython3_EXECUTABLE=%PYTHON_exe% ^
       -Dwasp_ENABLE_SWIG=ON ^
       -Dwasp_ENABLE_TESTS:BOOL=ON ^
       -Dwasp_ENABLE_ALL_PACKAGES:BOOL=ON ^

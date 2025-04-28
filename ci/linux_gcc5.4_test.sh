@@ -24,6 +24,7 @@ cmake -DBUILDNAME="$(uname -s)-GCC-5.4-Release-${CI_COMMIT_REF_NAME}" \
       -Dwasp_ENABLE_SWIG=ON \
       -DCMAKE_C_COMPILER=/projects/gcc-5.4.0/toolset/gcc-5.4.0/bin/gcc \
       -DCMAKE_CXX_COMPILER=/projects/gcc-5.4.0/toolset/gcc-5.4.0/bin/g++ \
+      -DPython3_EXECUTABLE=`which python`\
       -DBUILD_SHARED_LIBS:BOOL=ON \
       -Dwasp_ENABLE_ALL_PACKAGES=ON \
       ..

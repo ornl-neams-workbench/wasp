@@ -61,6 +61,13 @@ linux_gcc_analysis:
 windows_shared_vs2022_testing:
   tags:
     - vs2022
+  before_script:
+    - echo Cleaning up existing submodule directory...
+    - git submodule deinit -f --all
+    - IF EXIST TriBITS (
+        rmdir /S /Q TriBITS
+      )
+    - git submodule update --init --recursive
   script:
     - .\ci\vs2022_shared_test.bat
   artifacts:

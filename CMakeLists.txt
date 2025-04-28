@@ -52,7 +52,7 @@ SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 IF (NOT TRIBITS_PROCESSING_PACKAGE)
   # This CMakeLists.txt file is being processed as the wasp TriBITS projects's base
   # CMakeLists.txt file!  (See comments at bottom of this file.)
-  CMAKE_MINIMUM_REQUIRED(VERSION 3.1 FATAL_ERROR)
+  CMAKE_MINIMUM_REQUIRED(VERSION 3.20 FATAL_ERROR)
   INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/ProjectName.cmake")
   PROJECT(${PROJECT_NAME} NONE)
   # enable C++11 by default
@@ -73,24 +73,11 @@ IF (NOT TRIBITS_PROCESSING_PACKAGE)
   IF(NOT TPL_ENABLE_MPI)
     SET(TPL_ENABLE_MPI OFF CACHE BOOL "Enable MPI support")
   ENDIF()
-  #
-  # For windows with BUILD_SHARED_LIBS we must use CMAKE_RUNTIME_OUTPUT_DIRECTORY
-  # to place all *dll and *exe in the same directory so unit tests will work
-  IF("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows" AND BUILD_SHARED_LIBS)
-    IF(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-      MESSAGE(STATUS "Setting CMAKE_RUNTIME_OUTPUT_DIRECTORY to: ${CMAKE_CURRENT_BINARY_DIR}/cmake_runtime_output")
-      SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/cmake_runtime_output" CACHE STRING "")
-    ENDIF()
-  ENDIF()
   IF(wasp_ENABLE_TESTS)
     OPTION(BUILD_GMOCK "Builds the googlemock subproject" OFF)
     OPTION(gtest_force_shared_crt "Force googletest to link /MD instead of /MT on Windows." ON)
     MESSAGE(STATUS "Adding googletest submodule directory.")
     ADD_SUBDIRECTORY(googletest)
-    IF(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-      #google test doesn't handle dynamic windows environment properly
-      SET_TARGET_PROPERTIES(gtest PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-    ENDIF()
   ENDIF()
 
   TRIBITS_PROJECT_ENABLE_ALL()

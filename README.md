@@ -178,13 +178,13 @@ For individuals wanting to compile the code from source, below are the tested re
 
 ## Requirements
 * C/CXX compiler (See repository .gitlab-ci.yml for build configurations)  
-    * GCC-4.8 tested on Linux or Mac OS
+    * GCC-5.4+ tested on Linux or Mac OS
     * LLVM-7.0.2 tested on Mac OS
     * Visual Studio 2022 for Windows
     * MinGW 4.8.5 for Windows
 * Git 1.7+
-* CMake-2.8.12.2, 3.5, 3.8
-* Python-3.8
+* CMake-3.20+
+* Python-3.8+
 
 ## Code Configuration and Compilation
 * Save the ssh-key in [code-int.ornl.gov](https://code-int.ornl.gov/profile/keys).
@@ -205,6 +205,7 @@ cmake \
  -D CMAKE_BUILD_TYPE:STRING=RELEASE \
  -D wasp_ENABLE_ALL_PACKAGES:BOOL=ON \
  -D wasp_ENABLE_TESTS:BOOL=ON \
+ -D Python3_EXECUTABLE=`which python`\
  -D CMAKE_INSTALL_PREFIX=`pwd`/install \
  -G "Unix Makefiles" \
  ~/wasp
@@ -218,6 +219,7 @@ cmake \
  -D CMAKE_BUILD_TYPE:STRING=RELEASE \
  -D wasp_ENABLE_wasphit=ON \
  -D wasp_ENABLE_TESTS:BOOL=ON \
+ -D Python3_EXECUTABLE=`which python`\
  -D CMAKE_INSTALL_PREFIX=`pwd`/install \
  -G "Unix Makefiles" \
  ~/wasp
@@ -239,6 +241,7 @@ cmake \
  -D wasp_ENABLE_testframework:BOOL=OFF \
  -D wasp_ENABLE_wasppy:BOOL=OFF \
  -D wasp_ENABLE_TESTS:BOOL=OFF \
+ -D Python3_EXECUTABLE=`which python`\
  -D CMAKE_INSTALL_PREFIX=`pwd`/install \
  -D wasp_GENERATE_EXPORT_FILE_DEPENDENCIES:BOOL=ON \
  -D CMAKE_C_COMPILER:STRING=gcc \

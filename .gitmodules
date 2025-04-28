@@ -1,9 +1,9 @@
 [submodule "googletest"]
 	path = googletest
-	url = https://code.ornl.gov/jap/googletest.git
+	url = https://github.com/google/googletest.git
 [submodule "TriBITS"]
 	path = TriBITS
-	url = https://github.com/lefebvre/TriBITS.git
+	url = https://github.com/TriBITSPub/TriBITS.git
 [submodule "testframework"]
 	path = testframework
 	url = https://github.com/lefebvre/testframework.git

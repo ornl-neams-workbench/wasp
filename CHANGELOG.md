@@ -16,11 +16,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for initializer_list to DataArray and size_t to Value in waspcore/Object
 - Support for initializer_list or std::pair to DataObject in waspcore/Object
 - Plot package for LSP-extension supporting data visualization. See [waspplot/README.md](waspplot/README.md).
+- Support for LSP onHover array content
+- DataArray to_string support
+
 
 ### Fixed
 - WASP build error when used as TPL caused by missing waspcore/wasp_bug.h include
 - Missing waspcore/version.h from installation
 - HIT lexer parameter key pattern so space is not required before override syntax
+
+### Changed
+- Minimum version of CMake to 3.20, removing deprecated version incompatibility/error observed with newer CMake
 
 ## [4.3.0] - 5-03-2024
 

@@ -8,7 +8,7 @@ file(COPY "test"  DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY "drive"  DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 
-IF(PYTHON_EXECUTABLE)
+IF(Python3_EXECUTABLE)
   # Must use absolute path or Python __file__ test directives are incorrect
   ADD_TEST( tstWaspPy_test_Xml2Obj python ${CMAKE_CURRENT_BINARY_DIR}/test/test_Xml2Obj.py )
   ADD_TEST( tstWaspPy_test_Json2Python python ${CMAKE_CURRENT_BINARY_DIR}/test/test_Json2Python.py  )
@@ -107,31 +107,32 @@ else()
 endif()
 
 #Execute the setup file to generate a wheel
-add_custom_target(wasp_wheel ALL "${PYTHON_EXECUTABLE}" -m build > python_build.log 2>&1
+add_custom_target(wasp_wheel ALL "${Python3_EXECUTABLE}" -m build > python_build.log 2>&1
                   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Database.py ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py)
 add_dependencies(wasp_wheel wasppy waspcore waspson waspddi waspeddi wasphit waspsiren wasphive wasplsp)
 
 #Configure a basic unit test of the python bindings. In this case the wheels is 
 #installed as editable to test in a "natural" way and removed at the end.
-  TRIBITS_ADD_ADVANCED_TEST( test_swig_all
+message(${Python3_EXECUTABLE})
+TRIBITS_ADD_ADVANCED_TEST( test_swig_all
   OVERALL_WORKING_DIRECTORY
     ${CMAKE_CURRENT_BUILD_DIR}
   OVERALL_NUM_MPI_PROCS
     1
   TEST_0
-    CMND ${PYTHON_EXECUTABLE}
+    CMND "${Python3_EXECUTABLE}"
     ARGS -m pip install -e ${CMAKE_CURRENT_BINARY_DIR}
   TEST_1
-    CMND ${PYTHON_EXECUTABLE}
+    CMND "${Python3_EXECUTABLE}"
     ARGS -m unittest test/test_swig_bindings.py -v
   TEST_2
-    CMND ${PYTHON_EXECUTABLE}
+    CMND "${Python3_EXECUTABLE}"
     ARGS -m unittest test/test_lsp_server_methods.py -v
   TEST_3
-    CMND ${PYTHON_EXECUTABLE}
+    CMND "${Python3_EXECUTABLE}"
     ARGS -m unittest test/test_lsp_server_running.py -v
   TEST_4
-    CMND ${PYTHON_EXECUTABLE}
+    CMND "${Python3_EXECUTABLE}"
     ARGS -m pip uninstall --yes ornl-wasp
   TIMEOUT 3000
   CATEGORIES BASIC

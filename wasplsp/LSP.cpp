@@ -1727,7 +1727,7 @@ bool dissectHoverResponse( const DataObject   & object       ,
     const DataObject& result = *(object[m_result].to_object());
 
     // dissect result object into contents that should be diplayed on hover
-    wasp_check(result.contains(m_contents) && result[m_contents].is_string());
+    wasp_check(result.contains(m_contents));
     display_text = result[m_contents].to_string();
 
     return pass;

@@ -439,7 +439,12 @@ std::string Value::to_string() const
             return m_data.m_string;
 
         case TYPE_ARRAY:
-            wasp_not_implemented("conversion of array to string");
+            {
+                std::stringstream str;
+                const auto& array = to_array();
+                if (!array->empty()) array->pack_json(str);
+                return str.str();
+            }
 
         case TYPE_OBJECT:
             std::stringstream str;

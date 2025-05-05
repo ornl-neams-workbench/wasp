@@ -109,6 +109,8 @@ class WASP_PUBLIC TreeNodePool
      * @param str the token's string data
      * @param type the token's type (enumeration)
      * @param token_file_offset the token's offset into the file/stream
+     * Note: if the token contains a newline the newline will be captured 
+     *       i.e., the equivalent of a push_line will occur
      */
     void push_token(const char*                  str,
                     typename TP::token_type_size type,
@@ -307,6 +309,10 @@ class WASP_PUBLIC TreeNodePool
     void set_start_column(size_t col) { m_start_column = col; }
     size_t                       start_column() const { return m_start_column; }
 
+    bool node_offset_comparator(std::size_t node_a_index, std::size_t node_b_index) const
+    {
+        return node_token_offset(node_a_index) < node_token_offset(node_b_index);
+    }
   private:
     typename TP::file_offset_type_size m_start_line;
     typename TP::file_offset_type_size m_start_column;

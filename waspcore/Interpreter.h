@@ -364,11 +364,13 @@ class WASP_PUBLIC AbstractInterpreter
      * @param node_type the node's enumerated type
      * @param node_name the node's name
      * @param child_indices the child indices for the node
+     * @param is_document_root indicator of the parent being the root of the document
      * @return the new parent node's index in the TreeNodePool
      */
     virtual size_t push_parent(size_t                     node_type,
                                const char*                node_name,
-                               const std::vector<size_t>& child_indices) = 0;
+                               const std::vector<size_t>& child_indices,
+                               bool is_document_root = false) = 0;
     /**
      * @brief type acquire the type of the node at the given index
      * @param node_index the node index
@@ -400,6 +402,20 @@ class WASP_PUBLIC AbstractInterpreter
     virtual const char* token_data(size_t token_index) const = 0;
 
     /**
+     * @brief token_type acquires the type for the token at the given index
+     * @param token_index the index of the token for which the type is requested
+     * @return the type of the token
+     */
+    virtual size_t token_type(size_t token_index) const = 0;
+
+    /**
+     * @brief token_line acquires the line for the token at the given index
+     * @param token_index the index of the token for which the line is requested
+     * @return the line number of the given token
+     */
+    virtual size_t token_line(size_t token_index) const = 0;
+
+    /**
      * @brief child_count determines the number of children for the node
      * @param node_index index of the node of which children count are requested
      * @return the number of children nodes
@@ -429,6 +445,17 @@ class WASP_PUBLIC AbstractInterpreter
     virtual size_t push_staged(size_t                     node_type,
                                const std::string&         node_name,
                                const std::vector<size_t>& child_indices) = 0;
+    /**
+     * @brief push_hidden_leaf create a leaf node with the given type, name, and token
+     * reference but that will not be seen by the parser until the parent is pushed
+     * and the hidden leaves are merged with other children
+     * @param node_type the leaf node's type enumeration
+     * @param node_name the leaf node's name
+     * @param token_index the leaf node's token index
+     * @return the new leaf node's index in the TreeNodePool
+     */
+    virtual size_t
+    push_hidden_leaf(size_t node_type, const char* node_name, size_t token_index) = 0;
     /**
      * @brief push_staged_child adds the given child index to the currently
      * staged node
@@ -750,16 +777,29 @@ class WASP_PUBLIC Interpreter : public AbstractInterpreter
     size_t
     push_leaf(size_t node_type, const char* node_name, size_t token_index);
     /**
+     * @brief push_hidden_leaf create a leaf node with the given type, name, and token
+     * reference but that will not be seen by the parser until the parent is pushed
+     * and the hidden leaves are merged with other children
+     * @param node_type the leaf node's type enumeration
+     * @param node_name the leaf node's name
+     * @param token_index the leaf node's token index
+     * @return the new leaf node's index in the TreeNodePool
+     */
+    size_t
+    push_hidden_leaf(size_t node_type, const char* node_name, size_t token_index);
+    /**
      * @brief push_parent create a parent node with the given type, node, and
      * child indices
      * @param node_type the node's enumerated type
      * @param node_name the node's name
      * @param child_indices the child indices for the node
+     * @param is_document_root indicator of the parent being the root of the document
      * @return the new parent node's index in the TreeNodePool
      */
     size_t push_parent(size_t                     node_type,
                        const char*                node_name,
-                       const std::vector<size_t>& child_indices);
+                       const std::vector<size_t>& child_indices,
+                       bool is_document_root = false);
     /**
      * @brief type acquire the type of the node at the given index
      * @param node_index the node index
@@ -810,6 +850,12 @@ class WASP_PUBLIC Interpreter : public AbstractInterpreter
      * @return the data of the token
      */
     const char* token_data(size_t token_index) const;
+    /**
+     * @brief token_type acquires the type for the token at the given index
+     * @param token_index the index of the token for which the type is requested
+     * @return the type of the token
+     */
+    size_t token_type(size_t token_index) const;
     /**
      * @brief token_line acquires the line for the token at the given index
      * @param token_index the index of the token for which the line is requested
@@ -991,11 +1037,10 @@ class WASP_PUBLIC Interpreter : public AbstractInterpreter
         if (document.m_child_indices.empty() && m_nodes.size() > 0)
         {
             document.m_child_indices.push_back(m_nodes.size() - 1);
-        }
+        }     
         if (!document.m_child_indices.empty())
         {
-            m_root_index = commit_staged(0);
-            document.m_child_indices.clear();
+            m_root_index = commit_staged(0); // Clears document reference
         }
     }
 
@@ -1056,6 +1101,9 @@ class WASP_PUBLIC Interpreter : public AbstractInterpreter
         std::vector<size_t> m_child_indices;
     };
     std::vector<Stage> m_staged;
+
+    // The hidden nodes that will be merged upon parent being pushed
+    std::vector<size_t> m_hidden;
     // Decorative node types
     // Note: requires subclass to provide type set
     std::vector<wasp::NODE> m_decorative_node_types;

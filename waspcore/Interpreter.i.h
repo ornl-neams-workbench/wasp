@@ -96,13 +96,100 @@ size_t Interpreter<NodeStorage>::push_leaf(size_t      node_type,
     return node_index;
 }
 template<class NodeStorage>
+size_t Interpreter<NodeStorage>::push_hidden_leaf(size_t      node_type,
+                                           const char* node_name,
+                                           size_t      token_index)
+{
+    size_t node_index = push_leaf(node_type, node_name, token_index);
+    m_hidden.push_back(node_index);    
+    return node_index;
+}
+template<class NodeStorage>
 size_t
 Interpreter<NodeStorage>::push_parent(size_t                     node_type,
                                       const char*                node_name,
-                                      const std::vector<size_t>& child_indices)
+                                      const std::vector<size_t>& child_indices,
+                                      bool is_document_root)
 {
     size_t node_index = node_count();
-    m_nodes.push_parent(node_type, node_name, child_indices);
+    if (m_hidden.empty())
+    {
+        m_nodes.push_parent(node_type, node_name, child_indices);
+    }
+    else
+    {
+        std::vector<size_t> complete_children;
+        auto merge = [this, is_document_root](std::vector<size_t>& result, const std::vector<size_t>& child_indices)
+        {
+            auto citr = child_indices.begin();
+            auto hitr = m_hidden.begin();
+            auto shitr = hitr;
+            while(citr != child_indices.end() && hitr != m_hidden.end())
+            {
+                auto hidden_node_token_offset = m_nodes.node_token_offset(*hitr);
+                auto child_node_token_offset =  m_nodes.node_token_offset(*citr);
+                bool hidden_before_child = child_node_token_offset > hidden_node_token_offset;
+                
+                // If a hidden token is before the first or after the last child 
+                // assume it belongs to the parent unless the child last is on the same line
+                // E.g., trailing comment
+                if (!is_document_root && citr == child_indices.begin() && hidden_before_child)
+                {
+                    // skip - increment hidden iterator as it belongs to parent
+                    hitr++;
+                    // increment start to ensure hidden nodes that below to parent 
+                    // are skipped and subsequently given the opportunity to be
+                    // consumed by subsequent parent pushes
+                    shitr++; 
+                    continue;
+                }
+                else if (hidden_before_child)
+                {
+                    result.push_back(*hitr);
+                    hitr++;
+                }
+                else {
+                    // child is before hidden
+                    result.push_back(*citr);
+                    citr++;
+                }
+            }
+            // Check for trailing hidden node (e.g., trailing comment)
+            // TODO - use a while loop to capture multiple trailing hidden nodes 
+            // E.g., multiple hidden nodes on the same line
+            bool hidden_nodes_remain = hitr != m_hidden.end();
+            if(hidden_nodes_remain)
+            {
+                auto hidden_node_line = m_nodes.line(*hitr);
+                auto last_child_node_line =  m_nodes.last_line(child_indices.back());
+                if (hidden_node_line == last_child_node_line)
+                {
+                    // hidden tokens on the last line
+                    result.push_back(*hitr);
+                    hitr++;
+                }
+            }
+
+            while (citr != child_indices.end())
+            {
+                result.push_back(*citr);
+                citr++;
+            }
+            // capture all remaining trailing hidden nodes
+            // when capturing the document root node
+            while (is_document_root && hitr != m_hidden.end())
+            {
+                result.push_back(*hitr);
+                hitr++;
+            }
+            // remove the consumed hidden nodes
+            if(shitr != m_hidden.end())
+                m_hidden.erase(shitr, hitr);
+
+        };
+        merge(complete_children, child_indices);
+        m_nodes.push_parent(node_type, node_name, complete_children);
+    }
     return node_index;
 }
 template<class NodeStorage>
@@ -186,6 +273,18 @@ const char* Interpreter<NodeStorage>::token_data(size_t index) const
 }
 
 template<class NodeStorage>
+size_t Interpreter<NodeStorage>::token_type(size_t index) const
+{
+    // have any tokens?
+    const auto& token_pool = m_nodes.token_data();
+    if (token_pool.size() == 0)
+    {
+        return 0; // reserved for unknown
+    }
+    return token_pool.type(index);
+}
+
+template<class NodeStorage>
 size_t Interpreter<NodeStorage>::token_line(size_t index) const
 {
     // have any tokens?
@@ -213,7 +312,7 @@ bool Interpreter<NodeStorage>::parse_impl(std::istream&      in,
     m_nodes.set_start_line(start_line);
     m_nodes.set_start_column(start_column);
     PARSER_IMPL parser(*this, in, nullptr);
-    //    parser.set_debug_level(true);
+
 
     // parsed is understood to be that
     // the parse method did not immediately fail (i.e., non-zero return)
@@ -224,6 +323,7 @@ bool Interpreter<NodeStorage>::parse_impl(std::istream&      in,
     commit_stages();
 
     set_failed(parsed);  // updated failed cache
+    wasp_ensure(m_hidden.empty()); // Ensure hidden nodes (comments, etc.) have been processed    
     return parsed;
 }
 
@@ -284,8 +384,10 @@ size_t Interpreter<NodeStorage>::commit_staged(size_t stage_index)
     wasp_require(stage_index < m_staged.size());
 
     Stage& stage = m_staged[stage_index];
+    bool is_document_root = stage_index == 0;
     size_t node_index =
-        push_parent(stage.m_type, stage.m_name.c_str(), stage.m_child_indices);
+        push_parent(stage.m_type, stage.m_name.c_str(),
+         stage.m_child_indices, is_document_root);
 
     wasp_ensure(node_index >= 0 && node_index < m_nodes.size());
     m_staged.pop_back();

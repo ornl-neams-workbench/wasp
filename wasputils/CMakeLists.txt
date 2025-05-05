@@ -245,6 +245,26 @@ IF ( wasp_ENABLE_waspjson )
         )
     ENDIF ()
 ENDIF()
+IF ( wasp_ENABLE_waspmcnpi  )
+    TRIBITS_ADD_EXECUTABLE(mcnpilist
+      SOURCES mcnpilist.cpp
+      NOEXEPREFIX
+      NOEXESUFFIX
+      INSTALLABLE
+    )
+    TRIBITS_ADD_EXECUTABLE(mcnpiselect
+    SOURCES mcnpiselect.cpp
+    NOEXEPREFIX
+    NOEXESUFFIX
+    INSTALLABLE
+  )
+    TRIBITS_ADD_EXECUTABLE(mcnpimaterials
+    SOURCES mcnpimaterials.cpp
+    NOEXEPREFIX
+    NOEXESUFFIX
+    INSTALLABLE
+  )
+ENDIF()
 ##---------------------------------------------------------------------------##
 ##                   end of utils/CMakeLists.txt
 ##---------------------------------------------------------------------------##

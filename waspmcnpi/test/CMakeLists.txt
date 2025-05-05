@@ -1,0 +1,4 @@
+INCLUDE(GoogleTest)
+
+ADD_GOOGLE_TEST(tstMCNPI.cpp NP 1)
+ADD_GOOGLE_TEST(tstMCNPIModel.cpp NP 1)

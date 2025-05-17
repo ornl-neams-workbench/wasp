@@ -9,10 +9,10 @@ Set-Location "$CI_PROJECT_DIR/build"
 
 # Set Miniconda installation path
 $MINI_ROOT = Join-Path $CI_PROJECT_DIR "build/miniconda3"
-$MINICONDA_INSTALLER = "Miniconda3-latest-Windows-x86_64.exe"
+$MINICONDA_INSTALLER = "Miniconda3-py310_24.5.0-0-Windows-x86_64.exe"
 
 # Download and install Miniconda
-Invoke-WebRequest -Uri "https://repo.anaconda.com/miniconda/$MINICONDA_INSTALLER" -OutFile $MINICONDA_INSTALLER
+Invoke-WebRequest -Uri "https://code-int.ornl.gov/lefebvre/miniconda/-/raw/main/$MINICONDA_INSTALLER" -OutFile $MINICONDA_INSTALLER
 Start-Process -FilePath $MINICONDA_INSTALLER -ArgumentList "/S", "/D=$MINI_ROOT" -Wait
 
 # Setup conda shell hook for current PowerShell session

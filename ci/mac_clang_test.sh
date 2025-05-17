@@ -2,8 +2,8 @@ mkdir build
 cd build
 
 #git clone https://code.ornl.gov/warroom/miniconda.git
-curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
-bash ./Miniconda3-latest-MacOSX-arm64.sh -b -p ${PWD}/miniconda3
+curl -O https://code-int.ornl.gov/lefebvre/miniconda/-/raw/main/Miniconda3-py310_24.5.0-0-MacOSX-arm64.sh
+bash ./Miniconda3-py310_24.5.0-0-MacOSX-arm64.sh -b -p ${PWD}/miniconda3
 eval "$(${PWD}/miniconda3/bin/conda shell.bash hook 2> /dev/null)"
 conda env create -f ../ci/env.yml
 conda activate wasp_ci

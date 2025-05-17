@@ -231,7 +231,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents an RGBA color, similar to QColor.
      */
-    class Color
+    class WASP_PUBLIC Color
     {
       public:
         Color();
@@ -262,7 +262,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents a fill brush (pattern and color), similar to QBrush.
      */
-    class Brush
+    class WASP_PUBLIC Brush
     {
       public:
         Brush();
@@ -283,7 +283,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents a font for text styling (labels, legend, etc.).
      */
-    class Font
+    class WASP_PUBLIC Font
     {
       public:
         Font();
@@ -320,7 +320,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents a pen (stroke color, style, width), similar to QPen.
      */
-    class Pen
+    class WASP_PUBLIC Pen
     {
       public:
         Pen();
@@ -353,7 +353,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents grid lines for an axis.
      */
-    class Grid
+    class WASP_PUBLIC Grid
     {
       public:
         Grid();
@@ -382,7 +382,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents a plot axis with labeling, ticks, scaling, and grid.
      */
-    class Axis
+    class WASP_PUBLIC Axis
     {
       public:
         typedef std::vector<std::pair<std::string, double>> tick_values;
@@ -465,7 +465,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Base class for all series (data) types: Bar, Graph, ColorMap.
      */
-    class Series
+    class WASP_PUBLIC Series
     {
       public:
         using Collection = std::vector<std::shared_ptr<Series>>;
@@ -517,7 +517,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents a bar chart series.
      */
-    class Bar : public Series
+    class WASP_PUBLIC Bar : public Series
     {
       public:
         Bar();
@@ -527,7 +527,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents a 2D color map plot (like a heatmap).
      */
-    class ColorMap : public Series
+    class WASP_PUBLIC ColorMap : public Series
     {
       public:
         ColorMap();
@@ -548,7 +548,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents a graph series (line, scatter, or area).
      */
-    class Graph : public Series
+    class WASP_PUBLIC Graph : public Series
     {
       public:
         Graph();
@@ -599,7 +599,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents the plot legend.
      */
-    class Legend
+    class WASP_PUBLIC Legend
     {
       public:
         Legend();
@@ -620,7 +620,7 @@ class WASP_PUBLIC CustomPlot
     /**
      * @brief Represents the main title of the plot.
      */
-    class Title
+    class WASP_PUBLIC Title
     {
       public:
         Title();

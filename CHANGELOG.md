@@ -12,8 +12,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Ability to enable LSP snippet capability in wasplsp/ClientImpl via `enableSnippetSupport()`
 - wasplsp::SnippetManager and supporting classes for single tabstop and placeholder interactions
 - Preprocessor macro to define value of WASP_VERSION in configured version.h file
+- Plot package for LSP-extension supporting data visualization. See [waspplot/README.md](waspplot/README.md).
+- Support for initializer_list to DataArray and size_t to Value in waspcore/Object
+- Support for initializer_list or std::pair to DataObject in waspcore/Object
+- Plot package for LSP-extension supporting data visualization. See [waspplot/README.md](waspplot/README.md).
 - Support for LSP onHover array content
 - DataArray to_string support
+
 
 ### Fixed
 - WASP build error when used as TPL caused by missing waspcore/wasp_bug.h include

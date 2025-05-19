@@ -1,10 +1,12 @@
 #ifndef WASP_OBJECT_H
 #define WASP_OBJECT_H
 
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "waspcore/decl.h"
 
@@ -23,6 +25,7 @@ class WASP_PUBLIC Value
         TYPE_NULL,
         TYPE_BOOLEAN,
         TYPE_INTEGER,
+        TYPE_SIZE_T,
         TYPE_DOUBLE,
         TYPE_STRING,
         TYPE_ARRAY,
@@ -36,6 +39,7 @@ class WASP_PUBLIC Value
     {
         bool              m_bool;
         double            m_double;
+        size_t            m_size_t;
         int               m_int;
         char*             m_string;
         class DataArray*  m_array;
@@ -54,6 +58,8 @@ class WASP_PUBLIC Value
     Value(bool v);
     // integer
     Value(int v);
+    // unsigned integer
+    Value(size_t v);
     // double
     Value(double v);
     // const char *
@@ -71,6 +77,7 @@ class WASP_PUBLIC Value
     Value& operator=(Value&& v);
     Value& operator=(bool v);
     Value& operator=(int v);
+    Value& operator=(size_t v);
     Value& operator=(double v);
     Value& operator=(const char* v);
     Value& operator=(const std::string& v);
@@ -87,8 +94,9 @@ class WASP_PUBLIC Value
 
     bool is_null() const { return m_type == TYPE_NULL; }
     bool is_int() const { return m_type == TYPE_INTEGER; }
+    bool is_size_t() const { return m_type == TYPE_SIZE_T; }
     bool is_double() const { return m_type == TYPE_DOUBLE; }
-    bool is_number() const { return is_int() || is_double(); }
+    bool is_number() const { return is_int() || is_double() || is_size_t(); }
     bool is_bool() const { return m_type == TYPE_BOOLEAN; }
     bool is_string() const { return m_type == TYPE_STRING; }
     bool is_array() const { return m_type == TYPE_ARRAY; }
@@ -98,6 +106,7 @@ class WASP_PUBLIC Value
     bool convertable(Value::Type to) const;
 
     int         to_int() const;
+    size_t      to_size_t() const;
     double      to_double() const;
     bool        to_bool() const;
     const char* to_cstring() const;
@@ -162,6 +171,10 @@ class WASP_PUBLIC DataArray
     DataArray();
     DataArray(const DataArray& orig);
     ~DataArray();
+    DataArray(std::initializer_list<Value>l)
+    {
+      for( auto d : l) this->push_back(d);
+    }
 
     size_t size() const;
     bool   empty() const;
@@ -211,6 +224,16 @@ class WASP_PUBLIC DataObject
   public:
     DataObject();
     DataObject(const DataObject& orig);
+
+    DataObject(const std::pair<std::string,Value>& p)
+    {
+      this->insert(p);
+    }
+
+    DataObject(std::initializer_list<std::pair<std::string,Value>>l)
+    {
+      for (auto d : l) this->insert(d);
+    }
     ~DataObject();
 
     size_t size() const;

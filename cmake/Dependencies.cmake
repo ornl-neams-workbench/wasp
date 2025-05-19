@@ -5,10 +5,11 @@ TRIBITS_PACKAGE_DEFINE_DEPENDENCIES(
      expr  waspexpr    PT OPTIONAL
      son   waspson     PT OPTIONAL
      ddi   waspddi     PT OPTIONAL
-     eddi   waspeddi     PT OPTIONAL
+     eddi   waspeddi   PT OPTIONAL
      json   waspjson   PT OPTIONAL
+     plot waspplot     PT OPTIONAL
      hive  wasphive    PT OPTIONAL
-     hit wasphit PT OPTIONAL     
+     hit wasphit       PT OPTIONAL     
      halite wasphalite PT OPTIONAL          
      lsp   wasplsp     PT OPTIONAL
      dakota waspdakota PT OPTIONAL          

@@ -32,6 +32,13 @@ Value::Value(int v)
     m_data.m_int = v;
     m_type       = TYPE_INTEGER;
 }
+
+Value::Value(size_t v)
+{
+    m_data.m_size_t = v;
+    m_type       = TYPE_SIZE_T;
+}
+
 Value::Value(double v)
 {
     m_data.m_double = v;
@@ -75,6 +82,8 @@ void Value::copy_from(const Value& orig)
             break;
         case TYPE_INTEGER:
             m_data.m_int = orig.m_data.m_int;
+        case TYPE_SIZE_T:
+            m_data.m_size_t = orig.m_data.m_size_t;
             break;
         case TYPE_DOUBLE:
             m_data.m_double = orig.m_data.m_double;
@@ -106,6 +115,7 @@ std::string Value::categoryString() const
     switch (m_type)
     {
         case Type::TYPE_INTEGER:
+        case Type::TYPE_SIZE_T:
         case Type::TYPE_DOUBLE:
             return "number";
         case Type::TYPE_STRING:
@@ -154,6 +164,13 @@ Value& Value::operator=(int v)
     nullify();
     m_type       = TYPE_INTEGER;
     m_data.m_int = v;
+    return *this;
+}
+Value& Value::operator=(size_t v)
+{
+    nullify();
+    m_type       = TYPE_SIZE_T;
+    m_data.m_size_t = v;
     return *this;
 }
 Value& Value::operator=(double v)
@@ -228,10 +245,9 @@ void Value::nullify()
     switch (m_type)
     {
         case TYPE_NULL:
-            break;
         case TYPE_BOOLEAN:
-            break;
         case TYPE_INTEGER:
+        case TYPE_SIZE_T:
             break;
         case TYPE_DOUBLE:
             break;
@@ -269,7 +285,8 @@ int Value::to_int() const
 
         case TYPE_INTEGER:
             return m_data.m_int;
-
+        case TYPE_SIZE_T:
+            return int(m_data.m_size_t);
         case TYPE_DOUBLE:
             return int(m_data.m_double);
 
@@ -278,6 +295,42 @@ int Value::to_int() const
             wasp_ensure(m_data.m_string);
             return atoi(m_data.m_string);
 
+        case TYPE_ARRAY:
+            wasp_not_implemented("conversion of array to integer");
+
+        case TYPE_OBJECT:
+            wasp_not_implemented("conversion of object to integer");
+    }
+    wasp_not_implemented("unknown type conversion to integer");
+}
+size_t Value::to_size_t() const
+{
+    switch (m_type)
+    {
+        case TYPE_NULL:
+            return 0;
+
+        case TYPE_BOOLEAN:
+            return int(m_data.m_bool);
+
+        case TYPE_INTEGER:
+            return int(m_data.m_size_t);
+
+        case TYPE_SIZE_T:
+            return m_data.m_size_t;
+
+        case TYPE_DOUBLE:
+            return size_t(m_data.m_double);
+
+        case TYPE_STRING:
+        {
+            wasp_ensure(m_allocated);
+            wasp_ensure(m_data.m_string);
+            size_t d;
+            std::stringstream s(m_data.m_string);
+            s >> d;
+            return d;
+        }
         case TYPE_ARRAY:
             wasp_not_implemented("conversion of array to integer");
 
@@ -298,6 +351,8 @@ double Value::to_double() const
 
         case TYPE_INTEGER:
             return double(m_data.m_int);
+        case TYPE_SIZE_T:
+            return double(m_data.m_size_t);
 
         case TYPE_DOUBLE:
             return m_data.m_double;
@@ -327,6 +382,7 @@ bool Value::to_bool() const
 
         case TYPE_INTEGER:
             return m_data.m_int ? true : false;
+        case TYPE_SIZE_T:
 
         case TYPE_DOUBLE:
             return m_data.m_double ? true : false;
@@ -349,6 +405,7 @@ const char* Value::to_cstring() const
         case TYPE_NULL:
         case TYPE_BOOLEAN:
         case TYPE_INTEGER:
+        case TYPE_SIZE_T:
         case TYPE_DOUBLE:
             return nullptr;
         case TYPE_STRING:
@@ -373,6 +430,8 @@ std::string Value::to_string() const
             return m_data.m_bool ? "true" : "false";
         case TYPE_INTEGER:
             return std::to_string(m_data.m_int);
+        case TYPE_SIZE_T:
+            return std::to_string(m_data.m_size_t);
         case TYPE_DOUBLE:
             return std::to_string(m_data.m_double);
         case TYPE_STRING:
@@ -443,6 +502,7 @@ bool Value::convertable(Value::Type to) const
             return (is_number() && to_double() == 0.0);
         case TYPE_BOOLEAN:
         case TYPE_INTEGER:
+        case TYPE_SIZE_T:
         case TYPE_DOUBLE:
             return is_bool() || is_null() || is_number();
         case TYPE_STRING:
@@ -531,6 +591,9 @@ bool Value::format_json(std::ostream& out, int indent_level, int level) const
             case TYPE_INTEGER:
                 out << to_int();
                 break;
+            case TYPE_SIZE_T:
+                out << to_size_t();
+                break;
             case TYPE_DOUBLE:
                 // the precision can be set by the caller
                 out << to_double();
@@ -566,6 +629,9 @@ bool Value::pack_json(std::ostream& out) const
                 break;
             case TYPE_INTEGER:
                 out << to_int();
+                break;
+            case TYPE_SIZE_T:
+                out << to_size_t();
                 break;
             case TYPE_DOUBLE:
                 // the precision can be set by the caller
@@ -667,7 +733,7 @@ void DataArray::merge(const DataArray& rhs)
                 if (!item.is_object())
                 {
                     std::stringstream ss;
-                    ss << "Attempting to merge data arrary where member index("
+                    ss << "Attempting to merge data array where member index("
                        << index << ") differs in type." << std::endl
                        << "Left-hand side type(object) differs from right-hand "
                           "side type("

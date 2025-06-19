@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - WASP build error when used as TPL caused by missing waspcore/wasp_bug.h include
 - Missing waspcore/version.h from installation
 - HIT lexer parameter key pattern so space is not required before override syntax
+- Diagnostic object message access to clean up string before returning downstream
 
 ### Changed
 - Minimum version of CMake to 3.20, removing deprecated version incompatibility/error observed with newer CMake

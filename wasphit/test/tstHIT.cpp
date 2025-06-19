@@ -2838,18 +2838,27 @@ array_outer_01 = 'param_inner_01 = 100 param_inner_02 = 200 param_inner_03 = 300
 TEST(HITInterpreter, only_include_not_found)
 {
     std::stringstream input;
-    input << R"I(!include block_missing.i)I" << std::endl;
+    input << "\n\n\n      " << R"I(!include block_missing.i)I" << std::endl;
     std::stringstream errors;
     DefaultHITInterpreter interpreter(errors);
     ASSERT_FALSE(interpreter.parse(input));
 
     std::stringstream expected_errors;
-    expected_errors << "stream input:1.1: could not find 'block_missing.i'" << std::endl;
+    expected_errors << "stream input:4.7: could not find 'block_missing.i'" << std::endl;
 
     ASSERT_EQ(expected_errors.str(), errors.str());
     ASSERT_EQ(expected_errors.str(), interpreter.error_diagnostics().front().str());
     ASSERT_DIAGNOSTICS(interpreter, expected_errors);
     // Double check the contents
+
+    // check that pieces of diagnostic object are values expected for error
+    const auto diagnostic_error = interpreter.error_diagnostics().front();
+    ASSERT_EQ("stream input", diagnostic_error.filename());
+    ASSERT_EQ(4, diagnostic_error.start_line());
+    ASSERT_EQ(7, diagnostic_error.start_column());
+    ASSERT_EQ(4, diagnostic_error.end_line());
+    ASSERT_EQ(7, diagnostic_error.end_column());
+    ASSERT_EQ("could not find 'block_missing.i'", diagnostic_error.message());
 }
 
 /**

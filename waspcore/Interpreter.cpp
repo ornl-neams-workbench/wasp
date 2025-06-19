@@ -66,7 +66,11 @@ Diagnostic& Diagnostic::operator <<(std::ostream&(*os) (std::ostream&))
 std::string Diagnostic::message() const
 {
     wasp_check(msg);
-    return msg->str();
+    // trim front colon and spaces and end whitespace from returned message
+    std::string msg_str = msg->str();
+    msg_str.erase(0, msg_str.find_first_not_of(": "));
+    msg_str.erase(msg_str.find_last_not_of(" \t\n\r") + 1);
+    return msg_str;
 }
 std::string Diagnostic::str() const 
 {

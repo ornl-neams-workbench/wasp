@@ -5,6 +5,7 @@
 #include <cctype>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 
 namespace wasp

@@ -691,8 +691,8 @@ CustomPlot::Axis::Axis()
     , mLabelPrecision(6.0)
     , mLabelType(ltNumber)
     , mNumberFormat("gb")
-    , mRangeMax(std::numeric_limits<double>::infinity())
-    , mRangeMin(-std::numeric_limits<double>::infinity())
+    , mRangeMax(std::numeric_limits<double>::max())
+    , mRangeMin(std::numeric_limits<double>::lowest())
     , mScaleType(stLinear)
     , mTickLabelRotation(0.0)
     , mVisible(true)
@@ -749,12 +749,12 @@ CustomPlot::Grid& CustomPlot::Axis::grid()
 
 bool CustomPlot::Axis::hasRangeMax() const
 {
-    return mRangeMax != std::numeric_limits<double>::infinity();
+    return mRangeMax != std::numeric_limits<double>::max();
 }
 
 bool CustomPlot::Axis::hasRangeMin() const
 {
-    return mRangeMin != -std::numeric_limits<double>::infinity();
+    return mRangeMin != std::numeric_limits<double>::lowest();
 }
 
 bool CustomPlot::Axis::isNumberFormatEB() const

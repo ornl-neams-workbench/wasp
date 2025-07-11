@@ -246,6 +246,42 @@ this is a title
     ASSERT_EQ(expected.str(), paths.str());    
 }
 
+TEST(MCNPInterpreter, message_block_multiline_blank_line_title)
+{
+    std::stringstream input;
+    input << R"I( message:    o=inp.out $
+            r=inp.rtp $
+            s=inp.src $
+
+this is a title
+)I";
+    DefaultMCNPInterpreter mcnpi;
+    ASSERT_TRUE(mcnpi.parse(input));
+    std::stringstream paths;
+    mcnpi.root().paths(paths);
+    std::stringstream expected;
+    expected << R"I(/
+/msg_block
+/msg_block/decl (message:)
+/msg_block/outp
+/msg_block/outp/outp (o=)
+/msg_block/outp/value (inp.out)
+/msg_block/comment ($)
+/msg_block/runtpe
+/msg_block/runtpe/runtpe (r=)
+/msg_block/runtpe/value (inp.rtp)
+/msg_block/comment ($)
+/msg_block/srctp
+/msg_block/srctp/srctp (s=)
+/msg_block/srctp/value (inp.src)
+/msg_block/comment ($)
+/BL (
+)
+/title (this is a title)
+)I";
+
+    ASSERT_EQ(expected.str(), paths.str());
+}
 
 TEST(MCNPInterpreter, comments)
 {

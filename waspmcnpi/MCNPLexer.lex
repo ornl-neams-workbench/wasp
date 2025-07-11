@@ -368,11 +368,19 @@ std::cout <<"Matched '"<<yytext<<"' at " << *yylloc << " in state " << YY_START 
 <message_block_state>{MCNPEOL} {capture_token(yylval,wasp::mcnpi::KEY); return token::MCNPEOL;}
 
 
-<message_block_state>{NEWLINE} {
+<message_block_state>{BLANK_LINE_DELIMITER} {
+   capture_token(yylval,wasp::mcnpi::BLANK_LINE);
    yy_pop_state(/*message_block_state*/); // exit message block state
    yylloc->lines(yyleng); yylloc->step();
    interpreter.push_line_offset(file_offset-yyleng);
+   return token::BLANK_LINE;
 }
+
+<message_block_state>{NEWLINE} {
+   yylloc->lines(yyleng); yylloc->step();
+   interpreter.push_line_offset(file_offset-yyleng);
+}
+
 
 <cell_card_block_state>{RECORD_IDENTIFIER} {
     capture_token(yylval,wasp::mcnpi::ID);

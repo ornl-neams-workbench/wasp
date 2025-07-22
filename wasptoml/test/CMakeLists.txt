@@ -1,0 +1,3 @@
+INCLUDE(GoogleTest)
+
+ADD_GOOGLE_TEST(tstTOML.cpp NP 1)

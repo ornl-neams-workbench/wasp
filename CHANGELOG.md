@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ### Added
+- TOML syntax interpreter and list, json, and select utilities. See [wasptoml/README.md](wasptoml/README.md).
 - Ability for downstream servers and clients to add and use custom LSP extensions
 - Ability to precede '=' in HIT syntax with optional ':' or ':override' specifier
 - Convenience function is_override to check HIT key values for override specifier
@@ -18,7 +19,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Plot package for LSP-extension supporting data visualization. See [waspplot/README.md](waspplot/README.md).
 - Support for LSP onHover array content
 - DataArray to_string support
-
 
 ### Fixed
 - WASP build error when used as TPL caused by missing waspcore/wasp_bug.h include

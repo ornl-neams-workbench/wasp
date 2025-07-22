@@ -5,7 +5,7 @@
 
 TRIBITS_PACKAGE_DEFINE_DEPENDENCIES(
 LIB_REQUIRED_PACKAGES waspcore wasphive waspsiren
-LIB_OPTIONAL_PACKAGES wasphit waspson waspddi wasphalite waspjson waspeddi wasplsp waspdakota waspmcnpi
+LIB_OPTIONAL_PACKAGES wasphit waspson waspddi wasphalite waspjson waspeddi wasplsp waspdakota waspmcnpi wasptoml
 TEST_REQUIRED_PACKAGES testframework
 TEST_OPTIONAL_PACKAGES
 LIB_REQUIRED_TPLS

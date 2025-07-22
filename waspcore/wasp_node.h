@@ -71,7 +71,12 @@ enum NODE : unsigned char
     CONDITIONAL,
     FILE,
     OVERRIDE_ASSIGN,
-    REPEAT
+    REPEAT,
+    WHITESPACE,
+    DLBRACKET,  // [[
+    DRBRACKET,  // ]]
+    TABLE,
+    ARRAY_TABLE
 };
 }
 #endif

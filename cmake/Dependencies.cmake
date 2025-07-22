@@ -10,6 +10,7 @@ TRIBITS_PACKAGE_DEFINE_DEPENDENCIES(
      plot waspplot     PT OPTIONAL
      hive  wasphive    PT OPTIONAL
      hit wasphit       PT OPTIONAL     
+     toml wasptoml     PT OPTIONAL     
      halite wasphalite PT OPTIONAL          
      lsp   wasplsp     PT OPTIONAL
      dakota waspdakota PT OPTIONAL          

@@ -14,9 +14,10 @@ IF(Python3_EXECUTABLE)
   ADD_TEST( tstWaspPy_test_Json2Python python ${CMAKE_CURRENT_BINARY_DIR}/test/test_Json2Python.py  )
   ADD_TEST( tstWaspPy_test_DDI2Python python ${CMAKE_CURRENT_BINARY_DIR}/test/test_DDI2Python.py  )
   ADD_TEST( tstWaspPy_test_Drive python ${CMAKE_CURRENT_BINARY_DIR}/test/test_Drive.py  )
-  IF (CMAKE_SYSTEM_NAME STREQUAL  "Linux")
-    ADD_TEST( tstWaspPy_test_Drive_Scheduled python ${CMAKE_CURRENT_BINARY_DIR}/test/test_Drive_Scheduled.py  )
-  ENDIF()
+  # Disabled while CI slurm is inoperable
+  # IF (CMAKE_SYSTEM_NAME STREQUAL  "Linux")
+  #   ADD_TEST( tstWaspPy_test_Drive_Scheduled python ${CMAKE_CURRENT_BINARY_DIR}/test/test_Drive_Scheduled.py  )
+  # ENDIF()
 ENDIF()
 
 # Add binary directory to includes so wasp_wrap.cxx can include wasp_wrap.h

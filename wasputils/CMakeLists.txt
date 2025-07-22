@@ -5,7 +5,7 @@
 ##---------------------------------------------------------------------------##
 ## Copyright (C) 2017 Oak Ridge National Laboratory, UT-Battelle, LLC.
 ##---------------------------------------------------------------------------##
-## CMAKE for utils 
+## CMAKE for utils
 ##---------------------------------------------------------------------------##
 
 
@@ -21,7 +21,7 @@ SET_DEFAULT(DEBUG_OUTPUT 0)
 ##---------------------------------------------------------------------------##
 
 # C/C++ headers
-FILE(GLOB HEADERS *.h *.hh *.hpp 
+FILE(GLOB HEADERS *.h *.hh *.hpp
     "${CMAKE_CURRENT_BINARY_DIR}/*.h"
     )
 
@@ -264,6 +264,27 @@ IF ( wasp_ENABLE_waspmcnpi  )
     NOEXESUFFIX
     INSTALLABLE
   )
+ENDIF()
+
+IF ( wasp_ENABLE_wasptoml )
+    TRIBITS_ADD_EXECUTABLE(tomllist
+      SOURCES tomllist.cpp
+      NOEXEPREFIX
+      NOEXESUFFIX
+      INSTALLABLE
+    )
+    TRIBITS_ADD_EXECUTABLE(tomljson
+      SOURCES tomljson.cpp
+      NOEXEPREFIX
+      NOEXESUFFIX
+      INSTALLABLE
+    )
+    TRIBITS_ADD_EXECUTABLE(tomlselect
+      SOURCES tomlselect.cpp
+      NOEXEPREFIX
+      NOEXESUFFIX
+      INSTALLABLE
+    )
 ENDIF()
 ##---------------------------------------------------------------------------##
 ##                   end of utils/CMakeLists.txt

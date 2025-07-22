@@ -182,7 +182,7 @@ sonvalid /path/to/schema.sch /path/to/input.inp
 The schema's contents are beyond the scope of this document. The product of *valid will be a return code of 0 only if no validation errors occur in the input. 
 If an error occurs, a non-zero return code is produced and validation errors emitted. See the [HIVE](/wasphive/README.md#hierarchical-input-validation-engine-hive) documentation of types of validation errors.
 
-## SON/DDI to JSON Utilities
+## SON/DDI/HIT/TOML to JSON Utilities
  The JSON standard is readily accessible in most programming languages while SON and DDI are not.  JSON can easily be consumed into a native Python dictionary.
 
 Invocation of the JSON conversion utilities requires a schema and an input:

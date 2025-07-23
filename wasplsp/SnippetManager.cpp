@@ -54,7 +54,17 @@ bool SnippetManager::load(std::istream& snippet_data, std::ostream& errors)
     }
 
     snippet.line_offset = child.line()-1;
-    snippet.column_offset = child.column()-1;
+    auto column = child.column()-1;
+    // correct column to account for prior snippet syntax ($, ${}, placeholder, etc.)
+    // I.e., column is just accumulation of last column + text, if any 
+    // This snippet is already on the stack, need to check prior (-2) on the same line
+    if (m_snippets.size() > 2 && m_snippets[m_snippets.size()-2].line_offset == snippet.line_offset)
+    {
+      auto last_column = m_snippets[m_snippets.size()-2].column_offset;
+      auto text_size = m_snippets[m_snippets.size()-2].text.size();
+      column = last_column + text_size;
+    }
+    snippet.column_offset = column;
   }
 
   if (!m_tabstops.empty()){

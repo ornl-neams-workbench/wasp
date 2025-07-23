@@ -182,13 +182,13 @@ TEST(SnippetManager, multicolumn_tabstop_ordering)
     ASSERT_TRUE(snippet.valid_tabstop());
     ASSERT_EQ("beforesomething", snippet.text());
 
-    // first ($1) tabstop is at line 1 column 20 or 16?
+    // first ($1) tabstop is at line 1 column 16 of offset 15?
     ASSERT_EQ(0, snippet.current_tabstop());
     ASSERT_EQ(0, snippet.line_offset());
-    // should be 16 as the ${} should not be included
-    ASSERT_EQ(19, snippet.column_offset());
+    // should be column offset of 15 as the ${} should not be included
+    ASSERT_EQ(15, snippet.column_offset());
 
-    // final ($0) tabstop is at line 1 column 7
+    // final ($0) tabstop is at line 1 column 6
     ASSERT_TRUE(snippet.next_tabstop());
     ASSERT_EQ(0, snippet.line_offset());
     ASSERT_EQ(6, snippet.column_offset());
@@ -202,12 +202,12 @@ TEST(SnippetManager, multicolumn_tabstop_ordering)
 TEST(SnippetManager, son_snippet_addl_trailing)
 {
     std::stringstream data;
-    data << "object{key = ${1:something}} something trailing after { after }  " << std::endl
+    data << "object{key = ${1:something}} something trailing after { after }  $2" << std::endl
          << " with other {stuff} following newline";
     SnippetManager snippet;
     ASSERT_TRUE(snippet.load(data, std::cerr));
 
-    ASSERT_EQ(1, snippet.tabstop_count());
+    ASSERT_EQ(2, snippet.tabstop_count());
     ASSERT_TRUE(snippet.valid_tabstop());
     ASSERT_EQ("object{key = something} something trailing after { after }  \n with other {stuff} following newline", snippet.text());
 
@@ -215,6 +215,14 @@ TEST(SnippetManager, son_snippet_addl_trailing)
     ASSERT_EQ(0, snippet.current_tabstop());
     ASSERT_EQ(0, snippet.line_offset());
     ASSERT_EQ(13, snippet.column_offset());
+
+    
+    ASSERT_TRUE(snippet.next_tabstop());
+    ASSERT_TRUE(snippet.valid_tabstop());
+    ASSERT_EQ(1, snippet.current_tabstop());
+    ASSERT_EQ(0, snippet.line_offset());
+    // be sure the 'something' in $1 is accounted for in $2 column offset
+    ASSERT_EQ(60, snippet.column_offset());
 
     // next tabstop should be invalid
     ASSERT_FALSE(snippet.next_tabstop());

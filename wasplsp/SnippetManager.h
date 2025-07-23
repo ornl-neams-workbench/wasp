@@ -61,6 +61,7 @@ class WASP_PUBLIC SnippetManager
     bool prev_tabstop() {m_current_tabstop--; return valid_tabstop();}
     int line_offset() const;
     int column_offset() const;
+    int tabstop() const;
 
     /**
      * Obtain the text for the current tabstop, if any

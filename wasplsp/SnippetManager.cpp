@@ -114,6 +114,12 @@ int SnippetManager::column_offset() const
   auto snippet_index = m_tabstops[m_current_tabstop];
   return m_snippets[snippet_index].column_offset;
 }
+int SnippetManager::tabstop() const
+{
+  wasp_require(valid_tabstop());
+  auto snippet_index = m_tabstops[m_current_tabstop];
+  return m_snippets[snippet_index].tabstop;
+}
 
 } // namespace lsp
 } // namespace wasp

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Plot package for LSP-extension supporting data visualization. See [waspplot/README.md](waspplot/README.md).
 - Support for LSP onHover array content
 - DataArray to_string support
+- Support for multi-line MCNP message blocks
 
 ### Fixed
 - WASP build error when used as TPL caused by missing waspcore/wasp_bug.h include

@@ -48,8 +48,8 @@
     @$.begin.column = @$.end.column = interpreter.start_column();
     lexer = std::make_shared<MCNPLexerImpl>(interpreter,&input_stream);
 
-    //lexer->set_debug(true);
-    //set_debug_level(true);
+    // lexer->set_debug(true);
+    // set_debug_level(true);
 };
 
 /* The interpreter is passed by reference to the parser and to the MCNPLexer. This

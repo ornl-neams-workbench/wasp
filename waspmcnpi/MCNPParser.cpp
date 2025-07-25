@@ -849,8 +849,8 @@ namespace wasp {
     yyla.location.begin.column = yyla.location.end.column = interpreter.start_column();
     lexer = std::make_shared<MCNPLexerImpl>(interpreter,&input_stream);
 
-    //lexer->set_debug(true);
-    //set_debug_level(true);
+    // lexer->set_debug(true);
+    // set_debug_level(true);
 }
 
 #line 857 "MCNPParser.cpp"

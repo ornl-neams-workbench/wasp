@@ -1,5 +1,6 @@
 #include "waspmcnpi/Model.h"
 #include "waspcore/wasp_bug.h"
+#include "waspcore/wasp_math.h"
 #include "waspcore/Object.h"
 #include "waspmcnpi/mcnp_node.h"
 
@@ -40,12 +41,12 @@ namespace mcnpi
 
         // process surfaces
         success &= build_surfaces(document_root, error);
-        // process cells
-        success &= build_cells(document_root, error);
 
         // process materials
         success &= build_materials(document_root, error);
 
+        // process cells
+        success &= build_cells(document_root, error);
         return success;
     }
 
@@ -100,19 +101,33 @@ namespace mcnpi
     void Model::describe_materials_json(std::ostream& out) const
     {
         DataObject root;
-        root["materials"] = DataObject();
-        for (const auto& m : m_materials)
+        root["mixtures"] = DataArray();
+        auto& mixtures = root["mixtures"].as_array();
+        for (const auto& c : m_cells)
         {
+
+            // skip void
+            if (c.mat_id == 0) continue;
+
+            auto material_index = m_material_id_index.at(c.mat_id);
+            const auto& m = m_materials.at(material_index);
             // Store the ZAID : adens list
-            std::string mat_id = std::to_string(m.id);
-            root["materials"][mat_id] = DataObject();
-            root["materials"][mat_id]["isotopes"] = DataObject();
+            DataObject mixture;
+            mixture["mixture"] = m.id;
+            mixture["cell"] = c.id;
+            mixture["density"] = c.rho;
+            mixture["nuclides"] = DataArray();
+            auto& nuclides = mixture["nuclides"].as_array();
             for (std::size_t idx=0; idx < m.zaid_count; ++idx)
             {
+                DataObject nuclide;
                 Material_Zaid_Entry mza = m_material_zaids[idx+m.zaid_index];
-                root["materials"][mat_id]["isotopes"][std::to_string(mza.zaid)] = mza.value;
+                nuclide["zaid"] = mza.zaid;
+                nuclide["adens"] = c.nuclide_densities[idx];
+                // could add symbol (h1), if data was available 
+                nuclides.push_back(nuclide);
             }
-
+            
             // Store any associated comment metadata
             DataArray m_metadata;
             for (const std::string& md : m.metadata) 
@@ -121,11 +136,12 @@ namespace mcnpi
             }
             if(!m_metadata.empty())
             {
-                root["materials"][mat_id]["metadata"] = DataObject();
-                root["materials"][mat_id]["metadata"]["data"] = m_metadata;
-                root["materials"][mat_id]["metadata"]["column"] = (int) m.column;
-                root["materials"][mat_id]["metadata"]["line"] = (int) m.line;
+                mixture["metadata"] = DataObject();
+                mixture["metadata"]["data"] = m_metadata;
+                mixture["metadata"]["column"] = (int) m.column;
+                mixture["metadata"]["line"] = (int) m.line;
             }
+            mixtures.push_back(mixture); 
         }
         bool success = root.format_json(out, 2);
         out << std::endl;
@@ -310,6 +326,7 @@ namespace mcnpi
         wasp_require(std::strcmp(cell_node.name(),"cell") == 0);
         bool success = true;
         Cell c;
+        NodeView material_node;
         for (auto itr = cell_node.begin(); itr != cell_node.end(); itr.next())
         {
             // process id, material, rho, geom, and params
@@ -322,6 +339,7 @@ namespace mcnpi
             else if (name == "material")
             {
                 c.mat_id = std::stoi(child.data());
+                material_node = child;
             }
             else if (name == "rho")
             {
@@ -355,6 +373,8 @@ namespace mcnpi
         // we capture the processed cell
         if (c.id != 0)
         {
+            if (c.mat_id > 0) 
+                    success &= build_cell_material(c, material_node.is_null() ? cell_node : material_node, error);
             m_cells.push_back(c);
         }
         return success;
@@ -612,12 +632,117 @@ namespace mcnpi
             }
             else
             {
-                wasp_not_implemented(name << " is not supported");
+                // TODO - implement these remaining items, but don't fail
+                // Allow the utility in use to work in supported scenarios
+                // wasp_not_implemented(name << " is not supported");
             }
         }
         return true;
     }
 
+    /**
+     * Create cell-specific material nuclide atomic densities (g/b-cm)
+     * @param Cell c - the cell from which the density ($\rho$, or $D_T$) and material inventory (zaids mapped to $f_i$ or $w_i$) 
+     * @return true, iff the cell material's nuclide atomic densities are successfully calculated
+     * Fail scenarios involve, referenced material not existing/accessible, 
+     * inconsistent nuclide inventory specification (mixed weight and atom fraction),
+     * and missing molar mass library. 
+     * Note: The cell.nuclide_zaids and nuclide_densities will be populated.
+     */
+    bool Model::build_cell_material(Cell& c, const NodeView& cell_mixture_node, std::ostream& error)
+    {
+        wasp_require(c.mat_id > 0);
+        wasp_require(c.rho != 0);
+
+        // obtain the material information. 
+        if (m_material_id_index.find(c.mat_id) == m_material_id_index.end())
+        {
+            error << "*** Error - line: " << cell_mixture_node.line()
+                << ", column: " << cell_mixture_node.column()
+                << " references material " << c.mat_id << " which is not defined in the problem!"
+                << std::endl;
+            return false;
+        }
+
+        // Determine if cell material density is atomic or mass
+        bool is_cell_mass_density = c.rho < 0; 
+
+        size_t material_index = m_material_id_index[c.mat_id];
+        
+        const Material& material = m_materials[material_index];
+        wasp_check(material.id == c.mat_id);
+
+        // May reference a material that doesn't have inventory correctly specified
+        if (material.zaid_count == 0)
+        {
+            error << "*** Error - line: " << cell_mixture_node.line()
+                << ", column: " << cell_mixture_node.column()
+                << " references material " << c.mat_id << " which has no nuclide inventory captured!"
+                << std::endl;
+            return false;      
+        }
+
+        c.nuclide_zaids.resize(material.zaid_count); 
+        std::vector<double> zaid_values(material.zaid_count);
+        std::vector<double> molar_masses(material.zaid_count);
+        size_t zaid_index_end = material.zaid_index+material.zaid_count;
+
+        // Use first zaid value as indicator of weight/mass or atom fraction input
+        bool is_nuclide_mass_fraction = m_material_zaids[material.zaid_index].value < 0;
+
+        // We need zaid molar masses if involving material atom fractions or cell atomic density
+        if ((is_nuclide_mass_fraction || is_cell_mass_density)  && m_zaid_mass_map == nullptr)
+        {
+             error << "*** Internal Error - line: " << cell_mixture_node.line()
+                << ", column: " << cell_mixture_node.column()
+                << " cannot be converted because the required molar mass data library has not be set!"
+                << std::endl;
+            return false;
+        }
+        
+        for (std::size_t idx=0; idx < material.zaid_count; ++idx)
+        {
+            const Material_Zaid_Entry mza = m_material_zaids[idx+material.zaid_index];
+            if (is_nuclide_mass_fraction)
+            {
+                // weight fractions must uniformly be specified (all < 0)
+                wasp_check (mza.value < 0);
+                // capture positive value
+                zaid_values[idx] = -mza.value;
+            }
+            else {
+                wasp_check(mza.value > 0);
+                zaid_values[idx] = mza.value;
+            }
+            c.nuclide_zaids[idx] = mza.zaid;
+
+            // capture molar mass for given zaid, if provided
+            if (m_zaid_mass_map)
+            {
+                wasp_insist(m_zaid_mass_map->find(mza.zaid) != m_zaid_mass_map->end(), "zaid mass map is missing " << mza.zaid << "!");
+                molar_masses[idx] = m_zaid_mass_map->at(mza.zaid);
+            }
+        }
+        
+
+        if (is_nuclide_mass_fraction)
+        {
+            if (is_cell_mass_density) c.nuclide_densities = compute_di_from_weight_fraction_mass_density(zaid_values, c.rho);
+            else c.nuclide_densities = compute_di_from_weight_fraction_atomic_density(zaid_values, molar_masses, c.rho);
+        }
+        else // atom fraction 
+        {
+            if (is_cell_mass_density) c.nuclide_densities = compute_di_from_atom_fraction_mass_density(zaid_values, molar_masses, c.rho);
+            else c.nuclide_densities = compute_di_from_atom_fraction_atomic_density(zaid_values, c.rho);
+        }
+
+        // Ensure cell density is assigned g/cc, if molar masses provided
+        if (m_zaid_mass_map)
+        {
+            c.rho = compute_mass_density_from_atoms_bcm(c.nuclide_densities, molar_masses);
+        }
+        return true;
+    }
     bool Model::get_index(const NodeView& node,
                           size_t&         s_index,
                           size_t&         csg_index,
@@ -902,6 +1027,15 @@ namespace mcnpi
                   << " material has no ZAIDs specified!" << std::endl;
             return false;
         }
+        if (m_material_id_index.find(m.id) != m_material_id_index.end())
+        {
+            error << "*** Error -  line: " << material_node.line()
+                  << ", column: " << material_node.column()
+                  << " material with id " << m.id << " already exists!" << std::endl;
+            return false;
+        }
+
+        m_material_id_index.insert({m.id, m_materials.size()});
         m_materials.push_back(m);
         return success;
     }
@@ -936,7 +1070,7 @@ namespace mcnpi
             }
             else if (name == "lib")
             {
-                wasp_check(data.size() < 4);
+                // wasp_check(data.size() < 4);
                 std::strcpy(z.abx, data.data());
             }
             else if (name == "comment" || name == "LC")

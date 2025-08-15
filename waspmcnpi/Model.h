@@ -6,9 +6,11 @@
 
 #include <cstdint>
 #include <vector>
+#include <map>
 #include <string>
 #include <ostream>
 #include <unordered_map>
+#include <utility>
 
 namespace wasp
 {
@@ -20,6 +22,10 @@ class WASP_PUBLIC Model
 
 public:
 
+    void set_zaid_relative_atomic_mass_map(std::map<int, double>* map)
+    {
+        m_zaid_mass_map = map;
+    }
     /**
      * @brief build this model given an MCNP document parse tree
      * 
@@ -221,7 +227,7 @@ private:
         size_t  id = 0;
         // material identifier - search m_materials for definitin
         size_t  mat_id = 0;
-        // theoretical density
+        // density ( rho > 0 = atomic density g/b-cm, < 0 mass density (g/cc) )
         double  rho = 0;
         // 0 - none, 1 - hexahedra (cuboidal), 2 - hexagonal
         int lattice_type = 0; 
@@ -233,6 +239,11 @@ private:
         size_t trans_index = 0;
         // index into lattice fill data
         size_t fill_index = 0;
+        
+        // material nuclide atomic densities (atomic density g/b-cm)
+        // ordered by the zaid specified by material referenced by mat_id
+        std::vector<int> nuclide_zaids;
+        std::vector<double> nuclide_densities;
         // TODO add additional cell parameter connection
     };
     std::vector<Cell> m_cells;
@@ -248,6 +259,8 @@ private:
         std::vector<std::string> metadata;
     };
     std::vector<Material> m_materials;
+    // Map of material_id to index into m_materials
+    std::map<size_t, size_t> m_material_id_index;
     struct Material_Zaid_Entry
     {
         size_t zaid=0;
@@ -255,6 +268,10 @@ private:
         char abx[4] = "";
     };
     std::vector<Material_Zaid_Entry> m_material_zaids;
+
+    // Map of zaid (SSSZZAAA - S = State, Z = Atomic number, A = Atomic mass number id) 
+    // to relative atomic mass (g/mol numerically equivalent to unified atomic mass units)
+    std::map<int, double>* m_zaid_mass_map = nullptr;
 
 
     // csg tree recursive method 
@@ -266,6 +283,9 @@ private:
 
     // process the given cell parameters
     bool build_cell_params(Cell& c, const NodeView& cell_params_node, std::ostream& error);
+
+    // process the given cell mixture (requires mat_id and rho and material data to be processed)
+    bool build_cell_material(Cell& c, const NodeView& cell_mixture_node, std::ostream& error);
 
     // obtain the surface or cell index given a cell_geom_exp_node... used during construction
     // returns true, iff the surface_index or csg_index has been found.

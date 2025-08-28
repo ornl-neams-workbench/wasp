@@ -342,61 +342,61 @@ class IDObject{
 
         template<class SchemaAdapter>
         bool addMinOccursRule       (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addMaxOccursRule       (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addMinValIncRule       (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addMinValExcRule       (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addMaxValIncRule       (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addMaxValExcRule       (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addValTypeRule         (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addValEnumsRule        (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addInputChoicesRule    (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addExistsInRule        (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addNotExistsInRule     (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addSumOverRule         (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
-        bool addSumOverGroupRule    (SchemaAdapter, InputDefinition *);       
-        
+        bool addSumOverGroupRule    (SchemaAdapter, InputDefinition *);
+
         template<class SchemaAdapter>
         bool addIncreaseOverRule    (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addDecreaseOverRule    (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addChildAtMostOneRule  (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addChildExactlyOneRule (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addChildAtLeastOneRule (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addChildCountEqualRule (SchemaAdapter, InputDefinition *);
-        
+
         template<class SchemaAdapter>
         bool addChildUniquenessRule (SchemaAdapter, InputDefinition *);
 };
@@ -524,6 +524,17 @@ class InputDefinition{
             std::string pathCopy = path;
             auto tmpNode = node;
             int levels = std::count(pathCopy.begin(), pathCopy.end(), '/') + 1;
+
+            // Check if path is absolute and need to rewind to document root
+            if (path.front() == '/')
+            {
+                while(tmpNode.has_parent())
+                {
+                    tmpNode = tmpNode.parent();
+                }
+                pathCopy.erase(0, 1); // remove leading separator for subsequent search logic
+                --levels; // decrement level accordingly
+            }
 
             for(int i = 0; i < levels; i++){
 
@@ -1034,7 +1045,7 @@ class ValEnumsRule{
             }
             return "";
         }
-        
+
         size_t getEnumRefNameCount(){
             return enumRefNames.size();
         }
@@ -1046,7 +1057,7 @@ class ValEnumsRule{
         }
         std::string getRawEnumsAt(size_t index){
             return enumList.at(index);
-        }        
+        }
 
     private:
         InputDefinition * thisID;
@@ -1220,7 +1231,7 @@ class ExistsInRule{
             }
             return "";
         }
-        
+
         size_t getEnumRefNameCount(){
             return enumRefNames.size();
         }
@@ -1231,7 +1242,7 @@ class ExistsInRule{
             return constantsList.size();
         }
         std::string getRawConstantsAt(size_t index){
-            return constantsList.at(index);  
+            return constantsList.at(index);
         }
 
         template<class INPUTNV>

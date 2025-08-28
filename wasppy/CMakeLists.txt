@@ -94,6 +94,11 @@ add_custom_command(
   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/Database.py)
 
 add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sch2db.py
+  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/sch2db.py ${CMAKE_CURRENT_BINARY_DIR}/sch2db.py
+  MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/sch2db.py)
+
+add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test/test_swig_bindings.py ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/test/test_swig_bindings.py)
@@ -109,7 +114,9 @@ endif()
 
 #Execute the setup file to generate a wheel
 add_custom_target(wasp_wheel ALL "${Python3_EXECUTABLE}" -m build > python_build.log 2>&1
-                  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Database.py ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py)
+                  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Database.py
+                          ${CMAKE_CURRENT_BINARY_DIR}/sch2db.py
+                          ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py)
 add_dependencies(wasp_wheel wasppy waspcore waspson waspddi waspeddi wasphit waspsiren wasphive wasplsp)
 
 #Configure a basic unit test of the python bindings. In this case the wheels is 

@@ -5,6 +5,7 @@ cd build
 curl -O https://code-int.ornl.gov/lefebvre/miniconda/-/raw/main/Miniconda3-py310_24.5.0-0-MacOSX-arm64.sh
 bash ./Miniconda3-py310_24.5.0-0-MacOSX-arm64.sh -b -p ${PWD}/miniconda3
 eval "$(${PWD}/miniconda3/bin/conda shell.bash hook 2> /dev/null)"
+export CONDA_NUMBER_CHANNEL_NOTICES=0
 conda env create -f ../ci/env.yml
 conda activate wasp_ci
 pip install delocate build
@@ -21,9 +22,7 @@ export CMAKE_BUILD_PARALLEL_LEVEL=8
 ctest --output-on-failure \
       -D ExperimentalStart \
       -D ExperimentalBuild \
-      -D ExperimentalSubmit \
-      -D ExperimentalTest \
-      -D ExperimentalSubmit
+      -D ExperimentalTest 
 
 # clean up prior config for the next bundle config
 rm -rf CMake*

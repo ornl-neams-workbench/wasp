@@ -68,12 +68,14 @@ class VectorWaspNode(list):
         '''
         Specialization of "[]" to allow accessing child nodes by node index.        
         Workaround for not being able to use Python keywords in the dot operator (__getattr__).
-        Preserve the index-based method
+        Preserve the index-based method and also allow slicing notation.
         '''
         if isinstance(i, str):
             return self.__getattr__(i)
         elif isinstance(i, int):
             return super().__getitem__(i)
+        elif isinstance(i, slice):
+            return [self[j] for j in range(*i.indices(len(self)))]
         else:
             raise AttributeError(f"The provided input {i} is not a str or int")
 
@@ -83,20 +85,33 @@ class WaspNode():
         self._schemanode:"NodeView|None" = schemanodeview
         self._nodeview:NodeView = nodeview
 
+    def __bool__(self):
+        return self._nodeview is not None and not self._nodeview.is_null()
+
     def source(self):
         '''Obtain the source of this node. This is either a stream name or a file path.'''
         if self._nodeview:
             return str(self._nodeview.node_pool().stream_name())
         return ""
 
+    def path(self) -> "str":
+        '''Returns the path (/root/parent/node) of the node.'''
+        return self._nodeview.path()
+
     def isDecorative(self):
         if self._nodeview:
             return self._nodeview.is_decorative()
         return False
 
+    def isLeaf(self):
+        return self._nodeview.is_leaf()
+
+
     def __repr__(self) -> "str":
         '''Returns the name of the node.'''
-        return self.name()
+        if self:
+            return self.name()
+        return ""
 
     def line(self) -> "int":
         '''Returns the line on which this node exists in the input'''
@@ -133,6 +148,16 @@ class WaspNode():
         '''
         return self._nodeview.data()
 
+    def set_data(self, str):
+        '''
+        Set the data (character buffer) for this node
+        This is only legal for leaf/terminal nodes 
+        '''
+        if self and self.isLeaf():
+            self._nodeview.set_data(str)
+        else: 
+            raise NotImplementedError("data cannot be set on non-terminal nodes!")
+        
     def name(self) -> "str":
         '''Returns the name of the node.'''
         return self._nodeview.name()
@@ -294,13 +319,15 @@ class InterpreterDiagnostic(object):
 
     def source(self):
         return self._source_name
+    def message(self):
+        return self._message
     def start_line(self):
         return self._start_line 
     def end_line(self):
         return self._end_line
     def start_column(self):
         return self._start_column 
-    def end_line(self):
+    def end_column(self):
         return self._end_column
     
     def __str__(self):    
@@ -421,6 +448,19 @@ class Interpreter(object):
 
     def deserializeDiagnostics(self):
         return self._deserialize_diagnostics
+
+    def find(self, line, column) -> "WaspNode":
+        '''Obtain the node at the given line and column'''
+        schema_node = None
+        if self._schema_interpreter:
+            schema_node = self._schema_interpreter.root()
+        nodeView = self._interpreter.find(line, column)
+        if (nodeView.is_null()): return None
+
+        spec_node = WaspNode(self._registered_nodeviews[self._syntax](
+                        nodeView.node_index(),self._interpreter),
+                schema_node)
+        return spec_node
 
     def root(self) -> "WaspNode":
         '''Returns the document root node.'''

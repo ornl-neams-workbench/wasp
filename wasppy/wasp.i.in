@@ -7,24 +7,42 @@
 // Enable Python deriving, protected data wrapping, and unit test threading
 %module(directors="1", allprotected="1", threads="1") wasp
 
-// Enable director so ServerImpl can be implemented in derived Python class
-%feature("director") wasp::lsp::ServerImpl;
-
 // Ignore protected errors stringstream in ServerImpl due to issues in wrap
 %ignore wasp::lsp::ServerImpl::errors;
+
+// Rename ServerImpl to more appropriate BaseServer for use by Python class
+%rename(BaseServer) wasp::lsp::ServerImpl;
+
+// Enable director so ServerImpl can be implemented in derived Python class
+%feature("director") wasp::lsp::ServerImpl;
 
 // Return text from Python to C++ in reference it received with directorout
 %typemap(directorout) bool getHoverDisplayText
 {
-  char* buffer = 0;
-  int alloc = SWIG_OLDOBJ;
-  SWIG_AsCharPtr($input, &buffer, &alloc);
-  arg0 = buffer;
-  $result = true;
+  if ($input == Py_None) 
+  {
+    //fprintf(stderr, "[SWIG] Returned None\n");
+    arg0 = "";
+    $result = false;
+  } else 
+  {
+    //fprintf(stderr, "[SWIG] Got Python object of type: %s\n", Py_TYPE($input)->tp_name);
+
+    char* buffer = 0;
+    int alloc = SWIG_OLDOBJ;
+    if (SWIG_AsCharPtr($input, &buffer, &alloc) == 0) 
+    {
+      arg0 = buffer;
+      $result = true;
+    } 
+    else {
+      //fprintf(stderr, "[SWIG] SWIG_AsCharPtr failed\n");
+      $result = false;
+    }
+  }
 }
 
-// Rename ServerImpl to more appropriate BaseServer for use by Python class
-%rename(BaseServer) ServerImpl;
+
 
 // Enable director so Connection can be implemented in derived Python class
 %feature("director") wasp::lsp::Connection;

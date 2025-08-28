@@ -315,6 +315,13 @@ class WASP_PUBLIC AbstractInterpreter
     virtual NodeView root() const = 0;
 
     /**
+     * Find the node located at the given line and column
+     * @return NodeView - the node at the given line and column
+     * Note: check the node is not null 
+     */
+    virtual NodeView find(size_t line , size_t column) const;
+
+    /**
      * Obtain a new error diagnostic to populate
      * If this document is nested, the diagnostic is attached to the root-most interpreter
     */

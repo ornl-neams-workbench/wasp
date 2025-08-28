@@ -1,6 +1,9 @@
 import unittest
 from wasp import *
-from Database import InputObject, storeFloat, storeStr, ExistsConstraint
+from Database import InputObject, storeFloat, storeInt, storeStr, ExistsConstraint, SourcePredicatedTarget
+from sch2db import write_database
+from io import StringIO
+from contextlib import redirect_stdout
 import math
 
 class LinearModel:
@@ -28,7 +31,7 @@ class LinearModel:
         result._b = do["B"].value()
         result._c = do["C"].value()
         result._minT = do["MinTemp"].value()
-        result._maxT = do["MaxTemp"].value()
+        result._maxT = do["MaxTemp"].value() if do["MaxTemp"].hasValue() else result._minT
 
         theType = do["Type"].value()
 
@@ -81,10 +84,11 @@ class Salt:
         salt = InputObject(Desc="Single Salt instance")
         salt.createRequiredSingle("id", Enums=["LiF", "NaF", "CaF2", "NH4F", "NaCl"], Desc="Salt type", Action=storeStr)
         salt.createRequiredSingle("BoilTemp", Desc="Salting boiling temperature") \
-                .createRequiredSingle("value", MinValExc=0, Action=storeFloat)
+                .createRequiredSingle("value", MinValExc=0, Action=storeInt)
         salt.createRequiredSingle("MeltTemp", Desc="Salt melting temperature").createRequiredSingle("value", Action=storeFloat)
         salt.createSingle("MolecularWeight", Desc="Salt's molecular weight").createRequiredSingle("value", MinValExc=0, Action=storeFloat)
         salt.addRequiredSingle("Density", LinearModel.definition())
+
 
         Salt.Definition = salt
         return Salt.Definition
@@ -100,7 +104,10 @@ class Salt:
         result._name = do["id"] # not an id=value, just salt(id)
         result._molew = do["MolecularWeight"].value() # is a key=value MolecularWeight=value
         result._meltT = do["MeltTemp"].value()
-        result._boilT = do["BoilTemp"].value()
+
+        # In case the value of BoilTemp is bad (i.e., ignored deserialization error diagnostics)
+        result._boilT = do["BoilTemp"].value() if do["BoilTemp"].hasValue() else 0
+
         result._density = LinearModel.createFrom(do["Density"])
 
         return result
@@ -144,7 +151,7 @@ class TheInput:
         salts.addUniqueConstraint(["salt/id"])
         db.createRequiredSingle("queries", Desc="Parameters for queries salt properties") \
             .createRequiredSingle("temperatures", Desc="Temperatures (C) at which to query density") \
-                .createRequired("value", MinValExc=0, Action=storeFloat)
+                .create("value", MinOccurs=1, MaxOccurs=3, MinValExc=0, Action=storeInt)
         TheInput.Definition = db
         return TheInput.Definition
 
@@ -161,7 +168,7 @@ class TheInput:
         self.queryTemps = None
 
     def __str__(self):
-        return "".join(str(x)+"\n" for x in self.salts) + "\nqueried at: "+(",".join(str(t) for t in self.queryTemps))
+        return "".join(str(x)+"\n" for x in self.salts) + "\nqueried at: "+(",".join(str(t) for t in self.queryTemps))+"\n"
 
 class TestSwigInterface(unittest.TestCase):
 
@@ -302,7 +309,7 @@ class TestSwigInterface(unittest.TestCase):
             mainfile.write('  salt(NaF) {\n')
             mainfile.write('      MolecularWeight : 41.9882\n')
             mainfile.write('      MeltTemp : 1268\n')
-            mainfile.write('      BoilTemp : 1978\n')
+            mainfile.write('      BoilTemp : 1978.0\n')
             mainfile.write('      Density\n')
             mainfile.write('      {\n')
             mainfile.write('          Type : linear\n')
@@ -320,6 +327,10 @@ class TestSwigInterface(unittest.TestCase):
             mainfile.write('  }\n')
 
         doc = Interpreter(Syntax.SON,path=mainfile.name)
+
+        # Test finding a node given line and column
+        node = doc.find(3,7) # |MeltTemp : 1121.2
+        self.assertEqual("MeltTemp : 1121.2", node.parent().data())
 
         temps = []
         salt = []
@@ -553,7 +564,7 @@ queries{
         self.assertEqual(salt[0]._molew,25.9394)
         self.assertEqual(salt[1]._name,"NaF")
         self.assertEqual(salt[1]._meltT,1268.0)
-        self.assertEqual(salt[1]._boilT,1978.0)
+        self.assertEqual(salt[1]._boilT, 1978)
         self.assertEqual(salt[1]._molew,41.9882)
 
         # #Check that a set of queries were read correctly from input
@@ -682,19 +693,27 @@ queries{
           salt(NaF){
               MolecularWeight : 41.9882
               MeltTemp : 1268
-              BoilTemp : 1978
+              BoilTemp : bam
               Density
               {
                   Type : linear
                   A : 2.76
                   B : 6.36e-4
                   MinTemp : 1273
-                  MaxTemp : 1373
+                  MaxTemp : hello
+              }
+            Density
+              {
+                  Type : linear
+                  A : 2.76
+                  B : 6.36e-4
+                  MinTemp : 1273
+                  MaxTemp : foo
               }
           }
         }
         queries {
-          temperatures = [1100,-1200,1300,1400]
+          temperatures = [1100,-1200,1300.7,1400]
         }'''
 
         interpreter = Interpreter(Syntax.SON, path="input.son", data=ss)
@@ -710,11 +729,20 @@ queries{
 
         db = definition.deserialize(interpreter.root(), interpreter)
         self.assertTrue(interpreter.deserializeDiagnostics())
-        expectedDiagnostics = '''input.son:6.26: value 0.0 is less than or equal to the allowed minimum exclusive value of 0!
-input.son:9.26: value foo is not one of the allows values ['linear']!
+        expectedDiagnostics = '''input.son:6.26: value 0 is less than or equal to the allowed minimum exclusive value of 0!
+input.son:9.26: value foo is not one of the allowed values ['linear']!
+input.son:32.26: value 'bam' is expected to be an integer!
+input.son:32.15: BoilTemp has 0 occurrences of value when 1 are required!
+input.son:39.29: value 'hello' is expected to be a float!
+input.son:39.19: MaxTemp has 0 occurrences of value when 1 are required!
+input.son:47.29: value 'foo' is expected to be a float!
+input.son:47.19: MaxTemp has 0 occurrences of value when 1 are required!
+input.son:41.13-48.0: Density occurrence exceeds maximum allowed occurrence of 1!
 input.son:16.16: id NaF must be unique but is duplicate to id on line 29 column 16
 input.son:29.16: id NaF must be unique but is duplicate to id on line 16 column 16
-input.son:44.32: value -1200.0 is less than or equal to the allowed minimum exclusive value of 0!
+input.son:52.32: value -1200 is less than or equal to the allowed minimum exclusive value of 0!
+input.son:52.38: value '1300.7' is expected to be an integer!
+input.son:52.45: value has 4 occurrences which exceeds max occurs of 3!
 '''
         self.maxDiff = None
         self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
@@ -741,41 +769,111 @@ input.son:44.32: value -1200.0 is less than or equal to the allowed minimum excl
         self.assertEqual(1.0, db["salts"]["salt"][1]["Density"]["C"].value())
 
         self.assertTrue(db["queries"])
-        self.assertEqual([1100.0,-1200.0,1300.0,1400.0], db["queries"]["temperatures"].valuelist())
+        self.assertEqual([1100,-1200,None,1400], db["queries"]["temperatures"].valuelist())
 
         # create program data structure
         theInput = TheInput.createFrom(db)
         # This test illustrates the additional diagnostics from result to object creation
-        expectedDiagnostics = '''input.son:6.26: value 0.0 is less than or equal to the allowed minimum exclusive value of 0!
-input.son:9.26: value foo is not one of the allows values ['linear']!
+        expectedDiagnostics = '''input.son:6.26: value 0 is less than or equal to the allowed minimum exclusive value of 0!
+input.son:9.26: value foo is not one of the allowed values ['linear']!
+input.son:32.26: value 'bam' is expected to be an integer!
+input.son:32.15: BoilTemp has 0 occurrences of value when 1 are required!
+input.son:39.29: value 'hello' is expected to be a float!
+input.son:39.19: MaxTemp has 0 occurrences of value when 1 are required!
+input.son:47.29: value 'foo' is expected to be a float!
+input.son:47.19: MaxTemp has 0 occurrences of value when 1 are required!
+input.son:41.13-48.0: Density occurrence exceeds maximum allowed occurrence of 1!
 input.son:16.16: id NaF must be unique but is duplicate to id on line 29 column 16
 input.son:29.16: id NaF must be unique but is duplicate to id on line 16 column 16
-input.son:44.32: value -1200.0 is less than or equal to the allowed minimum exclusive value of 0!
+input.son:52.32: value -1200 is less than or equal to the allowed minimum exclusive value of 0!
+input.son:52.38: value '1300.7' is expected to be an integer!
+input.son:52.45: value has 4 occurrences which exceeds max occurs of 3!
 input.son:9.19: Type has value of foo which is not listed in ['linear']
 '''
         self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
-        self.assertEqual([1100.0,-1200.0,1300.0,1400.0],theInput.queryTemps)
+        self.assertEqual([1100,-1200,None,1400],theInput.queryTemps)
         self.assertEqual(3, len(theInput.salts))
 
         # Test theInput for deserialized result
-        expectedSummary = '''salt id:LiF mw:25.9394 melt:1121.2 boil:0.0
+        expectedSummary = '''salt id:LiF mw:25.9394 melt:1121.2 boil:0
     density - a:2.37 b:0.0005 c:1.0 min:1123.6 max:1367.5
-salt id:NaF mw:41.9882 melt:1268.0 boil:1978.0
+salt id:NaF mw:41.9882 melt:1268.0 boil:1978
     density - a:2.76 b:0.000636 c:1.0 min:1273.0 max:1373.0
-salt id:NaF mw:41.9882 melt:1268.0 boil:1978.0
-    density - a:2.76 b:0.000636 c:1.0 min:1273.0 max:1373.0
+salt id:NaF mw:41.9882 melt:1268.0 boil:0
+    density - a:2.76 b:0.000636 c:1.0 min:1273.0 max:1273.0
 
-queried at: 1100.0,-1200.0,1300.0,1400.0'''
+queried at: 1100,-1200,None,1400
+'''
         self.assertEqual(expectedSummary, str(theInput))
 
     def test_database_inputobject_exists(self):
         definition = InputObject()
         definition.createRequiredSingle("ids", Desc="List of viable identifers").createRequired("value", Action=storeStr)
-        definition.createRequiredSingle("ref", Desc="The id reference").createRequiredSingle("value", Action=storeStr)
-        definition.addExistsConstraint(ExistsConstraint(["ref/value"], target=["ids/value"]))
+        definition.createRequired("ref", Desc="The id reference").createRequiredSingle("value", Action=storeStr)
+        definition.addExistsConstraint(ExistsConstraint(["ref/value"], target=["ids/value"], discrete=["bob", "robert"]))
+
+        # Add constraint to input that will not be exercised/exists
+        definition.createSingle("ref_02", Desc="Another id reference").createRequiredSingle("value", Action=storeStr)
+        definition.addExistsConstraint(ExistsConstraint(["ref_02/value"], target=["ids/value"]))
+
+        class obj_with_pass_defaults:
+            def definition(self):
+                definition = InputObject()
+                definition.create("param_pass_enums", Default="red").createSingle("value", Enums=["red", "blue"], Action=storeStr)
+                definition.create("param_pass_exist", Default="ted").createSingle("value", Action=storeStr)
+                return definition
+        class obj_with_fail_defaults:
+            def definition(self):
+                definition = InputObject()
+                definition.create("param_fail_enums", Default="bad").createSingle("value", Enums=["red", "blue"], Action=storeStr)
+                definition.create("param_fail_exist", Default="abc").createSingle("value", Action=storeStr)
+                definition.create("param_fail_unque", Default="xyz").createSingle("value", Action=storeStr)
+                return definition
+        definition.add("obj_with_pass_defaults", obj_with_pass_defaults().definition())
+        definition.add("obj_with_fail_defaults", obj_with_fail_defaults().definition())
+        definition.addExistsConstraint(ExistsConstraint(["obj_with_pass_defaults/param_pass_exist/value"], target=["ids/value"]))
+        definition.addExistsConstraint(ExistsConstraint(["obj_with_fail_defaults/param_fail_exist/value"], target=["ids/value"]))
+        definition.addUniqueConstraint(["obj_with_fail_defaults/param_fail_unque/value"])
+
+        self.assertEqual(["ids/value"], definition.getExistsConstraintTargetGivenSource("obj_with_pass_defaults/param_pass_exist/value"))
+        self.assertEqual(["ref/value","ref_02/value","obj_with_pass_defaults/param_pass_exist/value","obj_with_fail_defaults/param_fail_exist/value"], definition.getExistsConstraintSourceGivenTarget("ids/value"))
 
         inputcontents = '''ids=[foo bar ted]
         ref=bart
+        ref=bob
+        ref=foo
+        ref=ro
+        obj_with_pass_defaults{
+            % this object has parameters with
+            % default values which would pass
+            % both enums and existence checks
+        }
+        obj_with_fail_defaults{
+            % this object has parameters with
+            % default values which would fail
+            % both enums and existence checks
+
+            % the enums check passes with the
+            % default but the existence check
+            % fails with an odd error message
+
+            % there is another parameter here
+            % failing its unique check due to
+            % having a default in two objects
+        }
+        obj_with_fail_defaults{
+            % this object has parameters with
+            % default values which would fail
+            % both enums and existence checks
+
+            % the enums check passes with the
+            % default but the existence check
+            % fails with an odd error message
+
+            % there is another parameter here
+            % failing its unique check due to
+            % having a default in two objects
+        }
         '''
         interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
 
@@ -783,9 +881,244 @@ queried at: 1100.0,-1200.0,1300.0,1400.0'''
 
         db = definition.deserialize(interpreter.root(), interpreter)
         self.assertTrue(interpreter.deserializeDiagnostics())
-        expectedDiagnostics = '''input.son:2.13: value bart is not one of the required existing targets! Required existing targets are foo, bar, ted!
+        expectedDiagnostics = '''input.son:11.9-23.0: obj_with_fail_defaults xyz must be unique but is duplicate to obj_with_fail_defaults on line 24 column 9
+input.son:24.9-36.0: obj_with_fail_defaults xyz must be unique but is duplicate to obj_with_fail_defaults on line 11 column 9
+input.son:2.13: value bart is not one of the required existing targets! Required existing targets are foo, bar, ted, bob, robert!
+input.son:5.13: value ro is not one of the required existing targets! Required existing targets are foo, bar, ted, bob, robert!
+input.son:11.9-23.0: obj_with_fail_defaults abc is not one of the required existing targets! Required existing targets are foo, bar, ted!
+input.son:24.9-36.0: obj_with_fail_defaults abc is not one of the required existing targets! Required existing targets are foo, bar, ted!
 '''
         self.maxDiff = None
         self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
+
+    def test_database_default_list(self):
+        definition = InputObject()
+
+        definition.createRequiredSingle("data").createSingle("ids", Desc="List of integers", Default=[1,2,3]).createRequired("value", Action=storeInt)
+        def defaulted_list_using_default():
+            # Empty string to test default data value
+            inputcontents = "data{}"
+            interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
+
+            self.assertTrue(interpreter)
+            db = definition.deserialize(interpreter.root(), interpreter)
+            self.assertFalse(interpreter.deserializeDiagnostics())
+            self.assertEqual([1,2,3], db["data"]["ids"].valuelist())
+        defaulted_list_using_default()
+
+        def defaulted_list_not_using_default():
+            inputcontents = "data{ids=[9 10 11]}"
+            interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
+
+            self.assertTrue(interpreter)
+            db = definition.deserialize(interpreter.root(), interpreter)
+            self.assertFalse(interpreter.deserializeDiagnostics())
+            self.assertEqual([9,10, 11], db["data"]["ids"].valuelist())
+        defaulted_list_not_using_default()
+
+    def test_database_AtMostConstraint(self):
+        definition = InputObject()
+        x= definition.create("x")
+        x.createSingle("id", Action=storeStr)
+        x.create("foo").createRequiredSingle("value", Action=storeInt)
+        x.create("bar").createRequiredSingle("value", Action=storeInt)
+        x.addAtMostConstraint(SourcePredicatedTarget(target={"bar/value":[3,7], "foo/value":3}))
+        definition.create("y").createSingle("id", Action=storeStr)
+        definition.create("z").createSingle("id", Action=storeStr)
+
+        definition.addAtMostConstraint(SourcePredicatedTarget(target={"x":None, "y":[None]}))
+        definition.addAtMostConstraint(SourcePredicatedTarget(target={"x/id":['foo'],"y/id":'bar'}))
+        definition.addAtMostConstraint(SourcePredicatedTarget(source="x/id", target={"z/id":'foo',"y/id":['bar']}))
+
+        # x.id value cannot be 'illegal' or 'invalid', i.e., ChildAtMostOne=[ "id" "id"=illegal "id"=invalid ]
+        x.addAtMostConstraint(SourcePredicatedTarget(target={"id":[None, "illegal", "invalid"]}))
+
+        def atmost_component():
+            inputcontents = '''
+            x { }
+            y { }
+            '''
+            interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
+
+            self.assertTrue(interpreter)
+
+            db = definition.deserialize(interpreter.root(), interpreter)
+            self.assertTrue(interpreter.deserializeDiagnostics())
+            expectedDiagnostics = '''input.son:2.13-3.0: document has more than 1 of: [x, y] - at most 1 must occur!
+'''
+            self.maxDiff = None
+            self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
+        atmost_component()
+
+        def atmost_cross_component_id():
+            inputcontents = '''
+            x (foo){ }
+            y (bAr){ }
+            z (foo){ }
+            '''
+            interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
+
+            self.assertTrue(interpreter)
+
+            db = definition.deserialize(interpreter.root(), interpreter)
+            self.assertTrue(interpreter.deserializeDiagnostics())
+            expectedDiagnostics = '''input.son:2.13-4.0: document has more than 1 of: [x, y] - at most 1 must occur!
+input.son:2.13-4.0: document has more than 1 of: [x/id=foo, y/id=bAr] - at most 1 must occur!
+input.son:2.13-4.0: document has more than 1 of: [z/id=foo, y/id=bAr] - at most 1 must occur when id on line 2 column 16 is present!
+'''
+            self.maxDiff = None
+            self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
+        atmost_cross_component_id()
+
+        def atmost_value():
+            inputcontents = '''
+            x {foo=3 bar=7 bar=3}
+            '''
+            interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
+
+            self.assertTrue(interpreter)
+
+            db = definition.deserialize(interpreter.root(), interpreter)
+            self.assertTrue(interpreter.deserializeDiagnostics())
+            expectedDiagnostics = '''input.son:2.13: x has more than 1 of: [bar/value=7, bar/value=3, foo/value=3] - at most 1 must occur!
+'''
+            self.maxDiff = None
+            self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
+        atmost_value()
+
+        def atmost_exclusion():
+            inputcontents = '''
+            x           { }
+            x (illegal) { }
+            x (allowed) { }
+            x (invalid) { }
+            '''
+            interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
+
+            self.assertTrue(interpreter)
+
+            db = definition.deserialize(interpreter.root(), interpreter)
+            self.assertTrue(interpreter.deserializeDiagnostics())
+            expectedDiagnostics = '''input.son:3.13: x has more than 1 of: [id, id=illegal] - at most 1 must occur!
+input.son:5.13: x has more than 1 of: [id, id=invalid] - at most 1 must occur!
+'''
+            self.maxDiff = None
+            self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
+        atmost_exclusion()
+
+    def test_database_AtLeastConstraint(self):
+        definition = InputObject()
+        x= definition.create("x")
+        x.createSingle("id", Action=storeStr)
+        x.create("foo").createRequiredSingle("value", Action=storeInt)
+        x.create("bar").createRequiredSingle("value", Action=storeInt)
+        x.addAtLeastConstraint(SourcePredicatedTarget(target={"bar/value":[3,7], "foo/value":3}))
+        definition.create("y").createSingle("id", Action=storeStr)
+        definition.create("z").createSingle("id", Action=storeStr)
+
+        definition.addAtLeastConstraint(SourcePredicatedTarget(target={"x":None, "y":[None]}))
+        definition.addAtLeastConstraint(SourcePredicatedTarget(source="z/id", target={"x/id":["bar"], "y/id":"foo"}))
+        def atleast_component():
+            inputcontents = '''
+                z{}
+            '''
+            interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
+
+            self.assertTrue(interpreter)
+
+            db = definition.deserialize(interpreter.root(), interpreter)
+            self.assertTrue(interpreter.deserializeDiagnostics())
+            expectedDiagnostics = '''input.son:2.17: document has fewer than 1 of: [x, y] - at least 1 must occur!
+'''
+            self.maxDiff = None
+            self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
+        atleast_component()
+        def atleast_sourced_component():
+            inputcontents = '''
+                y{}
+                x{}
+                z(id){} % requires bar id'd x or foo id'd y to be present
+            '''
+            interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
+
+            self.assertTrue(interpreter)
+
+            db = definition.deserialize(interpreter.root(), interpreter)
+            self.assertTrue(interpreter.deserializeDiagnostics())
+            expectedDiagnostics = '''input.son:3.17: x has fewer than 1 of: [bar/value=3, bar/value=7, foo/value=3] - at least 1 must occur!
+input.son:2.17-4.0: document has fewer than 1 of: [x/id=bar, y/id=foo] - at least 1 must occur when id on line 4 column 19 is present!
+'''
+            self.maxDiff = None
+            self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
+        atleast_sourced_component()
+
+    def test_database_ExactlyConstraint(self):
+        definition = InputObject()
+        x= definition.create("x")
+        x.createSingle("id", Action=storeStr)
+        x.create("foo").createRequiredSingle("value", Action=storeInt)
+        x.create("bar").createRequiredSingle("value", Action=storeInt)
+        x.addExactlyConstraint(SourcePredicatedTarget(target={"bar/value":3, "foo/value":[3,7]}))
+        definition.create("y").createSingle("id", Action=storeStr)
+        definition.create("z").createSingle("id", Action=storeStr)
+
+        definition.addExactlyConstraint(SourcePredicatedTarget(target={"x":[None], "y":None}))
+        definition.addExactlyConstraint(SourcePredicatedTarget(source="z/id", target={"x/id":"bar", "y/id":["foo"]}))
+        def exactly_component():
+            inputcontents = '''
+                z{}
+            '''
+            interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
+
+            self.assertTrue(interpreter)
+
+            db = definition.deserialize(interpreter.root(), interpreter)
+            self.assertTrue(interpreter.deserializeDiagnostics())
+            expectedDiagnostics = '''input.son:2.17: document has 0 of: [x, y] - exactly 1 must occur!
+'''
+            self.maxDiff = None
+            self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
+        exactly_component()
+        def exactly_sourced_component():
+            inputcontents = '''
+                y{}
+                x{}
+                z(id){} % requires bar id'd x or foo id'd y to be present
+            '''
+            interpreter = Interpreter(Syntax.SON, path="input.son", data=inputcontents)
+
+            self.assertTrue(interpreter)
+
+            db = definition.deserialize(interpreter.root(), interpreter)
+            self.assertTrue(interpreter.deserializeDiagnostics())
+            expectedDiagnostics = '''input.son:3.17: x has 0 of: [bar/value=3, foo/value=3, foo/value=7] - exactly 1 must occur!
+input.son:2.17-4.0: document has 2 of: [x, y] - exactly 1 must occur!
+input.son:2.17-4.0: document has 0 of: [x/id=bar, y/id=foo] - exactly 1 must occur when id on line 4 column 19 is present!
+'''
+            self.maxDiff = None
+            self.assertEqual(expectedDiagnostics,"".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
+        exactly_sourced_component()
+
+    def test_node_set_data(self):
+        input = 'data = 1.24'
+
+        interpreter = Interpreter(Syntax.SON, data=input, path="myfile.inp")
+        self.assertTrue(interpreter)
+        self.assertEqual("data = 1.24", interpreter.root().data())
+        data_value_node = interpreter.root()['data']['value'][0]
+        self.assertTrue(data_value_node)
+        data_value_node.set_data("bob")
+        self.assertEqual("data = bob", interpreter.root()['data'][0].data())
+
+    def test_sch2db(self):
+        self.assertTrue(schema := Interpreter(Syntax.SON, path="test/schema.sch"))
+        dbpy_captured = StringIO()
+        with redirect_stdout(dbpy_captured):
+            write_database(schema.root())
+        with open("test/db_expected.py") as dbpy_file:
+            dbpy_expected = dbpy_file.read()
+        self.maxDiff = None
+        self.assertEqual(dbpy_expected, dbpy_captured.getvalue())
+
 if __name__ == '__main__':
      unittest.main()

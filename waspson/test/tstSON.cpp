@@ -113,6 +113,20 @@ TEST(SON, keyed_value)
         ASSERT_EQ(document.child_at(index), itr.get());
     }
     }
+
+    // Test interpreter::find(line, col)
+    SONNodeView found = interpreter.find(5, 28); // real = |1.1232
+    ASSERT_FALSE(found.is_null());
+    ASSERT_EQ("/real/value", found.path());
+    ASSERT_EQ("1.1232", found.data());
+
+    found = interpreter.find(5, 23); // re|al =...
+    ASSERT_FALSE(found.is_null());
+    ASSERT_EQ("/real/decl", found.path());
+    ASSERT_EQ("real", found.data());
+
+    found = interpreter.find(10, 1); // root
+    ASSERT_FALSE(found.is_null());
 }
 TEST(SON, empty_object)
 {

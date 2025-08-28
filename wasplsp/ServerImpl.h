@@ -176,16 +176,14 @@ class WASP_PUBLIC ServerImpl
     /** get this server's connection - to be implemented on derived servers
      * @return - shared pointer to the server's read / write connection
      */
-    virtual std::shared_ptr<wasp::lsp::Connection> getConnection() = 0;
-
-  protected:
+    virtual std::shared_ptr<wasp::lsp::Connection> getConnection() {return nullptr;}
 
     /** parse document for diagnostics - to be implemented on derived servers
      * @param diagnosticsList - data array of diagnostics data objects to fill
      * @return - true if completed successfully - does not indicate parse fail
      */
     virtual bool parseDocumentForDiagnostics(
-                          wasp::DataArray  & diagnosticsList ) = 0;
+                          wasp::DataArray  & diagnosticsList ) {return true;}
 
     /** update document text changes - may be overridden on derived servers
      ** base implementation replaces entire document text if not overridden
@@ -221,7 +219,7 @@ class WASP_PUBLIC ServerImpl
                           wasp::DataArray & completionItems  ,
                           bool      & is_incomplete    ,
                           int         line             ,
-                          int         character        ) = 0;
+                          int         character        ) {return true;}
 
     /** gather definition locations - to be implemented on derived servers
      * @param definitionLocations - data array of locations objects to fill
@@ -232,7 +230,7 @@ class WASP_PUBLIC ServerImpl
     virtual bool gatherDocumentDefinitionLocations(
                           wasp::DataArray & definitionLocations ,
                           int         line                ,
-                          int         character           ) = 0;
+                          int         character           ) {return true;}
 
     /** get hover display text - details are implemented on derived servers
      ** rather than being pure virtual like similar server specific methods
@@ -259,7 +257,7 @@ class WASP_PUBLIC ServerImpl
                           wasp::DataArray & referencesLocations ,
                           int         line                ,
                           int         character           ,
-                          bool        include_declaration ) = 0;
+                          bool        include_declaration ) {return true;}
 
     /** gather formatting text edits - to be implemented on derived servers
      * @param formattingTextEdits - data array of text edit objects to fill
@@ -270,14 +268,14 @@ class WASP_PUBLIC ServerImpl
     virtual bool gatherDocumentFormattingTextEdits(
                           wasp::DataArray & formattingTextEdits ,
                           int         tab_size            ,
-                          bool        insert_spaces       ) = 0;
+                          bool        insert_spaces       ) {return true;}
 
     /** gather document symbols - to be implemented on derived servers
      * @param documentSymbols - data array of symbols data objects to fill
      * @return - true if the gathering of symbols completed successfully
      */
     virtual bool gatherDocumentSymbols(
-                          wasp::DataArray & documentSymbols ) = 0;
+                          wasp::DataArray & documentSymbols ) {return true;}
 
     /** gather extension responses - may be overridden on derived servers
      * @param extensionResponses - data array of custom responses to fill
@@ -295,14 +293,16 @@ class WASP_PUBLIC ServerImpl
     /** read from connection into object - to be implemented on derived servers
      * @param object - reference to object to be read into
      * @return - true if the read from the connection completed successfully
+     * Note: Override this method 
      */
-    virtual bool connectionRead( wasp::DataObject & object ) = 0;
+    virtual bool connectionRead( wasp::DataObject & object ) {return true;}
 
     /** write object json to connection - to be implemented on derived servers
      * @param object - reference to object with contents to write to connection
      * @return - true if the write to the connection completed successfully
+     * Note: Override this method
      */
-    virtual bool connectionWrite( wasp::DataObject & object ) = 0;
+    virtual bool connectionWrite( wasp::DataObject & object ) {return true;}
 
     /** enable full document sync capability for server */
     void enableFullSync()
@@ -372,7 +372,7 @@ class WASP_PUBLIC ServerImpl
     {
       return errors;
     }
-
+  protected:
     /**
      * @brief errors - all errors stored by the server for any reason
      */

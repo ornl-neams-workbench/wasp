@@ -127,6 +127,11 @@ Diagnostic& AbstractInterpreter::error_diagnostic()
     return m_error_diagnostics.back();
 }
 
+NodeView AbstractInterpreter::find(size_t line , size_t column) const
+{
+    return wasp::findNodeUnderLineColumn(root(), line, column);
+}
+
 NodeView::NodeView(std::size_t node_index, wasp::AbstractInterpreter& nodes)
     : m_node_index(node_index), m_pool(&nodes)
 {

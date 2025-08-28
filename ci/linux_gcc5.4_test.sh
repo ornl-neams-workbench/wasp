@@ -15,6 +15,7 @@ cd build
 wget https://code-int.ornl.gov/lefebvre/miniconda/-/raw/main/Miniconda3-py310_24.5.0-0-Linux-x86_64.sh -O ${PWD}/miniconda3/miniconda.sh
 bash ${PWD}/miniconda3/miniconda.sh -b -u -p ${PWD}/miniconda3
 eval "$(${PWD}/miniconda3/bin/conda shell.bash hook 2> /dev/null)"
+export CONDA_NUMBER_CHANNEL_NOTICES=0
 conda env create -f ../ci/env.yml
 conda activate wasp_ci
 

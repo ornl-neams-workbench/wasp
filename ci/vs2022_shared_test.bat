@@ -11,6 +11,7 @@ SET "MINI_ROOT=%BLD_DIR%\miniconda3"
 curl https://code-int.ornl.gov/lefebvre/miniconda/-/raw/main/Miniconda3-py310_24.5.0-0-Windows-x86_64.exe -o Miniconda3-latest-Windows-x86_64.exe
 Miniconda3-latest-Windows-x86_64.exe /S /D=%MINI_ROOT%
 CALL %cd%\miniconda3\Scripts\activate.bat
+set CONDA_NUMBER_CHANNEL_NOTICES=0
 CALL conda env create -f ..\ci\env.yml
 CALL conda activate wasp_ci
 CALL pip install delvewheel
@@ -36,8 +37,7 @@ ctest -VV --output-on-failure ^
       --build-config RELEASE ^
       -D ExperimentalStart ^
       -D ExperimentalBuild ^
-      -D ExperimentalTest ^
-      -D ExperimentalSubmit
+      -D ExperimentalTest 
 
 REM This command will "repair" the wheel and overwrite the existing wheel.
 FOR /F "usebackq delims=" %%g IN (`WHERE /R %BLD_DIR%\wasppy\dist\ *.whl`) DO delvewheel repair -w %BLD_DIR%\wasppy\dist %%g

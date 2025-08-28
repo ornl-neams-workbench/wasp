@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for LSP onHover array content
 - DataArray to_string support
 - Support for multi-line MCNP message blocks
+- Utility that generates Python database classes out of provided SON input schema
 
 ### Fixed
 - WASP build error when used as TPL caused by missing waspcore/wasp_bug.h include
@@ -28,6 +29,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Diagnostic object message access to clean up string before returning downstream
 - CustomPlotFile so valid JSON is made from default rangeMin and rangeMax of axes
 - SnippetManager tabstop column offset to no longer include snippet syntax
+- InputDefinition::isValidPath to support absolute paths
+- schema docprint utility support of absolute paths
 
 ### Changed
 - Minimum version of CMake to 3.20, removing deprecated version incompatibility/error observed with newer CMake

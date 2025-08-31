@@ -28,8 +28,9 @@ bool MCNPInterpreter<S>::parse(std::istream& in,
                              size_t        startLine,
                              size_t        startColumn)
 {
+    std::string name = Interpreter<S>::stream_name();
     return parseStream(
-        in, hasFile() ? Interpreter<S>::stream_name() : "stream input",
+        in, name,
         startLine, startColumn);
 }
 template<class S>
@@ -44,7 +45,8 @@ bool MCNPInterpreter<S>::parseStream(std::istream&      in,
 template<class S>
 bool MCNPInterpreter<S>::parseFile(const std::string& filename, size_t line)
 {
-    std::ifstream in(filename.c_str());
+    std::string name = filename;
+    std::ifstream in(name.c_str());
     if (!in.good())
     {
         Interpreter<S>::error_stream()
@@ -53,8 +55,8 @@ bool MCNPInterpreter<S>::parseFile(const std::string& filename, size_t line)
             << std::endl;
         return false;
     }
-    mHasFile = true;
-    return parseStream(in, filename, line);
+    setStreamName(name, true);
+    return parseStream(in, name, line);
 }
 template<class S>
 bool MCNPInterpreter<S>::parseString(const std::string& input,

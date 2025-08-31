@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     std::ifstream masses_stream(argv[2]);
     if (!masses_stream.good())
     {
-        std::cerr << "Unablet to read " << argv[2] << "!" << std::endl;
+        std::cerr << "Unable to read " << argv[2] << "!" << std::endl;
         return 1;
     }
 
@@ -74,7 +74,9 @@ int main(int argc, char* argv[])
 
     // Attempt to parse the document
     DefaultMCNPInterpreter interpreter(errors);
-    bool parsed = interpreter.parseFile(argv[1]);                
+    interpreter.setStreamName(argv[1]);
+    std::ifstream mcnpdata(argv[1]);
+    bool parsed = interpreter.parse(mcnpdata);
     if (!parsed)
     {
         da_error.push_back(errors.str());

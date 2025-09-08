@@ -75,6 +75,20 @@ class WASP_PUBLIC Server
                                                  publishDiagnosticsNotification );
     }
 
+    /** handle workspace didchangewatchedfiles and fill diagnostics array
+     * @param didChangeWatchedFilesNotification - contains modified files
+     * @param publishDiagnosticsArray - array to store publishDiagnostics
+     * @return - true if everything handled and array built without error
+     */
+    bool handleDidChangeWatchedFilesNotification(
+                    const wasp::DataObject & didChangeWatchedFilesNotification ,
+                          wasp::DataArray  & publishDiagnosticsArray           )
+    {
+        return Impl.handleDidChangeWatchedFilesNotification(
+                        didChangeWatchedFilesNotification ,
+                        publishDiagnosticsArray           );
+    }
+
     /** handle completion request creating response in provided reference
      * @param completionRequest - const reference to request to be handled
      * @param completionResponse - reference to object that will hold response
@@ -202,6 +216,14 @@ class WASP_PUBLIC Server
         return Impl.handleExitNotification( exitNotification  );
     }
 
+    /** register resources for input that client should watch for changes
+     * @return - true if unregister and register requests were successful
+     */
+    bool registerWatchFiles()
+    {
+        return Impl.registerWatchFiles();
+    }
+
     /** get a shared pointer this server's read / write connection
      * @return - shared pointer to the server's read / write connection
      */
@@ -232,6 +254,14 @@ class WASP_PUBLIC Server
     bool clientSupportsSnippets()
     {
         return Impl.clientSupportsSnippets();
+    }
+
+    /** check if client communicated it supports watch files registration
+     * @return - true if client supports dynamic watch files registration
+     */
+    bool clientSupportsWatchers()
+    {
+        return Impl.clientSupportsWatchers();
     }
 
     /** get a pointer to server implementation class used for above methods

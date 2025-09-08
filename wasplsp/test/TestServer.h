@@ -31,6 +31,7 @@ class WASP_PUBLIC TestServer : public ServerImpl
         this->enableSymbols();
         this->enableExtension("testMethod01");
         this->enableExtension("testMethod02");
+        this->enableExtension("watcherRegistration");
     }
 
     /** get read / write connection - specific to this server implemention

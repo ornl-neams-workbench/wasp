@@ -11,6 +11,8 @@
 #include <vector>
 #include <sstream>
 #include <string>
+#include <set>
+#include <map>
 
 namespace wasp {
 namespace lsp  {
@@ -35,6 +37,11 @@ TEST(client, launch_server_thread_and_connnect_client)
     // set capabilities/extensions/testMethod02 = true
     test_client.enableExtension("testMethod01");
     test_client.enableExtension("testMethod02");
+
+    // notify server that client supports watchers by setting these to true
+    // capabilities/workspace/didChangeWatchedFiles/dynamicRegistration
+    // capabilities/workspace/didChangeWatchedFiles/relativePatternSupport
+    test_client.enableWatcherSupport();
 
     ASSERT_TRUE ( test_client.connect( test_server.getConnection() ) );
 
@@ -778,6 +785,65 @@ TEST(client, document_symbols_and_responses)
 )INPUT";
 
     ASSERT_EQ ( expected_paths.str() , paths.str() );
+}
+
+TEST(client, workspace_handle_watch_files)
+{
+    // verify client and server support watch files and handle registration
+    ASSERT_TRUE(test_client.hasWatcherSupport());
+    ASSERT_TRUE(test_client.serverSupportsExtension("watcherRegistration"));
+    ASSERT_TRUE(test_client.handleWatchFileRegistration());
+
+    // get watch files that were registered by server and verify file paths
+    std::set<std::string> watch_uris = test_client.getAllWatchFiles();
+    ASSERT_EQ((std::size_t)2, watch_uris.size());
+    std::size_t watch_uri_index = 0;
+    for (const std::string & watch_uri : watch_uris)
+    {
+        if (watch_uri_index == 0)
+            ASSERT_EQ("/path/to/resource/file01.i", removeUriScheme(watch_uri));
+        else if (watch_uri_index == 1)
+            ASSERT_EQ("/path/to/resource/file02.i", removeUriScheme(watch_uri));
+        watch_uri_index++;
+    }
+
+    // notify server watch files have changed and get base file diagnostics
+    std::map<std::string, std::vector<clientDiagnostic>> all_diagnostics;
+    ASSERT_TRUE(test_client.notifyServerChangedWatchedFiles(watch_uris, all_diagnostics));
+    ASSERT_EQ((std::size_t)1, all_diagnostics.size());
+
+    // verify base file path and expected diagnostics from server reprocess
+    std::string base_uri                           = all_diagnostics.begin()->first;
+    std::vector<clientDiagnostic> base_diagnostics = all_diagnostics.begin()->second;
+    ASSERT_EQ("test/document/uri/string", removeUriScheme(base_uri));
+    ASSERT_EQ((std::size_t)2, base_diagnostics.size());
+    std::size_t diagnostic_index = 0;
+    for (const clientDiagnostic & diagnostic : base_diagnostics)
+    {
+        if (diagnostic_index == 0)
+        {
+            ASSERT_EQ(67                , diagnostic.start_line     );
+            ASSERT_EQ(45                , diagnostic.start_character);
+            ASSERT_EQ(68                , diagnostic.end_line       );
+            ASSERT_EQ(16                , diagnostic.end_character  );
+            ASSERT_EQ(4                 , diagnostic.severity       );
+            ASSERT_EQ("test.code.44"    , diagnostic.code           );
+            ASSERT_EQ("test_source_44"  , diagnostic.source         );
+            ASSERT_EQ("Test message 44.", diagnostic.message        );
+        }
+        else if (diagnostic_index == 1)
+        {
+            ASSERT_EQ(87                , diagnostic.start_line     );
+            ASSERT_EQ(17                , diagnostic.start_character);
+            ASSERT_EQ(88                , diagnostic.end_line       );
+            ASSERT_EQ(12                , diagnostic.end_character  );
+            ASSERT_EQ(1                 , diagnostic.severity       );
+            ASSERT_EQ("test.code.55"    , diagnostic.code           );
+            ASSERT_EQ("test_source_55"  , diagnostic.source         );
+            ASSERT_EQ("Test message 55.", diagnostic.message        );
+        }
+        diagnostic_index++;
+    }
 }
 
 TEST(client, extension_request_and_response_01)

@@ -579,6 +579,451 @@ bool dissectDidChangeNotification( const DataObject   & object          ,
     return pass;
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// {
+//   "jsonrpc": "2.0",
+//   "method": "workspace/didChangeWatchedFiles",
+//   "params": {
+//     "changes": [
+//       {
+//         "uri": "file:///full/path/to/watchfile01.i",
+//         "type": 2
+//       },
+//       {
+//         "uri": "file:///full/path/to/watchfile02.i",
+//         "type": 2
+//       }
+//     ]
+//   }
+// }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bool buildDidChangeWatchedFilesNotification( DataObject                  & object        ,
+                                             std::ostream                & errors        ,
+                                             const std::set<std::string> & resource_uris )
+{
+    bool pass = true;
+
+    DataObject params;
+    params[m_changes] = DataArray();
+
+    for (const auto & resource_uri : resource_uris)
+    {
+        DataObject change;
+        change[m_uri]  = resource_uri;
+        change[m_type] = m_change_type_changed;
+
+        params[m_changes].to_array()->push_back(change);
+    }
+
+    object[m_params] = params;
+    object[m_method] = m_method_didchangewatch;
+
+    return pass;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// {
+//   "jsonrpc": "2.0",
+//   "method": "workspace/didChangeWatchedFiles",
+//   "params": {
+//     "changes": [
+//       {
+//         "uri": "file:///full/path/to/watchfile01.i",
+//         "type": 2
+//       },
+//       {
+//         "uri": "file:///full/path/to/watchfile02.i",
+//         "type": 2
+//       }
+//     ]
+//   }
+// }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bool dissectDidChangeWatchedFilesNotification( const DataObject   & object  ,
+                                                     std::ostream & errors  ,
+                                                     DataArray    & changes )
+{
+    bool pass = true;
+
+    wasp_check(object.contains(m_method) && object[m_method].is_string());
+    wasp_check(object[m_method].to_string() == m_method_didchangewatch);
+
+    wasp_check(object.contains(m_params) && object[m_params].is_object());
+    const DataObject & params = *(object[m_params].to_object());
+
+    wasp_check(params.contains(m_changes) && params[m_changes].is_array());
+    changes = *(params[m_changes].to_array());
+
+    return pass;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// {
+//   "uri": "file:///full/path/to/watchfile01.i",
+//   "type": 2
+// }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bool dissectChangeObject( const DataObject   & object ,
+                                std::ostream & errors ,
+                                std::string  & uri    ,
+                                int          & type   )
+{
+    bool pass = true;
+
+    wasp_check(object.contains(m_uri) && object[m_uri].is_string());
+    uri = object[m_uri].to_string();
+
+    wasp_check(object.contains(m_type) && object[m_type].is_int());
+    type = object[m_type].to_int();
+
+    return pass;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// {
+//   "jsonrpc": "2.0",
+//   "method": "window/logMessage",
+//   "params": {
+//     "type": 4,
+//     "message": "diagnostics flush complete"
+//   }
+// }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+bool buildDiagnosticsSentinelObject( DataObject        & object ,
+                                     std::ostream      & errors )
+{
+    bool pass = true;
+
+    DataObject params;
+    params[m_type]    = m_message_type_log;
+    params[m_message] = m_sentinel_log_message;
+
+    object[m_params] = params;
+    object[m_method] = m_method_logmessage;
+
+    return pass;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// {
+//   "jsonrpc": "2.0",
+//   "method": "window/logMessage",
+//   "params": {
+//     "type": 4,
+//     "message": "diagnostics flush complete"
+//   }
+// }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bool isDiagnosticsSentinelObject( const DataObject & object )
+{
+    if (!object.contains(m_method) || !object[m_method].is_string())
+        return false;
+
+    if (object[m_method].to_string() != m_method_logmessage)
+        return false;
+
+    if (!object.contains(m_params) || !object[m_params].is_object())
+        return false;
+
+    const DataObject & params = *(object[m_params].to_object());
+
+    if (!params.contains(m_type) || !params[m_type].is_int())
+        return false;
+
+    if (params[m_type].to_int() != m_message_type_log)
+        return false;
+
+    if (!params.contains(m_message) || !params[m_message].is_string())
+        return false;
+
+    if (params[m_message].to_string() != m_sentinel_log_message)
+        return false;
+
+    return true;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// {
+//   "jsonrpc": "2.0",
+//   "id": 101,
+//   "method": "client/unregisterCapability",
+//   "params": {
+//     "unregisterations": [
+//       {
+//         "id": "file:///full/path/to/basefile.i",
+//         "method": "workspace/didChangeWatchedFiles"
+//       }
+//     ]
+//   }
+// }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bool buildUnregisterWatchFilesRequest( DataObject        & object     ,
+                                       std::ostream      & errors     ,
+                                       int                 request_id ,
+                                       const std::string & uri        )
+{
+    bool pass = true;
+
+    DataObject unregistration;
+    unregistration[m_id]     = uri;
+    unregistration[m_method] = m_method_didchangewatch;
+
+    DataObject params;
+    params[m_unregistrations] = DataArray();
+    params[m_unregistrations].to_array()->push_back(unregistration);
+
+    object[m_params] = params;
+    object[m_id]     = request_id;
+    object[m_method] = m_method_unregistercap;
+
+    return pass;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// {
+//   "jsonrpc": "2.0",
+//   "id": 101,
+//   "method": "client/unregisterCapability",
+//   "params": {
+//     "unregisterations": [
+//       {
+//         "id": "file:///full/path/to/basefile.i",
+//         "method": "workspace/didChangeWatchedFiles"
+//       }
+//     ]
+//   }
+// }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bool dissectUnregisterWatchFilesRequest( const DataObject            & object           ,
+                                               std::ostream          & errors           ,
+                                               int                   & request_id       ,
+                                               std::set<std::string> & registration_ids )
+{
+    bool pass = true;
+
+    wasp_check(object.contains(m_method) && object[m_method].is_string());
+    wasp_check(object[m_method].to_string() == m_method_unregistercap);
+
+    wasp_check(object.contains(m_id) && object[m_id].is_int());
+    request_id = object[m_id].to_int();
+
+    wasp_check(object.contains(m_params) && object[m_params].is_object());
+    const DataObject & params = *(object[m_params].to_object());
+
+    wasp_check(params.contains(m_unregistrations) && params[m_unregistrations].is_array());
+    const DataArray & unregistrations = *(params[m_unregistrations].to_array());
+
+    // walk over unregistrations and collect registration ids to unregister
+    for (std::size_t i = 0; i < unregistrations.size(); i++)
+    {
+        wasp_check(unregistrations.at(i).is_object());
+        const DataObject & unregistration = *(unregistrations.at(i).to_object());
+
+        wasp_check(unregistration.contains(m_method) && unregistration[m_method].is_string());
+        wasp_check(unregistration[m_method].to_string() == m_method_didchangewatch);
+
+        wasp_check(unregistration.contains(m_id) && unregistration[m_id].is_string());
+        registration_ids.insert(unregistration[m_id].to_string());
+    }
+
+    return pass;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// {
+//   "jsonrpc": "2.0",
+//   "id": 102,
+//   "method": "client/registerCapability",
+//   "params": {
+//     "registrations": [
+//       {
+//         "id": "file:///full/path/to/basefile.i",
+//         "method": "workspace/didChangeWatchedFiles",
+//         "registerOptions": {
+//           "watchers": [
+//             {
+//               "globPattern": {
+//                 "baseUri": "file:///full/path/to/",
+//                 "pattern": "watchfile01.i"
+//               },
+//               "kind": 2
+//             },
+//             {
+//               "globPattern": {
+//                 "baseUri": "file:///full/path/to/",
+//                 "pattern": "watchfile02.i"
+//               },
+//               "kind": 2
+//             }
+//           ]
+//         }
+//       }
+//     ]
+//   }
+// }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bool buildRegisterWatchFilesRequest( DataObject                  & object        ,
+                                     std::ostream                & errors        ,
+                                     int                           request_id    ,
+                                     const std::string           & uri           ,
+                                     const std::set<std::string> & resource_uris )
+{
+    bool pass = true;
+
+    DataObject register_options;
+    register_options[m_watchers] = DataArray();
+
+    for (const auto & resource_uri : resource_uris)
+    {
+        std::size_t lastsep = resource_uri.find_last_of("/\\");
+        std::string baseuri = resource_uri.substr(0, lastsep + 1);
+        std::string pattern = resource_uri.substr(lastsep + 1);
+
+        DataObject glob_pattern;
+        glob_pattern[m_base_uri] = baseuri;
+        glob_pattern[m_pattern]  = pattern;
+
+        DataObject watcher;
+        watcher[m_glob_pattern] = glob_pattern;
+        watcher[m_kind]         = m_watch_kind_change;
+
+        register_options[m_watchers].to_array()->push_back(watcher);
+    }
+
+    DataObject registration;
+    registration[m_id]               = uri;
+    registration[m_method]           = m_method_didchangewatch;
+    registration[m_register_options] = register_options;
+
+    DataObject params;
+    params[m_registrations] = DataArray();
+    params[m_registrations].to_array()->push_back(registration);
+
+    object[m_params] = params;
+    object[m_id]     = request_id;
+    object[m_method] = m_method_registercap;
+
+    return pass;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// {
+//   "jsonrpc": "2.0",
+//   "id": 102,
+//   "method": "client/registerCapability",
+//   "params": {
+//     "registrations": [
+//       {
+//         "id": "file:///full/path/to/basefile.i",
+//         "method": "workspace/didChangeWatchedFiles",
+//         "registerOptions": {
+//           "watchers": [
+//             {
+//               "globPattern": {
+//                 "baseUri": "file:///full/path/to/",
+//                 "pattern": "watchfile01.i"
+//               },
+//               "kind": 2
+//             },
+//             {
+//               "globPattern": {
+//                 "baseUri": "file:///full/path/to/",
+//                 "pattern": "watchfile02.i"
+//               },
+//               "kind": 2
+//             }
+//           ]
+//         }
+//       }
+//     ]
+//   }
+// }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bool dissectRegisterWatchFilesRequest(
+    const DataObject                                   & object          ,
+          std::ostream                                 & errors          ,
+          int                                          & request_id      ,
+          std::map<std::string, std::set<std::string>> & keyed_resources )
+{
+    bool pass = true;
+
+    wasp_check(object.contains(m_method) && object[m_method].is_string());
+    wasp_check(object[m_method].to_string() == m_method_registercap);
+
+    wasp_check(object.contains(m_id) && object[m_id].is_int());
+    request_id = object[m_id].to_int();
+
+    wasp_check(object.contains(m_params) && object[m_params].is_object());
+    const DataObject & params = *(object[m_params].to_object());
+
+    wasp_check(params.contains(m_registrations) && params[m_registrations].is_array());
+    const DataArray & registrations = *(params[m_registrations].to_array());
+
+    // walk over registrations and map child resources from registration id
+    for (std::size_t i = 0; i < registrations.size(); i++)
+    {
+        wasp_check(registrations.at(i).is_object());
+        const DataObject & registration = *(registrations.at(i).to_object());
+
+        wasp_check(registration.contains(m_method) && registration[m_method].is_string());
+        wasp_check(registration[m_method].to_string() == m_method_didchangewatch);
+
+        wasp_check(registration.contains(m_id) && registration[m_id].is_string());
+        const std::string registration_id = registration[m_id].to_string();
+
+        wasp_check(registration.contains(m_register_options) && registration[m_register_options].is_object());
+        const DataObject & register_options = *(registration[m_register_options].to_object());
+
+        wasp_check(register_options.contains(m_watchers) && register_options[m_watchers].is_array());
+        const DataArray & watchers = *(register_options[m_watchers].to_array());
+
+        // walk over watchers and store resources when watch kind is change
+        for (std::size_t j = 0; j < watchers.size(); j++)
+        {
+            wasp_check(watchers.at(i).is_object());
+            const DataObject & watcher = *(watchers.at(j).to_object());
+
+            wasp_check(watcher.contains(m_glob_pattern) && watcher[m_glob_pattern].is_object());
+            const DataObject & glob_pattern = *(watcher[m_glob_pattern].to_object());
+
+            wasp_check(watcher.contains(m_kind) && watcher[m_kind].is_int());
+            int watcher_kind = watcher[m_kind].to_int();
+
+            wasp_check(glob_pattern.contains(m_base_uri) && glob_pattern[m_base_uri].is_string());
+            const std::string baseuri = glob_pattern[m_base_uri].to_string();
+
+            wasp_check(glob_pattern.contains(m_pattern) && glob_pattern[m_pattern].is_string());
+            const std::string pattern = glob_pattern[m_pattern].to_string();
+
+            // store resource (baseuri + pattern) when watch kind is change
+            if (watcher_kind == m_watch_kind_change)
+                keyed_resources[registration_id].insert(baseuri + pattern);
+        }
+    }
+
+    return pass;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// {
+//   "jsonrpc": "2.0",
+//   "id": 101,
+//   "result": null
+// }
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bool buildRegistrationResponse( DataObject   & object     ,
+                                std::ostream & errors     ,
+                                int            request_id )
+{
+    bool pass = true;
+
+    object[m_result] = Value();
+    object[m_id]     = request_id;
+
+    return pass;
+}
+
 bool buildCompletionRequest( DataObject        & object     ,
                              std::ostream      & errors     ,
                              int                 request_id ,
@@ -1096,7 +1541,6 @@ bool buildExtensionResponse( DataObject        & object              ,
                              const DataArray   & extension_responses )
 {
     bool pass = true;
-    DataObject result;
 
     // set object's result and id
     object[m_result] = extension_responses;
@@ -1105,10 +1549,10 @@ bool buildExtensionResponse( DataObject        & object              ,
     return pass;
 }
 
-bool dissectExtensionResponse( const wasp::DataObject & object              ,
+bool dissectExtensionResponse( const DataObject       & object              ,
                                      std::ostream     & errors              ,
                                      int              & request_id          ,
-                                     wasp::DataArray  & extension_responses )
+                                     DataArray        & extension_responses )
 {
     bool pass = true;
 
@@ -1667,8 +2111,6 @@ bool buildLocationsResponse( DataObject        & object           ,
 {
     bool pass = true;
 
-    DataObject result;
-
     // set object's result and id
 
     object[m_result] = location_objects;
@@ -1794,8 +2236,6 @@ bool buildFormattingResponse( DataObject        & object           ,
                               const DataArray   & textedit_objects )
 {
     bool pass = true;
-
-    DataObject result;
 
     // set object's result and id
 
@@ -1965,8 +2405,6 @@ bool buildSymbolsResponse( DataObject      & object           ,
                            const DataArray & document_symbols )
 {
     bool pass = true;
-
-    DataObject result;
 
     // set object's result and id
 
@@ -2247,6 +2685,18 @@ DataArray * getSymbolChildrenArray( const DataObject & object )
     }
 
     return nullptr;
+}
+
+std::string removeUriScheme(const std::string & path)
+{
+    return path.rfind(std::string(m_uri_prefix), 0) == 0
+           ? path.substr(std::string(m_uri_prefix).size()) : path;
+}
+
+std::string prefixUriScheme(const std::string & path)
+{
+    return path.rfind(std::string(m_uri_prefix), 0) != 0
+           ? m_uri_prefix + path : path;
 }
 
 } // namespace lsp

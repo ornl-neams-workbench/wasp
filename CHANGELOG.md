@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - DataArray to_string support
 - Support for multi-line MCNP message blocks
 - Utility that generates Python database classes out of provided SON input schema
+- LSP change watch files capabilities regarding workspaces in servers and clients
+- Interpreter ability to obtain paths of all downstream include files recursively
 
 ### Fixed
 - WASP build error when used as TPL caused by missing waspcore/wasp_bug.h include

@@ -494,6 +494,16 @@ bool Interpreter<NodeStorage>::path_already_included(const std::string& path) co
 }
 
 template<class NodeStorage>
+void Interpreter<NodeStorage>::descendant_include_paths(std::set<std::string> & paths) const
+{
+    for (const auto & it : m_interp_node)
+    {
+        paths.insert(it.first->stream_name());
+        it.first->descendant_include_paths(paths);
+    }
+}
+
+template<class NodeStorage>
 const AbstractInterpreter* Interpreter<NodeStorage>::document(size_t node_index) const
 {
     auto itr = m_node_interp.find(node_index);

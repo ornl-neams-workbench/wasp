@@ -98,6 +98,7 @@ class WASP_PUBLIC LSPInterpreter : public Interpreter<TreeNodePool<>>
      * (1) Calls DOCUMENT_OPEN on the server with the INPUT string
      * (2) Gets any DIAGNOSTICS from server and adds each to the error_stream
      * (3) Gets DOCUMENT_SYMBOLS from server and traverses creating parse tree
+     * (4) Handles watch file registration by server if it has capability
      * @param input - input string
      * @param sname - optional stream name for error messages
      * @return      - true if successfully parsed with no diagnostic errors

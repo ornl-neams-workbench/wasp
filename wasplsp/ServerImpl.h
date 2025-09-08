@@ -10,6 +10,7 @@
 #include "wasplsp/Connection.h"
 #include "waspcore/Object.h"
 #include "waspcore/decl.h"
+#include "waspcore/wasp_bug.h"
 
 namespace wasp {
 namespace lsp  {
@@ -18,7 +19,11 @@ class WASP_PUBLIC ServerImpl
 {
   public:
 
-    ServerImpl() : is_initialized(false) , client_snippet_support(false) {}
+    ServerImpl() :
+        is_initialized(false)           ,
+        client_snippet_support(false)   ,
+        client_watcher_support(false)   ,
+        server_request_id(1)            {}
 
     virtual ~ServerImpl() = default;
 
@@ -60,6 +65,15 @@ class WASP_PUBLIC ServerImpl
     bool handleDidChangeNotification(
                     const wasp::DataObject & didChangeNotification          ,
                           wasp::DataObject & publishDiagnosticsNotification );
+
+    /** handle workspace didchangewatchedfiles and fill diagnostics array
+     * @param didChangeWatchedFilesNotification - contains modified files
+     * @param publishDiagnosticsArray - array to store publishDiagnostics
+     * @return - true if everything handled and array built without error
+     */
+    bool handleDidChangeWatchedFilesNotification(
+                    const wasp::DataObject & didChangeWatchedFilesNotification ,
+                          wasp::DataArray  & publishDiagnosticsArray           );
 
     /** handle completion request creating response in provided reference
      * @param completionRequest - const reference to request to be handled
@@ -149,6 +163,11 @@ class WASP_PUBLIC ServerImpl
     bool handleExitNotification(
                     const wasp::DataObject & exitNotification );
 
+    /** register resources for input that client should watch for changes
+     * @return - true if unregister and register requests were successful
+     */
+    bool registerWatchFiles();
+
     /** check if the server is initialized and reading from the connection
      * @return - true if server is initialized and reading from the connection
      */
@@ -173,17 +192,25 @@ class WASP_PUBLIC ServerImpl
         return this->client_snippet_support;
     }
 
+    /** check if client communicated it supports watch files registration
+     * @return - true if client supports dynamic watch files registration
+     */
+    bool clientSupportsWatchers()
+    {
+        return this->client_watcher_support;
+    }
+
     /** get this server's connection - to be implemented on derived servers
      * @return - shared pointer to the server's read / write connection
      */
-    virtual std::shared_ptr<wasp::lsp::Connection> getConnection() {return nullptr;}
+    virtual std::shared_ptr<wasp::lsp::Connection> getConnection() { return nullptr; }
 
     /** parse document for diagnostics - to be implemented on derived servers
      * @param diagnosticsList - data array of diagnostics data objects to fill
      * @return - true if completed successfully - does not indicate parse fail
      */
     virtual bool parseDocumentForDiagnostics(
-                          wasp::DataArray  & diagnosticsList ) {return true;}
+        wasp::DataArray & /* diagnosticsList */ ) { return true; }
 
     /** update document text changes - may be overridden on derived servers
      ** base implementation replaces entire document text if not overridden
@@ -196,12 +223,12 @@ class WASP_PUBLIC ServerImpl
      * @return - true if the document text was updated successfully
      */
     virtual bool updateDocumentTextChanges(
-                    const std::string & replacement_text   ,
-                          int        /* start_line      */ ,
-                          int        /* start_character */ ,
-                          int        /* end_line        */ ,
-                          int        /* end_character   */ ,
-                          int        /* range_length    */ )
+        const std::string & replacement_text   ,
+              int        /* start_line      */ ,
+              int        /* start_character */ ,
+              int        /* end_line        */ ,
+              int        /* end_character   */ ,
+              int        /* range_length    */ )
     {
         // default implementation ignores range and replaces whole document
         this->document_text = replacement_text;
@@ -216,10 +243,10 @@ class WASP_PUBLIC ServerImpl
      * @return - true if the gathering of items completed successfully
      */
     virtual bool gatherDocumentCompletionItems(
-                          wasp::DataArray & completionItems  ,
-                          bool      & is_incomplete    ,
-                          int         line             ,
-                          int         character        ) {return true;}
+        wasp::DataArray & /* completionItems */ ,
+        bool            & /* is_incomplete   */ ,
+        int               /* line            */ ,
+        int               /* character       */ ) { return true; }
 
     /** gather definition locations - to be implemented on derived servers
      * @param definitionLocations - data array of locations objects to fill
@@ -228,9 +255,9 @@ class WASP_PUBLIC ServerImpl
      * @return - true if the gathering of locations completed successfully
      */
     virtual bool gatherDocumentDefinitionLocations(
-                          wasp::DataArray & definitionLocations ,
-                          int         line                ,
-                          int         character           ) {return true;}
+        wasp::DataArray & /* definitionLocations */ ,
+        int               /* line                */ ,
+        int               /* character           */ ) { return true; }
 
     /** get hover display text - details are implemented on derived servers
      ** rather than being pure virtual like similar server specific methods
@@ -242,9 +269,9 @@ class WASP_PUBLIC ServerImpl
      * @return - true if display text was added or unmodified without error
      */
     virtual bool getHoverDisplayText(
-                          std::string & /* displayText */ ,
-                          int           /* line        */ ,
-                          int           /* character   */ )  { return true; }
+        std::string & /* displayText */ ,
+        int           /* line        */ ,
+        int           /* character   */ ) { return true; }
 
     /** gather references locations - to be implemented on derived servers
      * @param referencesLocations - data array of locations objects to fill
@@ -254,10 +281,10 @@ class WASP_PUBLIC ServerImpl
      * @return - true if the gathering of locations completed successfully
      */
     virtual bool gatherDocumentReferencesLocations(
-                          wasp::DataArray & referencesLocations ,
-                          int         line                ,
-                          int         character           ,
-                          bool        include_declaration ) {return true;}
+        wasp::DataArray & /* referencesLocations */ ,
+        int               /* line                */ ,
+        int               /* character           */ ,
+        bool              /* include_declaration */ ) { return true; }
 
     /** gather formatting text edits - to be implemented on derived servers
      * @param formattingTextEdits - data array of text edit objects to fill
@@ -266,16 +293,16 @@ class WASP_PUBLIC ServerImpl
      * @return - true if the gathering of text edits completed successfully
      */
     virtual bool gatherDocumentFormattingTextEdits(
-                          wasp::DataArray & formattingTextEdits ,
-                          int         tab_size            ,
-                          bool        insert_spaces       ) {return true;}
+        wasp::DataArray & /* formattingTextEdits */ ,
+        int               /* tab_size            */ ,
+        bool              /* insert_spaces       */ ) { return true; }
 
     /** gather document symbols - to be implemented on derived servers
      * @param documentSymbols - data array of symbols data objects to fill
      * @return - true if the gathering of symbols completed successfully
      */
     virtual bool gatherDocumentSymbols(
-                          wasp::DataArray & documentSymbols ) {return true;}
+        wasp::DataArray & /* documentSymbols */ ) { return true; }
 
     /** gather extension responses - may be overridden on derived servers
      * @param extensionResponses - data array of custom responses to fill
@@ -285,24 +312,24 @@ class WASP_PUBLIC ServerImpl
      * @return - true if request successfully handled with response built
      */
     virtual bool gatherExtensionResponses(
-                    wasp::DataArray   & /* extensionResponses */ ,
-                    const std::string & /* extensionMethod    */ ,
-                    int                 /* line               */ ,
-                    int                 /* character          */ ) { return true; }
+        wasp::DataArray   & /* extensionResponses */ ,
+        const std::string & /* extensionMethod    */ ,
+        int                 /* line               */ ,
+        int                 /* character          */ ) { return true; }
 
     /** read from connection into object - to be implemented on derived servers
      * @param object - reference to object to be read into
      * @return - true if the read from the connection completed successfully
      * Note: Override this method 
      */
-    virtual bool connectionRead( wasp::DataObject & object ) {return true;}
+    virtual bool connectionRead( wasp::DataObject & /* object */ ) { return true; }
 
     /** write object json to connection - to be implemented on derived servers
      * @param object - reference to object with contents to write to connection
      * @return - true if the write to the connection completed successfully
      * Note: Override this method
      */
-    virtual bool connectionWrite( wasp::DataObject & object ) {return true;}
+    virtual bool connectionWrite( wasp::DataObject & /* object */ ) { return true; }
 
     /** enable full document sync capability for server */
     void enableFullSync()
@@ -372,7 +399,37 @@ class WASP_PUBLIC ServerImpl
     {
       return errors;
     }
+
+    /** obtain latest text string that is linked to current document path
+     * @return - string that contains up to date text of current document
+     */
+    const std::string & getDocumentText() const
+    {
+      wasp_check(this->path_to_text.count(this->document_path));
+      return this->path_to_text.at(this->document_path);
+    }
+
+    /** remove any existing resources for given base file and add new set
+     * @param base_uri - uri for base file that will have resources added
+     * @param resource_uris - uris for resource files that base file uses
+     */
+    void setResourcesForBase(const std::string           & base_uri,
+                             const std::set<std::string> & resource_uris);
+
+    /** get set of all base files that are dependent on provided resource
+     * @param resource_uri - uri for resource to find all dependent bases
+     * @return - set of base file uris dependent on provided resource uri
+     */
+    std::set<std::string> getBasesForResource(const std::string & resource_uri) const;
+
+    /** get set of all resource files that are used by provided base file
+     * @param base_uri - uri for base file for which resources are needed
+     * @return - set of resource file uris that were added for given base
+     */
+    std::set<std::string> getResourcesForBase(const std::string & base_uri) const;
+
   protected:
+
     /**
      * @brief errors - all errors stored by the server for any reason
      */
@@ -434,9 +491,34 @@ class WASP_PUBLIC ServerImpl
     bool client_snippet_support;
 
     /**
+     * @brief client_watcher_support - watch files should be registered
+     */
+    bool client_watcher_support;
+
+    /**
      * @brief client_extension_methods - client supported extension methods
      */
     std::set<std::string> client_extension_methods;
+
+    /**
+     * @brief path_to_text - map of document paths to current text string
+     */
+    std::map<std::string, std::string> path_to_text;
+
+    /**
+     * @brief server_request_id - id to use with next request from server
+     */
+    int server_request_id;
+
+    /**
+     * @brief resource_to_bases_map - map of resources to dependent bases
+     */
+    std::map<std::string, std::set<std::string>> resource_to_bases_map;
+
+    /**
+     * @brief base_to_resources_map - map of base files to used resources
+     */
+    std::map<std::string, std::set<std::string>> base_to_resources_map;
 };
 
 } // namespace lsp

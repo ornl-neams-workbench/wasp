@@ -241,6 +241,13 @@ bool LSPInterpreter::parseLSP( const std::string & input       ,
 
     pass &= createParseTree();
 
+    // handle watch file register requests from server if it has capability
+
+    if (client->hasWatcherSupport() && client->serverSupportsExtension("watcherRegistration"))
+    {
+        pass &= client->handleWatchFileRegistration();
+    }
+
     // if anything failed along the way - check the client and server for errors
 
     if ( !pass ) checkClientServerErrors();

@@ -44,11 +44,15 @@ TEST(server, handle_initialize)
 
     ASSERT_FALSE(test_server.clientSupportsSnippets());
 
+    ASSERT_FALSE(test_server.clientSupportsWatchers());
+
     ASSERT_TRUE(test_server.handleInitializeRequest( initializeRequest  ,
                                                      initializeResponse ));
     test_request_id++;
 
     ASSERT_FALSE(test_server.clientSupportsSnippets());
+
+    ASSERT_FALSE(test_server.clientSupportsWatchers());
 
     // check the formatted json from the test_server's response object
 
@@ -69,6 +73,7 @@ TEST(server, handle_initialize)
     ,"extensionsProvider" : {
       "testMethod01" : true
       ,"testMethod02" : true
+      ,"watcherRegistration" : true
     }
     ,"hoverProvider" : true
     ,"textDocumentSync" : {

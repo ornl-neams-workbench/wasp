@@ -69,6 +69,8 @@ TEST(integrate, test_initialize)
 
     ASSERT_FALSE(test_server.clientSupportsSnippets());
 
+    ASSERT_FALSE(test_server.clientSupportsWatchers());
+
     ASSERT_TRUE( test_connection->write( client_object , client_errors ) );
 
     test_request_id++;
@@ -76,6 +78,8 @@ TEST(integrate, test_initialize)
     ASSERT_TRUE( test_connection->read( response_object , client_errors ) );
 
     ASSERT_TRUE(test_server.clientSupportsSnippets());
+
+    ASSERT_FALSE(test_server.clientSupportsWatchers());
 
     ASSERT_TRUE( dissectInitializeResponse( response_object       ,
                                             client_errors         ,
@@ -109,13 +113,16 @@ TEST(integrate, test_initialize)
     ASSERT_TRUE(response_capabilities[m_hover_provider].to_bool());
 
     ASSERT_TRUE(response_capabilities[m_extensions_provider].is_object());
-    ASSERT_EQ((std::size_t) 2, response_capabilities[m_extensions_provider].size());
+    ASSERT_EQ((std::size_t) 3, response_capabilities[m_extensions_provider].size());
 
     ASSERT_TRUE(response_capabilities[m_extensions_provider]["testMethod01"].is_bool());
     ASSERT_TRUE(response_capabilities[m_extensions_provider]["testMethod01"].to_bool());
 
     ASSERT_TRUE(response_capabilities[m_extensions_provider]["testMethod02"].is_bool());
     ASSERT_TRUE(response_capabilities[m_extensions_provider]["testMethod02"].to_bool());
+
+    ASSERT_TRUE(response_capabilities[m_extensions_provider]["watcherRegistration"].is_bool());
+    ASSERT_TRUE(response_capabilities[m_extensions_provider]["watcherRegistration"].to_bool());
 }
 
 TEST(integrate, test_initialized)

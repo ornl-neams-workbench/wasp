@@ -10,6 +10,16 @@ void ClientImpl::enableSnippetSupport()
     this->support_snippets = true;
 }
 
+void ClientImpl::enableWatcherSupport()
+{
+    this->support_watchers = true;
+}
+
+bool ClientImpl::hasWatcherSupport()
+{
+    return this->support_watchers;
+}
+
 void ClientImpl::enableExtension(const std::string & method_name)
 {
     this->client_extension_methods.insert(method_name);
@@ -136,6 +146,17 @@ bool ClientImpl::doInitialize()
         client_capabilities[m_text_document][m_comp] = DataObject();
         client_capabilities[m_text_document][m_comp][m_compitem] = DataObject();
         client_capabilities[m_text_document][m_comp][m_compitem][m_snip] = this->support_snippets;
+    }
+
+    // add watch file registration and relative patterns support if enabled
+    if (this->support_watchers)
+    {
+        // capabilities/workspace/didChangeWatchedFiles/dynamicRegistration
+        // capabilities/workspace/didChangeWatchedFiles/relativePatternSupport
+        client_capabilities[m_workspace] = DataObject();
+        client_capabilities[m_workspace][m_change_watched_files] = DataObject();
+        client_capabilities[m_workspace][m_change_watched_files][m_dynamic_registration] = true;
+        client_capabilities[m_workspace][m_change_watched_files][m_relative_patterns]    = true;
     }
 
     // turn on any client extension capability in initialize that was enabled
@@ -1418,6 +1439,166 @@ bool ClientImpl::getExtensionResponseAt( int          index             ,
     extension_response = *getExtensionResponseArray(*this->response)->at(index).to_object();
 
     return true;
+}
+
+bool ClientImpl::handleWatchFileRegistration()
+{
+    // turn on client in call state so that another call will not interfere
+    bool pass = true;
+    if (this->already_in_call) return false;
+    InsideClientCall scoped_guard(this->already_in_call);
+
+    // check client is connected and initialized with document already open
+    if (!this->is_connected)
+    {
+        this->errors << m_error_prefix << "Client not connected" << std::endl;
+        return false;
+    }
+    if (!this->is_initialized)
+    {
+        this->errors << m_error_prefix << "Connection not initialized" << std::endl;
+        return false;
+    }
+    if (!this->is_document_open)
+    {
+        this->errors << m_error_prefix << "Document not open" << std::endl;
+        return false;
+    }
+
+    // this should only get called if server advertised watcherRegistration
+    wasp_check(this->serverSupportsExtension("watcherRegistration"));
+
+    // read unregister request from server and dissect for registration ids
+    DataObject unregister_request;
+    int unregister_request_id;
+    std::set<std::string> registration_ids;
+    pass &= connection->read(unregister_request, this->errors);
+    pass &= dissectUnregisterWatchFilesRequest( unregister_request     ,
+                                                this->errors           ,
+                                                unregister_request_id  ,
+                                                registration_ids       );
+
+    // remove registration ids with their resources from map of watch files
+    for (const auto & registration_id : registration_ids)
+        this->watch_files.erase(registration_id);
+
+    // build success response to unregister request and write to connection
+    DataObject unregister_response;
+    pass &= buildRegistrationResponse( unregister_response     ,
+                                       this->errors            ,
+                                       unregister_request_id   );
+    pass &= connection->write(unregister_response, this->errors);
+
+    // read register request from server and dissect for resources to watch
+    DataObject register_request;
+    int register_request_id;
+    std::map<std::string, std::set<std::string>> keyed_resources;
+    pass &= connection->read(register_request, this->errors);
+    pass &= dissectRegisterWatchFilesRequest( register_request    ,
+                                              this->errors        ,
+                                              register_request_id ,
+                                              keyed_resources     );
+
+    // insert registration ids with their resources into map of watch files
+    for (const auto & it : keyed_resources)
+    {
+        const auto & res_key = it.first;
+        const auto & res_set = it.second;
+        this->watch_files[res_key].insert(res_set.begin(), res_set.end());
+    }
+
+    // build success response for register request then write to connection
+    DataObject register_response;
+    pass &= buildRegistrationResponse( register_response   ,
+                                       this->errors        ,
+                                       register_request_id );
+    pass &= connection->write(register_response, this->errors);
+
+    return pass;
+}
+
+std::set<std::string> ClientImpl::getAllWatchFiles() const
+{
+    std::set<std::string> all_watch_files;
+    for (const auto & it : this->watch_files)
+        all_watch_files.insert(it.second.begin(), it.second.end());
+    return all_watch_files;
+}
+
+bool ClientImpl::notifyServerChangedWatchedFiles(
+    const std::set<std::string>                          & resource_uris   ,
+    std::map<std::string, std::vector<clientDiagnostic>> & all_diagnostics )
+{
+    // turn on client in call state so that another call will not interfere
+    bool pass = true;
+    if (this->already_in_call) return false;
+    InsideClientCall scoped_guard(this->already_in_call);
+
+    // check client is connected and initialized with document already open
+    if (!this->is_connected)
+    {
+        this->errors << m_error_prefix << "Client not connected" << std::endl;
+        return false;
+    }
+    if (!this->is_initialized)
+    {
+        this->errors << m_error_prefix << "Connection not initialized" << std::endl;
+        return false;
+    }
+    if (!this->is_document_open)
+    {
+        this->errors << m_error_prefix << "Document not open" << std::endl;
+        return false;
+    }
+
+    // build and send server didChangeWatchedFiles with given resource uris
+    DataObject watch_files_notification;
+    pass &= buildDidChangeWatchedFilesNotification( watch_files_notification ,
+                                                    this->errors             ,
+                                                    resource_uris            );
+    pass &= connection->write(watch_files_notification, this->errors);
+
+    // keep reading all diagnostics from connection to store until sentinel
+    // TODO - should be handled by asynchronous communication in the future
+    while (true)
+    {
+        // read from connection and if it is sentinel then do not read more
+        DataObject received_object;
+        pass &= connection->read(received_object, this->errors);
+        pass &= checkErrorResponse(received_object, this->errors);
+        if (isDiagnosticsSentinelObject(received_object)) break;
+
+        // object should be publish diagnostics so dissect for array and uri
+        std::string diagnostics_uri;
+        DataArray diagnostics_array;
+        wasp_check(verifyDiagnosticResponse(received_object));
+        pass &= dissectPublishDiagnosticsNotification( received_object   ,
+                                                       this->errors      ,
+                                                       diagnostics_uri   ,
+                                                       diagnostics_array );
+
+        // walk over this array of diagnostics to store all for current uri
+        all_diagnostics[diagnostics_uri];
+        for (std::size_t i = 0; i < diagnostics_array.size(); i++)
+        {
+            wasp_check(diagnostics_array.at(i).is_object());
+            const auto & diagnostic_object = *(diagnostics_array.at(i).to_object());
+            clientDiagnostic diagnostic;
+            pass &= dissectDiagnosticObject(diagnostic_object         ,
+                                           this->errors               ,
+                                           diagnostic.start_line      ,
+                                           diagnostic.start_character ,
+                                           diagnostic.end_line        ,
+                                           diagnostic.end_character   ,
+                                           diagnostic.severity        ,
+                                           diagnostic.code            ,
+                                           diagnostic.source          ,
+                                           diagnostic.message         );
+            all_diagnostics[diagnostics_uri].push_back(diagnostic);
+        }
+    }
+
+    return pass;
 }
 
 } // namespace lsp

@@ -14,6 +14,7 @@ bool ServerImpl::run()
         DataObject  input_object;
         std::string method_name;
         DataObject  output_object;
+        DataArray   output_array;
 
         // read from the connection into the input_object
 
@@ -46,6 +47,11 @@ bool ServerImpl::run()
         {
             pass &= this->handleDidChangeNotification( input_object  ,
                                                        output_object );
+        }
+        else if ( method_name == m_method_didchangewatch )
+        {
+            pass &= this->handleDidChangeWatchedFilesNotification( input_object ,
+                                                                   output_array );
         }
         else if ( method_name == m_method_completion )
         {
@@ -93,8 +99,7 @@ bool ServerImpl::run()
 
         // if request method is unknown then send back error and keep going
         // unless method is supported by client then call extension handler
-
-        else if ( objectHasRequestId(input_object) )
+        else if ( objectHasRequestId(input_object) && !method_name.empty() )
         {
             if ( !this->clientSupportsExtension(method_name) )
             {
@@ -111,7 +116,6 @@ bool ServerImpl::run()
         }
 
         // if anything failed in the process, then build an error response
-
         if ( !pass )
         {
             buildErrorResponse( output_object      ,
@@ -121,11 +125,24 @@ bool ServerImpl::run()
             this->is_initialized = false;
         }
 
-        // if there was a response object built then write it to the connection
-
+        // write either response object or all items in array to connection
         if ( !output_object.empty() )
         {
             pass &= this->connectionWrite( output_object );
+        }
+        else if ( !output_array.empty() )
+        {
+            for (std::size_t i = 0; i < output_array.size(); i++)
+            {
+                pass &= this->connectionWrite(*(output_array.at(i).to_object()));
+            }
+        }
+
+        // send client list of document resources if symbols were just sent
+        // if client supports watch file registration and relative patterns
+        if (method_name == m_method_documentsymbol && this->client_watcher_support)
+        {
+            pass &= this->registerWatchFiles();
         }
 
         // if anything failed or if the method was 'exit' - then stop reading
@@ -172,6 +189,35 @@ bool ServerImpl::handleInitializeRequest(
                 if (compitem_caps.contains(m_snip) && compitem_caps[m_snip].is_bool())
                 {
                     this->client_snippet_support = compitem_caps[m_snip].to_bool();
+                }
+            }
+        }
+    }
+
+    // check if client allows watch file registration and relative patterns
+    // capabilities/workspace/didChangeWatchedFiles/dynamicRegistration and
+    // capabilities/workspace/didChangeWatchedFiles/relativePatternSupport
+    if (client_capabilities.contains(m_workspace) &&
+        client_capabilities[m_workspace].is_object())
+    {
+        const auto & workspace_caps = *(client_capabilities[m_workspace].to_object());
+        if (workspace_caps.contains(m_change_watched_files) &&
+            workspace_caps[m_change_watched_files].is_object())
+        {
+            const auto & watch_caps = *(workspace_caps[m_change_watched_files].to_object());
+            if (watch_caps.contains(m_dynamic_registration) &&
+                watch_caps[m_dynamic_registration].is_bool())
+            {
+                if (watch_caps[m_dynamic_registration].to_bool())
+                {
+                    if (watch_caps.contains(m_relative_patterns) &&
+                        watch_caps[m_relative_patterns].is_bool())
+                    {
+                        if (watch_caps[m_relative_patterns].to_bool())
+                        {
+                            this->client_watcher_support = true;
+                        }
+                    }
                 }
             }
         }
@@ -252,6 +298,9 @@ bool ServerImpl::handleDidOpenNotification(
     // set current document path on server to input path for this operation
     this->document_path = document_path;
 
+    // put initial document content in map from file paths to current input
+    this->path_to_text[this->document_path] = this->document_text;
+
     DataArray document_diagnostics;
 
     // call server specific method to parse the document and gather diagnostics
@@ -329,6 +378,9 @@ bool ServerImpl::handleDidChangeNotification(
                                              end_character    ,
                                              range_length     );
 
+    // update map from document paths to current input with changed content
+    this->path_to_text[this->document_path] = this->document_text;
+
     DataArray document_diagnostics;
 
     // call server specific method to parse the document and gather diagnostics
@@ -341,6 +393,72 @@ bool ServerImpl::handleDidChangeNotification(
                                                  this->errors                   ,
                                                  this->document_path            ,
                                                  document_diagnostics           );
+
+    return pass;
+}
+
+bool ServerImpl::handleDidChangeWatchedFilesNotification(
+                const DataObject & didChangeWatchedFilesNotification ,
+                      DataArray  & publishDiagnosticsArray           )
+{
+    if (!this->is_initialized)
+    {
+        this->errors << m_error_prefix << "Server needs to be initialized" << std::endl;
+        return false;
+    }
+
+    bool pass = true;
+
+    // dissect didChangeWatchedFiles notification object client sent server
+    DataArray changes;
+    pass &= dissectDidChangeWatchedFilesNotification( didChangeWatchedFilesNotification ,
+                                                      this->errors                      ,
+                                                      changes                           );
+
+    // walk over changed resources array to gather all dependent base files
+    std::set<std::string> all_base_uris;
+    for (std::size_t i = 0; i < changes.size(); i++)
+    {
+        // dissect each change object in array for change file uri and type
+        std::string uri;
+        int         type;
+        pass &= dissectChangeObject( *(changes.at(i).to_object()) ,
+                                     this->errors                 ,
+                                     uri                          ,
+                                     type                         );
+
+        // accumulate base files with dependencies on any changed resources
+        if (type == m_change_type_changed)
+        {
+            const auto & dependent_base_uris = getBasesForResource(uri);
+            all_base_uris.insert(dependent_base_uris.begin(), dependent_base_uris.end());
+        }
+    }
+
+    // reprocess all base files that have dependencies on changed resources
+    for (const auto & base_uri : all_base_uris)
+    {
+        // set current path and text for each base file before reprocessing
+        this->document_path = base_uri;
+        this->document_text = getDocumentText();
+
+        // reprocess dependent base file to obtain array of its diagnostics
+        DataArray document_diagnostics;
+        pass &= parseDocumentForDiagnostics(document_diagnostics);
+
+        // add each publishDiagnostics object into publishDiagnostics array
+        publishDiagnosticsArray.push_back(wasp::DataObject());
+        wasp::DataObject * publishDiagnosticsObject = publishDiagnosticsArray.back().to_object();
+        pass &= buildPublishDiagnosticsNotification(*publishDiagnosticsObject ,
+                                                    this->errors              ,
+                                                    this->document_path       ,
+                                                    document_diagnostics      );
+    }
+
+    // append sentinel object to tell client all diagnostics have been sent
+    publishDiagnosticsArray.push_back(wasp::DataObject());
+    wasp::DataObject * lastObject = publishDiagnosticsArray.back().to_object();
+    pass &= buildDiagnosticsSentinelObject(*lastObject, this->errors);
 
     return pass;
 }
@@ -651,6 +769,94 @@ bool ServerImpl::handleSymbolsRequest(
                                   document_symbols        );
 
     return pass;
+}
+
+bool ServerImpl::registerWatchFiles()
+{
+    if (!this->is_initialized)
+    {
+        this->errors << m_error_prefix << "Server needs to be initialized" << std::endl;
+        return false;
+    }
+
+    bool pass = true;
+
+    // build request to unregister client didChangeWatchedFiles of document
+    DataObject unregister_request;
+    pass &= buildUnregisterWatchFilesRequest(unregister_request,
+                                             this->errors,
+                                             this->server_request_id++,
+                                             this->document_path);
+
+    // request client to unregister document watch files before registering
+    pass &= this->connectionWrite(unregister_request);
+
+    // read response by client and make sure it indicates success not error
+    DataObject unregister_response;
+    pass &= this->connectionRead(unregister_response);
+    pass &= checkErrorResponse(unregister_response, this->errors);
+
+    // build request to register client didChangeWatchedFiles for resources
+    const auto & resource_uris = getResourcesForBase(this->document_path);
+    DataObject register_request;
+    pass &= buildRegisterWatchFilesRequest(register_request,
+                                           this->errors,
+                                           this->server_request_id++,
+                                           this->document_path,
+                                           resource_uris);
+
+    // request client to register document resources as files it will watch
+    pass &= this->connectionWrite(register_request);
+
+    // read response by client and make sure it indicates success not error
+    DataObject register_response;
+    pass &= this->connectionRead(register_response);
+    pass &= checkErrorResponse(register_response, this->errors);
+
+    return pass;
+}
+
+void ServerImpl::setResourcesForBase(const std::string           & base_uri,
+                                     const std::set<std::string> & resource_uris)
+{
+    // remove base file from resource dependency map where previously added
+    const auto it = base_to_resources_map.find(base_uri);
+    if (it != base_to_resources_map.end())
+    {
+        for (const auto & resource : it->second)
+        {
+            auto & base_uris = resource_to_bases_map[resource];
+            base_uris.erase(base_uri);
+            if (base_uris.empty())
+                resource_to_bases_map.erase(resource);
+        }
+    }
+
+    // update resources for base file by overwriting any that already exist
+    if (resource_uris.empty()) base_to_resources_map.erase(base_uri);
+    else base_to_resources_map[base_uri] = resource_uris;
+
+    // add base file into set of dependencies for every associated resource
+    for (const auto & resource_uri : resource_uris)
+        resource_to_bases_map[resource_uri].insert(base_uri);
+}
+
+std::set<std::string> ServerImpl::getBasesForResource(const std::string & resource_uri) const
+{
+    // return uris for all base files that set given resource as dependency
+    const auto it = resource_to_bases_map.find(resource_uri);
+    if (it != resource_to_bases_map.end())
+        return it->second;
+    return {};
+}
+
+std::set<std::string> ServerImpl::getResourcesForBase(const std::string & base_uri) const
+{
+    // return uris for all resource files set as dependencies of given base
+    const auto it = base_to_resources_map.find(base_uri);
+    if (it != base_to_resources_map.end())
+        return it->second;
+    return {};
 }
 
 bool ServerImpl::handleExtensionRequest(

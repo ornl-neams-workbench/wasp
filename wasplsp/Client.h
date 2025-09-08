@@ -2,7 +2,11 @@
 #define WASPLSP_CLIENT_H
 
 #include <string>
+#include <set>
+#include <map>
+#include <vector>
 #include "waspcore/decl.h"
+#include "wasplsp/LSP.h"
 #include "wasplsp/Connection.h"
 #include "wasplsp/SymbolIterator.h"
 #include "waspcore/Object.h"
@@ -26,12 +30,39 @@ class WASP_PUBLIC Client
         return Impl.enableSnippetSupport();
     }
 
+    /** Turn on client watch file registration and relative patterns with
+     * capabilities/workspace/didChangeWatchedFiles/dynamicRegistration and
+     * capabilities/workspace/didChangeWatchedFiles/relativePatternSupport
+     */
+    void enableWatcherSupport()
+    {
+        return Impl.enableWatcherSupport();
+    }
+
+    /** Check if watch file registration and relative patterns is enabled
+     * capabilities/workspace/didChangeWatchedFiles/dynamicRegistration and
+     * capabilities/workspace/didChangeWatchedFiles/relativePatternSupport
+     * @return - true if this client expect watch files to get registered
+     */
+    bool hasWatcherSupport()
+    {
+        return Impl.hasWatcherSupport();
+    }
+
     /** Enable client extension capability of given name in server initialize
      * @param method_name - sets capabilities/extensions/<method_name> = true
      */
     void enableExtension( const std::string & method_name )
     {
         return Impl.enableExtension( method_name );
+    }
+
+    /** Check if connected server supports provided extension method name
+     * @param method_name - method name to check with server capabilities
+     */
+    bool serverSupportsExtension( const std::string & method_name )
+    {
+        return Impl.serverSupportsExtension( method_name );
     }
 
     /** set the client's connection shared_ptr to the provided connection
@@ -373,6 +404,38 @@ class WASP_PUBLIC Client
     {
         return Impl.getExtensionResponseAt( index              ,
                                             extension_response );
+    }
+
+    /** handle unregister and register requests by server for watch files
+     ** this is called by LSPInterpreter if server has capability enabled
+     * @return - true if unregister and register requests were successful
+     */
+    bool handleWatchFileRegistration()
+    {
+        return Impl.handleWatchFileRegistration();
+    }
+
+    /** get set of all current files that client should watch for changes
+     ** this can be called by Workbench to get list of all files to watch
+     * @return - set of files that client should tell server when changed
+     */
+    std::set<std::string> getAllWatchFiles() const
+    {
+        return Impl.getAllWatchFiles();
+    }
+
+    /** notify server about any changed resources and get all diagnostics
+     ** this can be called by Workbench when any of it watch files change
+     * @param resource_uris - set of uris for resources that have changed
+     * @param all_diagnostics - map of file uris to clientDiagnostic list
+     * @return - true if notification and diagnostics read was successful
+     */
+    bool notifyServerChangedWatchedFiles(
+        const std::set<std::string>                          & resource_uris   ,
+        std::map<std::string, std::vector<clientDiagnostic>> & all_diagnostics )
+    {
+        return Impl.notifyServerChangedWatchedFiles( resource_uris   ,
+                                                     all_diagnostics );
     }
 
     /** check if the client is properly connected for reading / writing

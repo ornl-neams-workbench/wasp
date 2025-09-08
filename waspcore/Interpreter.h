@@ -560,6 +560,12 @@ class WASP_PUBLIC AbstractInterpreter
     virtual bool path_already_included(const std::string& path) const = 0;
 
     /**
+     * @brief descendant_include_paths gets all include paths recursively
+     * @param paths - set to fill with all descendant included file paths
+     */
+    virtual void descendant_include_paths(std::set<std::string> & paths) const = 0;
+
+    /**
      * @brief document obtains the associated document for the given node index
      * @param node_index the node index at which the Interpreter is being requested
      * @return pointer to nested interpreter, nullptr iff no interpreter associated
@@ -666,6 +672,12 @@ class WASP_PUBLIC Interpreter : public AbstractInterpreter
      * @return true iff including file path will create a circular reference
      */
     virtual bool path_already_included(const std::string& path) const;
+
+    /**
+     * @brief descendant_include_paths gets all include paths recursively
+     * @param paths - set to fill with all descendant included file paths
+     */
+    virtual void descendant_include_paths(std::set<std::string> & paths) const;
 
     /**
      * @brief document obtains the associated document for the given node index

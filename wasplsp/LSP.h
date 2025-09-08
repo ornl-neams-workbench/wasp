@@ -3,6 +3,8 @@
 
 #include <string>
 #include <iostream>
+#include <set>
+#include <map>
 #include "waspcore/Object.h"
 #include "waspcore/decl.h"
 
@@ -253,6 +255,124 @@ bool dissectDidChangeNotification( const wasp::DataObject & object      ,
                                          int          & range_length    ,
                                          std::string  & text            );
 
+/** build didchangewatchedfiles notification to server that files changed
+ * @param object - reference to object that will be built of notification
+ * @param errors - reference to stream to add any possible error messages
+ * @param resource_uris - set of all uris for resources that have changed
+ * @return - true if notification object successfully built without error
+ */
+
+WASP_PUBLIC
+bool buildDidChangeWatchedFilesNotification( wasp::DataObject            & object        ,
+                                             std::ostream                & errors        ,
+                                             const std::set<std::string> & resource_uris );
+
+/** dissect didchangewatchedfiles notification to get changed files array
+ * @param object - const reference to notification object being dissected
+ * @param errors - reference to stream to add any possible error messages
+ * @param changes - reference for array to get filled with change objects
+ * @return - true if notification object was dissected without any errors
+ */
+WASP_PUBLIC
+bool dissectDidChangeWatchedFilesNotification( const wasp::DataObject & object  ,
+                                                     std::ostream     & errors  ,
+                                                     wasp::DataArray  & changes );
+
+/** dissect object in didchangewatchedfiles notification array of changes
+ * @param object - const reference to array object that will be dissected
+ * @param errors - reference to stream to add any possible error messages
+ * @param uri - well formed URI path indicating location for changed file
+ * @param type - type of file change: created (1) changed (2) deleted (3)
+ * @return - true if change array object was dissected without any errors
+ */
+WASP_PUBLIC
+bool dissectChangeObject( const wasp::DataObject & object ,
+                                std::ostream     & errors ,
+                                std::string      & uri    ,
+                                int              & type   );
+
+/** build logmessage notification that indicates end of diagnostics array
+ * @param object - reference to object that will be built of notification
+ * @param errors - reference to stream to add any possible error messages
+ * @return - true if notification object successfully built without error
+ */
+WASP_PUBLIC
+bool buildDiagnosticsSentinelObject( wasp::DataObject  & object ,
+                                     std::ostream      & errors );
+
+/** check if provided object is sentinel terminating array of diagnostics
+ * @param object - object that will get checked to know if it is sentinel
+ * @return - true if object is sentinel that terminates diagnostics array
+ */
+WASP_PUBLIC
+bool isDiagnosticsSentinelObject( const DataObject & object );
+
+/** build request to unregister client didChangeWatchedFiles for document
+ * @param object - reference to data object that will be built of request
+ * @param errors - reference to stream to add any possible error messages
+ * @param request_id - id of server request to match response from client
+ * @param uri - well formed URI path for input document from this request
+ * @return - true if request object successfully built without any errors
+ */
+WASP_PUBLIC
+bool buildUnregisterWatchFilesRequest( wasp::DataObject  & object     ,
+                                       std::ostream      & errors     ,
+                                       int                 request_id ,
+                                       const std::string & uri        );
+
+/** dissect watched files unregisterCapability request into useful pieces
+ * @param object - const reference to request data that will be dissected
+ * @param errors - reference to stream to add any possible error messages
+ * @param request_id - id of server request to match response from client
+ * @param registration_ids - set to be filled with ids for unregistration
+ * @return - true if request was dissected successfully and without error
+ */
+WASP_PUBLIC
+bool dissectUnregisterWatchFilesRequest( const wasp::DataObject      & object           ,
+                                               std::ostream          & errors           ,
+                                               int                   & request_id       ,
+                                               std::set<std::string> & registration_ids );
+
+/** build request to register client didChangeWatchedFiles with resources
+ * @param object - reference to data object that will be built of request
+ * @param errors - reference to stream to add any possible error messages
+ * @param request_id - id of server request to match response from client
+ * @param uri - well formed URI path for input document from this request
+ * @param resource_uris - set of resource uris that client needs to watch
+ * @return - true if request object successfully built without any errors
+ */
+WASP_PUBLIC
+bool buildRegisterWatchFilesRequest( wasp::DataObject            & object        ,
+                                     std::ostream                & errors        ,
+                                     int                           request_id    ,
+                                     const std::string           & uri           ,
+                                     const std::set<std::string> & resource_uris );
+
+/** dissect watched files registerCapability request for given parameters
+ * @param object - const reference to request data that will be dissected
+ * @param errors - reference to stream to add any possible error messages
+ * @param request_id - id of server request to match response from client
+ * @param keyed_resources - map of registration id to watch files to fill
+ * @return - true if request was dissected successfully and without error
+ */
+WASP_PUBLIC
+bool dissectRegisterWatchFilesRequest(
+    const wasp::DataObject                             & object          ,
+          std::ostream                                 & errors          ,
+          int                                          & request_id      ,
+          std::map<std::string, std::set<std::string>> & keyed_resources );
+
+/** build response to unregister and register requests indicating success
+ * @param object - reference to data object that built response will fill
+ * @param errors - reference to stream to add any possible error messages
+ * @param request_id - id of server request to match response from client
+ * @return - true if response object was successfully built without error
+ */
+WASP_PUBLIC
+bool buildRegistrationResponse( wasp::DataObject & object     ,
+                                std::ostream     & errors     ,
+                                int                request_id );
+
 /** build completion request object from the provided parameters
  * @param object - reference to data object that will be built
  * @param errors - reference to stream to fill with any possible errors
@@ -500,7 +620,7 @@ WASP_PUBLIC
 bool buildExtensionResponse( wasp::DataObject & object              ,
                              std::ostream     & errors              ,
                              int                request_id          ,
-                             const DataArray  & extension_responses );
+                             const wasp::DataArray & extension_responses );
 
 /** dissect extension response object into array of result and request id
  * @param object - const reference to object for response being dissected
@@ -1237,6 +1357,20 @@ wasp::DataArray * getFormattingResponseArray( const wasp::DataObject & object );
 WASP_PUBLIC
 wasp::DataArray * getSymbolChildrenArray( const wasp::DataObject & object );
 
+/** return given path string with file:// uri scheme removed if it exists
+ * @param path - path to have its file:// uri scheme removed if it exists
+ * @return - path string that has file:// uri scheme removed if it exists
+ */
+WASP_PUBLIC
+std::string removeUriScheme(const std::string & path);
+
+/** return given path string with file:// uri scheme added onto its front
+ * @param path - path for which file:// uri scheme will be added to front
+ * @return - path string that has file:// uri scheme added onto its front
+ */
+WASP_PUBLIC
+std::string prefixUriScheme(const std::string & path);
+
 /**
  * @brief convenience parameter struct used for client getDiagnosticAt call
  */
@@ -1330,6 +1464,10 @@ static const char m_method_formatting[]     = "textDocument/formatting";
 static const char m_method_documentsymbol[] = "textDocument/documentSymbol";
 static const char m_method_pubdiagnostics[] = "textDocument/publishDiagnostics";
 static const char m_method_didclose[]       = "textDocument/didClose";
+static const char m_method_didchangewatch[] = "workspace/didChangeWatchedFiles";
+static const char m_method_logmessage[]     = "window/logMessage";
+static const char m_method_unregistercap[]  = "client/unregisterCapability";
+static const char m_method_registercap[]    = "client/registerCapability";
 static const char m_method_shutdown[]       = "shutdown";
 static const char m_method_exit[]           = "exit";
 static const char m_method[]                = "method";
@@ -1343,6 +1481,10 @@ static const char m_text_document[]         = "textDocument";
 static const char m_comp[]                  = "completion";
 static const char m_compitem[]              = "completionItem";
 static const char m_snip[]                  = "snippetSupport";
+static const char m_workspace[]             = "workspace";
+static const char m_change_watched_files[]  = "didChangeWatchedFiles";
+static const char m_dynamic_registration[]  = "dynamicRegistration";
+static const char m_relative_patterns[]     = "relativePatternSupport";
 static const char m_uri[]                   = "uri";
 static const char m_language_id[]           = "languageId";
 static const char m_version[]               = "version";
@@ -1395,6 +1537,26 @@ static const char m_references_provider[]   = "referencesProvider";
 static const char m_hover_provider[]        = "hoverProvider";
 static const char m_extensions_provider[]   = "extensionsProvider";
 static const char m_extensions[]            = "extensions";
+static const char m_sentinel_log_message[]  = "diagnostics flush complete";
+static const char m_unregistrations[]       = "unregisterations";
+static const char m_registrations[]         = "registrations";
+static const char m_register_options[]      = "registerOptions";
+static const char m_watchers[]              = "watchers";
+static const char m_glob_pattern[]          = "globPattern";
+static const char m_base_uri[]              = "baseUri";
+static const char m_pattern[]               = "pattern";
+static const char m_changes[]               = "changes";
+static const char m_type[]                  = "type";
+static const int  m_change_type_created     =  1;
+static const int  m_change_type_changed     =  2;
+static const int  m_change_type_deleted     =  3;
+static const int  m_watch_kind_create       =  1;
+static const int  m_watch_kind_change       =  2;
+static const int  m_watch_kind_delete       =  4;
+static const int  m_message_type_error      =  1;
+static const int  m_message_type_warning    =  2;
+static const int  m_message_type_info       =  3;
+static const int  m_message_type_log        =  4;
 static const int  m_change_full             =  1;
 static const int  m_change_incr             =  2;
 static const int  m_text_format_plaintext   =  1;

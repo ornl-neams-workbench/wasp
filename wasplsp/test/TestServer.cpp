@@ -89,6 +89,18 @@ bool TestServer::parseDocumentForDiagnostics(
         diagnosticsList.push_back(diagnostic);
     }
 
+    // set resource files of input that will be registered for unit testing
+    if (client_watcher_support)
+    {
+        std::set<std::string> resource_uris;
+        if (this->document_path == "test/document/uri/string")
+        {
+            resource_uris.insert({prefixUriScheme("/path/to/resource/file01.i"),
+                                  prefixUriScheme("/path/to/resource/file02.i")});
+        }
+        setResourcesForBase(this->document_path, resource_uris);
+    }
+
     return pass;
 }
 

@@ -3,9 +3,25 @@
 #include "gtest/gtest.h"
 #include <sstream>
 #include <vector>
+#include <string>
+#include <cctype>
 
 namespace wasp {
 namespace lsp  {
+
+// helper function that returns string with all unquoted whitespace removed
+std::string collapse(const std::string & input)
+{
+    std::string result;
+    result.reserve(input.size());
+    bool in_quotes = false;
+    for (char c : input)
+    {
+        if (c == '"') in_quotes = !in_quotes;
+        if (in_quotes || !std::isspace(c)) result.push_back(c);
+    }
+    return result;
+}
 
 TEST(lsp, bad_ranges)
 {
@@ -431,6 +447,432 @@ TEST(lsp, didchange_notification)
     ASSERT_EQ ( end_character   , tst_end_character   );
     ASSERT_EQ ( range_length    , tst_range_length    );
     ASSERT_EQ ( text            , tst_text            );
+}
+
+TEST(lsp, didchangewatchedfiles_notification)
+{
+    // test didchangewatchedfiles notification build and dissect round trip
+
+    DataObject        object;
+    std::stringstream errors;
+
+    std::set<std::string> resource_paths = {"/path/to/resource/file01.i",
+                                            "/path/to/resource/file02.i"};
+    std::set<std::string> resource_uris;
+    for (const std::string & resource_path : resource_paths)
+        resource_uris.insert(prefixUriScheme(resource_path));
+
+    ASSERT_TRUE(buildDidChangeWatchedFilesNotification(object, errors, resource_uris));
+
+    ASSERT_EQ((std::size_t)2, object.size());
+
+    ASSERT_TRUE(object[m_method].is_string());
+    ASSERT_EQ  (object[m_method].to_string(), m_method_didchangewatch);
+
+    ASSERT_TRUE(object[m_params].is_object());
+    ASSERT_EQ  (object[m_params].size(), (std::size_t)1);
+
+    ASSERT_TRUE(object[m_params][m_changes].is_array());
+    ASSERT_EQ  (object[m_params][m_changes].size(), (std::size_t)2);
+
+    for (std::size_t index = 0; index < object[m_params][m_changes].size(); index++)
+    {
+        ASSERT_TRUE(object[m_params][m_changes][index].is_object());
+        ASSERT_EQ  (object[m_params][m_changes][index].size(), (std::size_t)2);
+
+        ASSERT_TRUE(object[m_params][m_changes][index][m_type].is_int());
+        ASSERT_EQ  (object[m_params][m_changes][index][m_type].to_int(), m_change_type_changed);
+
+        ASSERT_TRUE(object[m_params][m_changes][index][m_uri].is_string());
+        std::string tst_build_uri = object[m_params][m_changes][index][m_uri].to_string();
+        if (index == 0)
+            ASSERT_EQ("/path/to/resource/file01.i", removeUriScheme(tst_build_uri));
+        else if (index == 1)
+            ASSERT_EQ("/path/to/resource/file02.i", removeUriScheme(tst_build_uri));
+    }
+
+    std::string rpcstr;
+    ASSERT_TRUE(objectToRPCString(object, rpcstr, errors));
+
+    std::string json_expected = R"INPUT(
+    {
+        "jsonrpc": "2.0",
+        "method": "workspace/didChangeWatchedFiles",
+        "params": {
+            "changes": [
+                {
+                    "type": 2,
+                    "uri": "file:///path/to/resource/file01.i"
+                },
+                {
+                    "type": 2,
+                    "uri": "file:///path/to/resource/file02.i"
+                }
+            ]
+        }
+    }
+    )INPUT";
+    std::string rpc_expected = "Content-Length: 189\r\n\r\n" + collapse(json_expected);
+    ASSERT_EQ(rpc_expected, rpcstr);
+
+    DataObject tst_object;
+    ASSERT_TRUE(RPCStringToObject(rpcstr, tst_object, errors));
+
+    ASSERT_TRUE(tst_object[m_method].is_string());
+    ASSERT_EQ  (tst_object[m_method].to_string(), m_method_didchangewatch);
+
+    DataArray changes;
+    ASSERT_TRUE(dissectDidChangeWatchedFilesNotification(tst_object, errors, changes));
+
+    ASSERT_EQ((std::size_t)2, changes.size());
+
+    for (std::size_t index = 0; index < changes.size(); index++)
+    {
+        std::string tst_dissect_uri;
+        int         tst_dissect_type;
+        ASSERT_TRUE(dissectChangeObject(*(changes.at(index).to_object()),
+                                        errors                          ,
+                                        tst_dissect_uri                 ,
+                                        tst_dissect_type                ));
+
+        ASSERT_EQ(m_change_type_changed, tst_dissect_type);
+        if (index == 0)
+            ASSERT_EQ("/path/to/resource/file01.i", removeUriScheme(tst_dissect_uri));
+        else if (index == 1)
+            ASSERT_EQ("/path/to/resource/file02.i", removeUriScheme(tst_dissect_uri));
+    }
+}
+
+TEST(lsp, diagnostics_sentinel_object)
+{
+    // test diagnostics array sentinel terminator building and verification
+
+    DataObject        object;
+    std::stringstream errors;
+
+    ASSERT_TRUE(buildDiagnosticsSentinelObject(object, errors));
+
+    ASSERT_EQ((std::size_t)2, object.size());
+
+    ASSERT_TRUE(object[m_method].is_string());
+    ASSERT_EQ  (object[m_method].to_string(), m_method_logmessage);
+
+    ASSERT_TRUE(object[m_params].is_object());
+    ASSERT_EQ  (object[m_params].size(), (std::size_t)2);
+
+    ASSERT_TRUE(object[m_params][m_type].is_int());
+    ASSERT_EQ  (object[m_params][m_type].to_int(), m_message_type_log);
+
+    ASSERT_TRUE(object[m_params][m_message].is_string());
+    ASSERT_EQ  (object[m_params][m_message].to_string(), m_sentinel_log_message);
+
+    ASSERT_TRUE(isDiagnosticsSentinelObject(object));
+
+    std::string rpcstr;
+    ASSERT_TRUE(objectToRPCString(object, rpcstr, errors));
+
+    std::string json_expected = R"INPUT(
+    {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+            "message": "diagnostics flush complete",
+            "type": 4
+        }
+    }
+    )INPUT";
+    std::string rpc_expected = "Content-Length: 105\r\n\r\n" + collapse(json_expected);
+    ASSERT_EQ(rpc_expected, rpcstr);
+
+    DataObject tst_object;
+    ASSERT_TRUE(RPCStringToObject(rpcstr, tst_object, errors));
+
+    ASSERT_TRUE(tst_object[m_method].is_string());
+    ASSERT_EQ  (tst_object[m_method].to_string(), m_method_logmessage);
+
+    ASSERT_TRUE(isDiagnosticsSentinelObject(object));
+
+    tst_object[m_method] = "different/method";
+    ASSERT_FALSE(isDiagnosticsSentinelObject(tst_object));
+    tst_object[m_method] = m_method_logmessage;
+    ASSERT_TRUE(isDiagnosticsSentinelObject(tst_object));
+
+    tst_object[m_params][m_type] = m_message_type_warning;
+    ASSERT_FALSE(isDiagnosticsSentinelObject(tst_object));
+    tst_object[m_params][m_type] = m_message_type_log;
+    ASSERT_TRUE(isDiagnosticsSentinelObject(tst_object));
+
+    tst_object[m_params][m_message] = "different log message";
+    ASSERT_FALSE(isDiagnosticsSentinelObject(tst_object));
+    tst_object[m_params][m_message] = m_sentinel_log_message;
+    ASSERT_TRUE(isDiagnosticsSentinelObject(tst_object));
+}
+
+TEST(lsp, unregisterwatchfiles_request)
+{
+    // test unregisterwatchfiles request building and dissection round trip
+
+    DataObject        object;
+    std::stringstream errors;
+
+    int         request_id = 31;
+    std::string uri        = prefixUriScheme("/path/to/base/file.i");
+
+    ASSERT_TRUE(buildUnregisterWatchFilesRequest(object, errors, request_id, uri));
+
+    ASSERT_EQ((std::size_t)3, object.size());
+
+    ASSERT_TRUE(object[m_id].is_int());
+    ASSERT_EQ  (object[m_id].to_int(), request_id);
+
+    ASSERT_TRUE(object[m_method].is_string());
+    ASSERT_EQ  (object[m_method].to_string(), m_method_unregistercap);
+
+    ASSERT_TRUE(object[m_params].is_object());
+    ASSERT_EQ  (object[m_params].size(), (std::size_t)1);
+
+    ASSERT_TRUE(object[m_params][m_unregistrations].is_array());
+    ASSERT_EQ  (object[m_params][m_unregistrations].size(), (std::size_t)1);
+
+    ASSERT_TRUE(object[m_params][m_unregistrations][0].is_object());
+    DataObject unreg_object = *(object[m_params][m_unregistrations][0].to_object());
+    ASSERT_EQ((std::size_t)2, unreg_object.size());
+
+    ASSERT_TRUE(unreg_object[m_id].is_string());
+    ASSERT_EQ  (unreg_object[m_id].to_string(), uri);
+
+    ASSERT_TRUE(unreg_object[m_method].is_string());
+    ASSERT_EQ  (unreg_object[m_method].to_string(), m_method_didchangewatch);
+
+    std::string rpcstr;
+    ASSERT_TRUE(objectToRPCString(object, rpcstr, errors));
+
+    std::string json_expected = R"INPUT(
+    {
+        "id": 31,
+        "jsonrpc": "2.0",
+        "method": "client/unregisterCapability",
+        "params": {
+            "unregisterations": [
+                {
+                    "id": "file:///path/to/base/file.i",
+                    "method": "workspace/didChangeWatchedFiles"
+                }
+            ]
+        }
+    }
+    )INPUT";
+    std::string rpc_expected = "Content-Length: 176\r\n\r\n" + collapse(json_expected);
+    ASSERT_EQ(rpc_expected, rpcstr);
+
+    DataObject tst_object;
+    ASSERT_TRUE(RPCStringToObject(rpcstr, tst_object, errors));
+
+    ASSERT_TRUE(tst_object[m_method].is_string());
+    ASSERT_EQ  (tst_object[m_method].to_string(), m_method_unregistercap);
+
+    int                   tst_request_id;
+    std::set<std::string> tst_registration_ids;
+
+    ASSERT_TRUE(dissectUnregisterWatchFilesRequest(tst_object          ,
+                                                   errors              ,
+                                                   tst_request_id      ,
+                                                   tst_registration_ids));
+
+    ASSERT_EQ(request_id    ,  tst_request_id);
+    ASSERT_EQ((std::size_t)1,  tst_registration_ids.size());
+    ASSERT_EQ(uri           , *tst_registration_ids.begin());
+}
+
+TEST(lsp, registerwatchfiles_request)
+{
+    // test registerwatchfiles request with build and dissection round trip
+
+    DataObject        object;
+    std::stringstream errors;
+
+    int                   request_id     = 32;
+    std::string           uri            = prefixUriScheme("/path/to/base/file.i");
+    std::set<std::string> resource_paths = {"/path/to/resource/file01.i",
+                                            "/path/to/resource/file02.i"};
+    std::set<std::string> resource_uris;
+    for (const std::string & resource_path : resource_paths)
+        resource_uris.insert(prefixUriScheme(resource_path));
+
+    ASSERT_TRUE(buildRegisterWatchFilesRequest(object, errors, request_id, uri, resource_uris));
+
+    ASSERT_EQ((std::size_t)3, object.size());
+
+    ASSERT_TRUE(object[m_id].is_int());
+    ASSERT_EQ  (object[m_id].to_int(), request_id);
+
+    ASSERT_TRUE(object[m_method].is_string());
+    ASSERT_EQ  (object[m_method].to_string(), m_method_registercap);
+
+    ASSERT_TRUE(object[m_params].is_object());
+    ASSERT_EQ  (object[m_params].size(), (std::size_t)1);
+
+    ASSERT_TRUE(object[m_params][m_registrations].is_array());
+    ASSERT_EQ  (object[m_params][m_registrations].size(), (std::size_t)1);
+
+    ASSERT_TRUE(object[m_params][m_registrations][0].is_object());
+    DataObject reg_object = *(object[m_params][m_registrations][0].to_object());
+    ASSERT_EQ((std::size_t)3, reg_object.size());
+
+    ASSERT_TRUE(reg_object[m_id].is_string());
+    ASSERT_EQ  (reg_object[m_id].to_string(), uri);
+
+    ASSERT_TRUE(reg_object[m_method].is_string());
+    ASSERT_EQ  (reg_object[m_method].to_string(), m_method_didchangewatch);
+
+    ASSERT_TRUE(reg_object[m_register_options].is_object());
+    ASSERT_EQ  (reg_object[m_register_options].size(), (std::size_t)1);
+
+    ASSERT_TRUE(reg_object[m_register_options][m_watchers].is_array());
+    DataArray watchers = *(reg_object[m_register_options][m_watchers].to_array());
+    ASSERT_EQ((std::size_t)2, watchers.size());
+
+    for (std::size_t index = 0; index < watchers.size(); index++)
+    {
+        ASSERT_TRUE(watchers[index].is_object());
+        ASSERT_EQ  (watchers[index].size(), (std::size_t)2);
+
+        ASSERT_TRUE(watchers[index][m_kind].is_int());
+        ASSERT_EQ  (watchers[index][m_kind].to_int(), m_watch_kind_change);
+
+        ASSERT_TRUE(watchers[index][m_glob_pattern].is_object());
+        DataObject glob_obj = *(watchers[index][m_glob_pattern].to_object());
+        ASSERT_EQ((std::size_t)2, glob_obj.size());
+
+        ASSERT_TRUE(glob_obj[m_base_uri].is_string());
+        ASSERT_EQ  (glob_obj[m_base_uri].to_string(), "file:///path/to/resource/");
+
+        ASSERT_TRUE(glob_obj[m_pattern].is_string());
+        if (index == 0)
+            ASSERT_EQ("file01.i", glob_obj[m_pattern].to_string());
+        else if (index == 1)
+            ASSERT_EQ("file02.i", glob_obj[m_pattern].to_string());
+    }
+
+    std::string rpcstr;
+    ASSERT_TRUE(objectToRPCString(object, rpcstr, errors));
+
+    std::string json_expected = R"INPUT(
+    {
+        "id": 32,
+        "jsonrpc": "2.0",
+        "method": "client/registerCapability",
+        "params": {
+            "registrations": [
+                {
+                    "id": "file:///path/to/base/file.i",
+                    "method": "workspace/didChangeWatchedFiles",
+                    "registerOptions": {
+                        "watchers": [
+                            {
+                                "globPattern": {
+                                    "baseUri": "file:///path/to/resource/",
+                                    "pattern": "file01.i"
+                                },
+                                "kind": 2
+                            },
+                            {
+                                "globPattern": {
+                                    "baseUri": "file:///path/to/resource/",
+                                    "pattern": "file02.i"
+                                },
+                                "kind": 2
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+    )INPUT";
+    std::string rpc_expected = "Content-Length: 376\r\n\r\n" + collapse(json_expected);
+    ASSERT_EQ(rpc_expected, rpcstr);
+
+    DataObject tst_object;
+    ASSERT_TRUE(RPCStringToObject(rpcstr, tst_object, errors));
+
+    ASSERT_TRUE(tst_object[m_method].is_string());
+    ASSERT_EQ  (tst_object[m_method].to_string(), m_method_registercap);
+
+    int                                          tst_request_id;
+    std::map<std::string, std::set<std::string>> tst_keyed_resources;
+
+    ASSERT_TRUE(dissectRegisterWatchFilesRequest(tst_object         ,
+                                                 errors             ,
+                                                 tst_request_id     ,
+                                                 tst_keyed_resources));
+
+    ASSERT_EQ(request_id    , tst_request_id);
+    ASSERT_EQ((std::size_t)1, tst_keyed_resources.size());
+
+    std::string           tst_registration_id = tst_keyed_resources.begin()->first;
+    std::set<std::string> tst_resource_uris   = tst_keyed_resources.begin()->second;
+
+    ASSERT_EQ(uri           , tst_registration_id);
+    ASSERT_EQ((std::size_t)2, tst_resource_uris.size());
+
+    std::size_t tst_resource_index = 0;
+    for (const std::string & tst_resource_uri : tst_resource_uris)
+    {
+        if (tst_resource_index == 0)
+            ASSERT_EQ("/path/to/resource/file01.i", removeUriScheme(tst_resource_uri));
+        else if (tst_resource_index == 1)
+            ASSERT_EQ("/path/to/resource/file02.i", removeUriScheme(tst_resource_uri));
+        tst_resource_index++;
+    }
+}
+
+TEST(lsp, registration_response)
+{
+    // test unregister and register request response build and verification
+
+    DataObject        object;
+    std::stringstream errors;
+
+    int request_id = 33;
+
+    ASSERT_TRUE(buildRegistrationResponse(object, errors, request_id));
+
+    ASSERT_EQ((std::size_t)2, object.size());
+
+    ASSERT_TRUE(object[m_id].is_int());
+    ASSERT_EQ  (object[m_id].to_int(), request_id);
+
+    ASSERT_TRUE(object[m_result].is_null());
+    ASSERT_EQ  (object[m_result].size(), (std::size_t)0);
+
+    std::string rpcstr;
+    ASSERT_TRUE(objectToRPCString(object, rpcstr, errors));
+
+    std::string json_expected = R"INPUT(
+    {
+        "id": 33,
+        "jsonrpc": "2.0",
+        "result": null
+    }
+    )INPUT";
+    std::string rpc_expected = "Content-Length: 39\r\n\r\n" + collapse(json_expected);
+    ASSERT_EQ(rpc_expected, rpcstr);
+
+    DataObject tst_object;
+    ASSERT_TRUE(RPCStringToObject(rpcstr, tst_object, errors));
+
+    ASSERT_EQ((std::size_t)3, tst_object.size());
+    ASSERT_FALSE(tst_object[m_method].is_string());
+
+    ASSERT_TRUE(tst_object[m_id].is_int());
+    ASSERT_EQ  (tst_object[m_id].to_int(), request_id);
+
+    ASSERT_TRUE(tst_object[m_result].is_null());
+    ASSERT_EQ  (tst_object[m_result].size(), (std::size_t)0);
+
+    ASSERT_TRUE(tst_object[m_rpc_jsonrpc_key].is_string());
+    ASSERT_EQ  (tst_object[m_rpc_jsonrpc_key].to_string(), m_rpc_jsonrpc_val);
 }
 
 TEST(lsp, completion_request)

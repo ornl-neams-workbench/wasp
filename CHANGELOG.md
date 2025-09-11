@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - SnippetManager tabstop column offset to no longer include snippet syntax
 - InputDefinition::isValidPath to support absolute paths
 - schema docprint utility support of absolute paths
+- MCNP STRING token pattern to allow for h-h2o.42t, etc.
 
 ### Changed
 - Minimum version of CMake to 3.20, removing deprecated version incompatibility/error observed with newer CMake

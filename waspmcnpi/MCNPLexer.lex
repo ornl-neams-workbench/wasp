@@ -85,7 +85,8 @@ LINE_CONTINUATION &\ *\r?\n
 DOUBLE {WHOLE}?\.{FRAC}?{EXPONENT}?|{WHOLE}\.({FRAC}?{EXPONENT}?)?|{WHOLE}\.?{EXPONENT}
 FORTRAN_FLOAT ([\+\-]?[0-9]*((\.[0-9]+(D?[\+\-]?[0-9]+)?)))|([\+\-]?[0-9]+((D?[\-\+][0-9]+)))
 NUMBER {DOUBLE}|{INTEGER}
-STRING [A-Za-z_/\\]([A-Za-z0-9_\./\\])*
+STR [A-Za-z0-9_\./\\]*
+STRING [A-Za-z_/\\]({STR}(-{STR})?)*
 UNICODE [^\x00-\x7F]+
 MESSAGE_CARD message:
 

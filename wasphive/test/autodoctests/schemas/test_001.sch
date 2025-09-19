@@ -354,6 +354,26 @@ root_tagged_array{
         MaxValExc=  18.8
     }
 }
+cce_build_check{
+    Description = "Description for ChildCountEqual build check object"
+    ChildCountEqual(IfExists) = [ "cce_option/id"=all cce_option ]
+    cce_option{
+        Description = "Description for ChildCountEqual build check option"
+        MinOccurs=1
+        MaxOccurs=NoLimit
+        id{
+            MinOccurs=1
+            MaxOccurs=1
+            ValType=String
+            ValEnums=[ all select random ]
+        }
+        value{
+            MinOccurs=1
+            MaxOccurs=1
+            ValType=String
+        }
+    }
+}
 
 ReferencedEnumsNumtxt=[ zero one two three four five six seven eight nine ]
 ReferencedEnumsColors=[ red orange yellow green blue indigo violet ]

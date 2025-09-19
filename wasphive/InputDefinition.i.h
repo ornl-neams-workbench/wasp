@@ -2012,12 +2012,12 @@ bool IDObject::addChildCountEqualRule(SchemaAdapter node, InputDefinition * this
         }
     }
 
-    const auto & children = node.non_decorative_children();
-    for(size_t i = 0; i < children.size(); i++){
-
-        std::string path = children[i].to_string();
+    for(const auto & child : node.non_decorative_children())
+    {
+        std::string path  = child.child_count() == 0 ? child.to_string() : child.name();
+        std::string value = child.child_count() != 0 ? child.to_string() : "";
         if (rule->getInputDefinition()->isValidPath(path, node.parent())){
-            rule->addLookupPath(path);
+            rule->addPathValuePair(std::make_pair(path, value));
             validPathsCount++;
         }
         else{
@@ -2030,7 +2030,6 @@ bool IDObject::addChildCountEqualRule(SchemaAdapter node, InputDefinition * this
         }
 
     }
-
 
     if (pass == true) this->childCountEqualRuleList.push_back(rule);
     else delete rule;

@@ -16,6 +16,7 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <utility>
 #include "waspsiren/SIRENInterpreter.h"
 #include "waspsiren/SIRENResultSet.h"
 
@@ -1898,20 +1899,23 @@ class ChildCountEqualRule{
             return this->modifierFlag;
         }
 
-        void addLookupPath(const std::string & lookuppath){
-            this->lookupPathsList.push_back(lookuppath);
+        void addPathValuePair(const std::pair<std::string,std::string> & pathValuePair)
+        {
+            this->pathValuePairList.push_back(pathValuePair);
         }
-        size_t getLookupPathCount(){
-            return lookupPathsList.size();
+        std::size_t getPathValuePairCount()
+        {
+            return pathValuePairList.size();
         }
-        std::string getLookupPathAt(size_t index){
-            return lookupPathsList.at(index);
+        std::pair<std::string,std::string> getPathValuePairAt(std::size_t index)
+        {
+            return pathValuePairList.at(index);
         }
 
     private:
         InputDefinition * thisID;
         std::string modifierFlag;
-        std::vector<std::string> lookupPathsList;
+        std::vector<std::pair<std::string,std::string>> pathValuePairList;
 
 };
 

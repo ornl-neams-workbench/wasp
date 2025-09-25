@@ -116,7 +116,12 @@ endif()
 add_custom_target(wasp_wheel ALL "${Python3_EXECUTABLE}" -m build > python_build.log 2>&1
                   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Database.py
                           ${CMAKE_CURRENT_BINARY_DIR}/sch2db.py
-                          ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py)
+                          ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
+                          ${CMAKE_CURRENT_BINARY_DIR}/MANIFEST.in
+                          ${CMAKE_CURRENT_BINARY_DIR}/README.md
+                          ${CMAKE_CURRENT_BINARY_DIR}/../LICENSE
+                          ${CMAKE_CURRENT_BINARY_DIR}/setup.cfg                          
+                          )
 add_dependencies(wasp_wheel wasppy waspcore waspson waspddi waspeddi wasphit waspsiren wasphive wasplsp)
 
 #Configure a basic unit test of the python bindings. In this case the wheels is 

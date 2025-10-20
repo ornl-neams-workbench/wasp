@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - schema docprint utility support of absolute paths
 - MCNP STRING token pattern to allow for h-h2o.42t, etc.
 - InputDefinition to successfully build if ChildCountEqual rule uses lookup value
+- Missing using of json_unescape_string in JSON parsetree and object interpreter 
+- Missing JSON key character escape in waspobject pack_json and format_json 
 
 ### Changed
 - Minimum version of CMake to 3.20, removing deprecated version incompatibility/error observed with newer CMake

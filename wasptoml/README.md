@@ -4,8 +4,6 @@ Minimal configuration file format representing key-value pairs, arrays, tables, 
 
 >Note: dates and times are not supported, yet.
 
->Note: quoted names are not supported, yet.
-
 >Note: multi-line basic and literal strings are not supported,  yet. 
 
 >Note: No special considerations are currently accounted for with basic or literal strings (i.e., escaping)
@@ -20,7 +18,8 @@ table := '[' key ']' block_members
 block_members := key_value
 key_value := key '=' value
 key := name ('.' name)+
-name := [a-zA-Z_0-9-]+
+token: [a-zA-Z_0-9-]+
+name := token | '"' token '"' | "'" token "'"
 value := (number|string|boolean|array|object)
 array := "[" (number|string|object|boolean|array)* "]"
 object := "{" key_value* "}"

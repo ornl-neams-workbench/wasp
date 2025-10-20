@@ -334,6 +334,15 @@ decl : ID
         $$ = interpreter.push_leaf(wasp::DECL
                                    ,"decl"
                                    ,token_index);
+    } 
+    | STRING 
+    {
+        auto token_index = ($1);
+        std::string quote_less_data = interpreter.token_data(token_index);
+        quote_less_data = wasp::strip_quotes(quote_less_data);
+        $$ = interpreter.push_leaf(wasp::DECL
+                                   ,"decl"
+                                   ,token_index);
     }
 key : decl
         {

@@ -972,86 +972,99 @@ namespace wasp {
 #line 973 "TOMLParser.cpp"
     break;
 
-  case 21: // key: decl
+  case 21: // decl: "string"
 #line 339 "TOML.bison"
+    {
+        auto token_index = ((yystack_[0].value.token_index));
+        std::string quote_less_data = interpreter.token_data(token_index);
+        quote_less_data = wasp::strip_quotes(quote_less_data);
+        (yylhs.value.node_index) = interpreter.push_leaf(wasp::DECL
+                                   ,"decl"
+                                   ,token_index);
+    }
+#line 986 "TOMLParser.cpp"
+    break;
+
+  case 22: // key: decl
+#line 348 "TOML.bison"
         {
             (yylhs.value.node_indices) = new std::vector<size_t>();
             (yylhs.value.node_indices)->push_back((yystack_[0].value.node_index));
         }
-#line 982 "TOMLParser.cpp"
+#line 995 "TOMLParser.cpp"
     break;
 
-  case 22: // key: decl separator key
-#line 344 "TOML.bison"
+  case 23: // key: decl separator key
+#line 353 "TOML.bison"
         {
             (yylhs.value.node_indices) = (yystack_[0].value.node_indices);            
             (yylhs.value.node_indices)->insert((yylhs.value.node_indices)->begin(), (yystack_[1].value.node_index));
             (yylhs.value.node_indices)->insert((yylhs.value.node_indices)->begin(), (yystack_[2].value.node_index));
         }
-#line 992 "TOMLParser.cpp"
+#line 1005 "TOMLParser.cpp"
     break;
 
-  case 23: // declaration: key assign
-#line 350 "TOML.bison"
+  case 24: // declaration: key assign
+#line 359 "TOML.bison"
         {
             (yylhs.value.node_indices) = (yystack_[1].value.node_indices); 
             (yylhs.value.node_indices)->push_back((yystack_[0].value.node_index));
         }
-#line 1001 "TOMLParser.cpp"
+#line 1014 "TOMLParser.cpp"
     break;
 
-  case 24: // PRIMITIVE: "string"
-#line 356 "TOML.bison"
+  case 25: // PRIMITIVE: "string"
+#line 365 "TOML.bison"
             { (yylhs.value.token_index) = (yystack_[0].value.token_index); }
-#line 1007 "TOMLParser.cpp"
+#line 1020 "TOMLParser.cpp"
     break;
 
-  case 25: // PRIMITIVE: "integer"
-#line 356 "TOML.bison"
+  case 26: // PRIMITIVE: "integer"
+#line 365 "TOML.bison"
                      { (yylhs.value.token_index) = (yystack_[0].value.token_index); }
-#line 1013 "TOMLParser.cpp"
+#line 1026 "TOMLParser.cpp"
     break;
 
-  case 26: // PRIMITIVE: "real"
-#line 356 "TOML.bison"
+  case 27: // PRIMITIVE: "real"
+#line 365 "TOML.bison"
                                { (yylhs.value.token_index) = (yystack_[0].value.token_index); }
-#line 1019 "TOMLParser.cpp"
+#line 1032 "TOMLParser.cpp"
     break;
 
-  case 27: // PRIMITIVE: "false"
-#line 356 "TOML.bison"
+  case 28: // PRIMITIVE: "false"
+#line 365 "TOML.bison"
                                       { (yylhs.value.token_index) = (yystack_[0].value.token_index); }
-#line 1025 "TOMLParser.cpp"
+#line 1038 "TOMLParser.cpp"
     break;
 
-  case 28: // PRIMITIVE: "true"
-#line 356 "TOML.bison"
+  case 29: // PRIMITIVE: "true"
+#line 365 "TOML.bison"
                                                     { (yylhs.value.token_index) = (yystack_[0].value.token_index); }
-#line 1031 "TOMLParser.cpp"
+#line 1044 "TOMLParser.cpp"
     break;
 
-  case 29: // primitive: PRIMITIVE
-#line 359 "TOML.bison"
+  case 30: // primitive: PRIMITIVE
+#line 368 "TOML.bison"
 {
     size_t token_index = ((yystack_[0].value.token_index));
     (yylhs.value.node_index) = interpreter.push_leaf(wasp::VALUE,"value"
                      ,token_index);
 }
-#line 1041 "TOMLParser.cpp"
+#line 1054 "TOMLParser.cpp"
     break;
 
-  case 30: // keyed_primitive: declaration primitive
-#line 365 "TOML.bison"
+  case 31: // keyed_primitive: declaration primitive
+#line 374 "TOML.bison"
     {
         (yystack_[1].value.node_indices)->push_back((yystack_[0].value.node_index));
         (yylhs.value.node_index) = push_declared_type(interpreter, *(yystack_[1].value.node_indices), wasp::KEYED_VALUE);
         delete (yystack_[1].value.node_indices);
     }
-#line 1051 "TOMLParser.cpp"
+#line 1064 "TOMLParser.cpp"
     break;
 
-  case 31: // keyed_object: declaration object
-#line 371 "TOML.bison"
+  case 32: // keyed_object: declaration object
+#line 380 "TOML.bison"
     {
         for( size_t i = 0; i < (yystack_[0].value.node_indices)->size(); ++i )
         {
@@ -1061,11 +1074,11 @@ namespace wasp {
         delete (yystack_[1].value.node_indices);
         delete (yystack_[0].value.node_indices);
     }
-#line 1065 "TOMLParser.cpp"
+#line 1078 "TOMLParser.cpp"
     break;
 
-  case 32: // keyed_array: declaration array
-#line 381 "TOML.bison"
+  case 33: // keyed_array: declaration array
+#line 390 "TOML.bison"
     {
         for( size_t i = 0; i < (yystack_[0].value.node_indices)->size(); ++i )
         {
@@ -1075,11 +1088,11 @@ namespace wasp {
         delete (yystack_[1].value.node_indices);
         delete (yystack_[0].value.node_indices);
     }
-#line 1079 "TOMLParser.cpp"
+#line 1092 "TOMLParser.cpp"
     break;
 
-  case 33: // array_members: object
-#line 391 "TOML.bison"
+  case 34: // array_members: object
+#line 400 "TOML.bison"
         {
             (yylhs.value.node_indices) = new std::vector<size_t>();
             size_t obj_i = interpreter.push_parent(wasp::OBJECT
@@ -1088,11 +1101,11 @@ namespace wasp {
             (yylhs.value.node_indices)->push_back(obj_i);
             delete (yystack_[0].value.node_indices);
         }
-#line 1092 "TOMLParser.cpp"
+#line 1105 "TOMLParser.cpp"
     break;
 
-  case 34: // array_members: array_members comma object
-#line 400 "TOML.bison"
+  case 35: // array_members: array_members comma object
+#line 409 "TOML.bison"
         {
             (yylhs.value.node_indices) = (yystack_[2].value.node_indices);
             (yylhs.value.node_indices)->push_back((yystack_[1].value.node_index));
@@ -1100,26 +1113,26 @@ namespace wasp {
                                         ,"value"
                                         ,*(yystack_[0].value.node_indices));
             (yylhs.value.node_indices)->push_back(obj_i);
-            delete (yystack_[0].value.node_indices);
-        }
-#line 1106 "TOMLParser.cpp"
-    break;
-
-  case 35: // array_members: array
-#line 410 "TOML.bison"
-        {
-            (yylhs.value.node_indices) = new std::vector<size_t>();
-            size_t arr_i = interpreter.push_parent(wasp::ARRAY
-                                        ,"value"
-                                        ,*(yystack_[0].value.node_indices));
-            (yylhs.value.node_indices)->push_back(arr_i);
             delete (yystack_[0].value.node_indices);
         }
 #line 1119 "TOMLParser.cpp"
     break;
 
-  case 36: // array_members: array_members comma array
+  case 36: // array_members: array
 #line 419 "TOML.bison"
+        {
+            (yylhs.value.node_indices) = new std::vector<size_t>();
+            size_t arr_i = interpreter.push_parent(wasp::ARRAY
+                                        ,"value"
+                                        ,*(yystack_[0].value.node_indices));
+            (yylhs.value.node_indices)->push_back(arr_i);
+            delete (yystack_[0].value.node_indices);
+        }
+#line 1132 "TOMLParser.cpp"
+    break;
+
+  case 37: // array_members: array_members comma array
+#line 428 "TOML.bison"
         {
             (yylhs.value.node_indices) = (yystack_[2].value.node_indices);
             (yylhs.value.node_indices)->push_back((yystack_[1].value.node_index));
@@ -1129,87 +1142,87 @@ namespace wasp {
             (yylhs.value.node_indices)->push_back(arr_i);
             delete (yystack_[0].value.node_indices);
         }
-#line 1133 "TOMLParser.cpp"
+#line 1146 "TOMLParser.cpp"
     break;
 
-  case 37: // array_members: primitive
-#line 429 "TOML.bison"
+  case 38: // array_members: primitive
+#line 438 "TOML.bison"
         {
             (yylhs.value.node_indices) = new std::vector<size_t>();
             (yylhs.value.node_indices)->push_back((yystack_[0].value.node_index));
         }
-#line 1142 "TOMLParser.cpp"
+#line 1155 "TOMLParser.cpp"
     break;
 
-  case 38: // array_members: array_members comma primitive
-#line 434 "TOML.bison"
+  case 39: // array_members: array_members comma primitive
+#line 443 "TOML.bison"
         {
             (yylhs.value.node_indices) = (yystack_[2].value.node_indices);
             (yylhs.value.node_indices)->push_back((yystack_[1].value.node_index));
             (yylhs.value.node_indices)->push_back((yystack_[0].value.node_index));
         }
-#line 1152 "TOMLParser.cpp"
+#line 1165 "TOMLParser.cpp"
     break;
 
-  case 39: // object_members: keyed_object
-#line 440 "TOML.bison"
+  case 40: // object_members: keyed_object
+#line 449 "TOML.bison"
         {
             (yylhs.value.node_indices) = new std::vector<size_t>();
             (yylhs.value.node_indices)->push_back((yystack_[0].value.node_index));
         }
-#line 1161 "TOMLParser.cpp"
+#line 1174 "TOMLParser.cpp"
     break;
 
-  case 40: // object_members: object_members comma keyed_object
-#line 445 "TOML.bison"
+  case 41: // object_members: object_members comma keyed_object
+#line 454 "TOML.bison"
         {
             (yylhs.value.node_indices) = (yystack_[2].value.node_indices);
             (yylhs.value.node_indices)->push_back((yystack_[1].value.node_index));
             (yylhs.value.node_indices)->push_back((yystack_[0].value.node_index));
         }
-#line 1171 "TOMLParser.cpp"
+#line 1184 "TOMLParser.cpp"
     break;
 
-  case 41: // object_members: keyed_array
-#line 451 "TOML.bison"
+  case 42: // object_members: keyed_array
+#line 460 "TOML.bison"
         {
             (yylhs.value.node_indices) = new std::vector<size_t>();
             (yylhs.value.node_indices)->push_back((yystack_[0].value.node_index));
         }
-#line 1180 "TOMLParser.cpp"
+#line 1193 "TOMLParser.cpp"
     break;
 
-  case 42: // object_members: object_members comma keyed_array
-#line 456 "TOML.bison"
+  case 43: // object_members: object_members comma keyed_array
+#line 465 "TOML.bison"
         {
             (yylhs.value.node_indices) = (yystack_[2].value.node_indices);
             (yylhs.value.node_indices)->push_back((yystack_[1].value.node_index));
             (yylhs.value.node_indices)->push_back((yystack_[0].value.node_index));
         }
-#line 1190 "TOMLParser.cpp"
+#line 1203 "TOMLParser.cpp"
     break;
 
-  case 43: // object_members: keyed_primitive
-#line 462 "TOML.bison"
+  case 44: // object_members: keyed_primitive
+#line 471 "TOML.bison"
         {
             (yylhs.value.node_indices) = new std::vector<size_t>();
             (yylhs.value.node_indices)->push_back((yystack_[0].value.node_index));
         }
-#line 1199 "TOMLParser.cpp"
+#line 1212 "TOMLParser.cpp"
     break;
 
-  case 44: // object_members: object_members comma keyed_primitive
-#line 467 "TOML.bison"
+  case 45: // object_members: object_members comma keyed_primitive
+#line 476 "TOML.bison"
         {
             (yylhs.value.node_indices) = (yystack_[2].value.node_indices);
             (yylhs.value.node_indices)->push_back((yystack_[1].value.node_index));
             (yylhs.value.node_indices)->push_back((yystack_[0].value.node_index));
         }
-#line 1209 "TOMLParser.cpp"
+#line 1222 "TOMLParser.cpp"
     break;
 
-  case 45: // table: lbracket key rbracket
-#line 475 "TOML.bison"
+  case 46: // table: lbracket key rbracket
+#line 484 "TOML.bison"
     {
         // Check for prior staged table that may need to be committed.
         while (interpreter.staged_count() > 1)
@@ -1223,11 +1236,11 @@ namespace wasp {
         (yylhs.value.node_index) = push_staged_declared_type(interpreter, *(yystack_[1].value.node_indices), wasp::TABLE);
         delete (yystack_[1].value.node_indices);
     }
-#line 1227 "TOMLParser.cpp"
+#line 1240 "TOMLParser.cpp"
     break;
 
-  case 46: // array_table: dlbracket key drbracket
-#line 491 "TOML.bison"
+  case 47: // array_table: dlbracket key drbracket
+#line 500 "TOML.bison"
     {
         // Check for prior staged table that may need to be committed.
         while (interpreter.staged_count() > 1)
@@ -1241,104 +1254,104 @@ namespace wasp {
         (yylhs.value.node_index) = push_staged_declared_type(interpreter, *(yystack_[1].value.node_indices), wasp::ARRAY_TABLE);
         delete (yystack_[1].value.node_indices);
     }
-#line 1245 "TOMLParser.cpp"
+#line 1258 "TOMLParser.cpp"
     break;
 
-  case 48: // start: start comment
-#line 505 "TOML.bison"
+  case 49: // start: start comment
+#line 514 "TOML.bison"
                        {
             interpreter.push_staged_child((yystack_[0].value.node_index));
         }
-#line 1253 "TOMLParser.cpp"
+#line 1266 "TOMLParser.cpp"
     break;
 
-  case 49: // start: start keyed_primitive
-#line 508 "TOML.bison"
+  case 50: // start: start keyed_primitive
+#line 517 "TOML.bison"
                                {
             interpreter.push_staged_child((yystack_[0].value.node_index));
         }
-#line 1261 "TOMLParser.cpp"
+#line 1274 "TOMLParser.cpp"
     break;
 
-  case 50: // start: start keyed_primitive error
-#line 511 "TOML.bison"
+  case 51: // start: start keyed_primitive error
+#line 520 "TOML.bison"
                                      {
             interpreter.push_staged_child((yystack_[1].value.node_index));
             interpreter.set_failed(true);
         }
-#line 1270 "TOMLParser.cpp"
+#line 1283 "TOMLParser.cpp"
     break;
 
-  case 51: // start: start keyed_object
-#line 515 "TOML.bison"
+  case 52: // start: start keyed_object
+#line 524 "TOML.bison"
                             {
             interpreter.push_staged_child((yystack_[0].value.node_index));
         }
-#line 1278 "TOMLParser.cpp"
+#line 1291 "TOMLParser.cpp"
     break;
 
-  case 52: // start: start keyed_object error
-#line 518 "TOML.bison"
+  case 53: // start: start keyed_object error
+#line 527 "TOML.bison"
                                   {
             interpreter.push_staged_child((yystack_[1].value.node_index));
             interpreter.set_failed(true);
         }
-#line 1287 "TOMLParser.cpp"
+#line 1300 "TOMLParser.cpp"
     break;
 
-  case 53: // start: start keyed_array
-#line 522 "TOML.bison"
+  case 54: // start: start keyed_array
+#line 531 "TOML.bison"
                            {
             interpreter.push_staged_child((yystack_[0].value.node_index));
         }
-#line 1295 "TOMLParser.cpp"
+#line 1308 "TOMLParser.cpp"
     break;
 
-  case 54: // start: start keyed_array error
-#line 525 "TOML.bison"
+  case 55: // start: start keyed_array error
+#line 534 "TOML.bison"
                                  {
             interpreter.push_staged_child((yystack_[1].value.node_index));
             interpreter.set_failed(true);
         }
-#line 1304 "TOMLParser.cpp"
+#line 1317 "TOMLParser.cpp"
     break;
 
-  case 55: // start: start table
-#line 529 "TOML.bison"
+  case 56: // start: start table
+#line 538 "TOML.bison"
                      {
             // node staging occurs for this rule
         }
-#line 1312 "TOMLParser.cpp"
+#line 1325 "TOMLParser.cpp"
     break;
 
-  case 56: // start: start table error
-#line 532 "TOML.bison"
+  case 57: // start: start table error
+#line 541 "TOML.bison"
                            {
             // node staging occurs for this rule
             interpreter.set_failed(true);
         }
-#line 1321 "TOMLParser.cpp"
+#line 1334 "TOMLParser.cpp"
     break;
 
-  case 57: // start: start array_table
-#line 536 "TOML.bison"
+  case 58: // start: start array_table
+#line 545 "TOML.bison"
                            {
             // node staging occurs for this rule
         }
-#line 1329 "TOMLParser.cpp"
+#line 1342 "TOMLParser.cpp"
     break;
 
-  case 58: // start: start array_table error
-#line 539 "TOML.bison"
+  case 59: // start: start array_table error
+#line 548 "TOML.bison"
                                  {
             // node staging occurs for this rule
             interpreter.set_failed(true);
         }
-#line 1338 "TOMLParser.cpp"
+#line 1351 "TOMLParser.cpp"
     break;
 
 
-#line 1342 "TOMLParser.cpp"
+#line 1355 "TOMLParser.cpp"
 
             default:
               break;
@@ -1690,95 +1703,97 @@ namespace wasp {
   }
 
 
-  const signed char TOMLParser::yypact_ninf_ = -32;
+  const signed char TOMLParser::yypact_ninf_ = -33;
 
-  const signed char TOMLParser::yytable_ninf_ = -58;
+  const signed char TOMLParser::yytable_ninf_ = -59;
 
   const signed char
   TOMLParser::yypact_[] =
   {
-     -32,    61,   -32,   -32,   -32,   -32,   -32,    -9,    -9,   -32,
-       5,     6,    79,     8,    11,    40,    43,    51,    16,    17,
-     -32,    -9,   -32,   -32,   -32,   -32,   -32,   -32,   -32,   -32,
-      69,     4,   -32,   -32,   -32,   -32,   -32,   -32,   -32,   -32,
-     -32,   -32,   -32,   -32,   -32,   -32,   -32,   -32,   -32,   -32,
-     -32,    94,   -32,   -32,   -32,   -32,   -32,   -32,    54,   -32,
-     -32,   -32,    79,   -32,   -32,    -9,   -32,   -32,   -32,   -32,
-     -32,   -32
+     -33,    67,   -33,   -33,   -33,   -33,   -33,   -33,    33,    33,
+     -33,     5,    27,    94,     8,    11,    40,    43,    64,    13,
+      17,   -33,    33,   -33,   -33,   -33,   -33,   -33,   -33,   -33,
+     -33,    88,     4,   -33,   -33,   -33,   -33,   -33,   -33,   -33,
+     -33,   -33,   -33,   -33,   -33,   -33,   -33,   -33,   -33,   -33,
+     -33,   -33,    70,   -33,   -33,   -33,   -33,   -33,   -33,    10,
+     -33,   -33,   -33,    94,   -33,   -33,    33,   -33,   -33,   -33,
+     -33,   -33,   -33
   };
 
   const signed char
   TOMLParser::yydefact_[] =
   {
-      47,     0,     1,     3,     7,    20,    11,     0,     0,    48,
-      21,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-      10,     0,     2,    23,     5,    28,    27,    26,    25,    24,
-       0,     0,    32,    31,    29,    30,    50,    52,    54,    56,
-      58,     4,    45,     8,    46,    22,    13,    12,    35,    33,
-      37,     0,    17,     6,    16,    43,    39,    41,     0,    14,
-       9,    15,     0,    18,    19,     0,    36,    34,    38,    44,
-      40,    42
+      48,     0,     1,     3,     7,    21,    20,    11,     0,     0,
+      49,    22,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,    10,     0,     2,    24,     5,    29,    28,    27,    26,
+      25,     0,     0,    33,    32,    30,    31,    51,    53,    55,
+      57,    59,     4,    46,     8,    47,    23,    13,    12,    36,
+      34,    38,     0,    17,     6,    16,    44,    40,    42,     0,
+      14,     9,    15,     0,    18,    19,     0,    37,    35,    39,
+      45,    41,    43
   };
 
   const signed char
   TOMLParser::yypgoto_[] =
   {
-     -32,   -32,    25,   -27,   -32,   -26,   -32,   -32,   -16,   -32,
-     -32,   -25,   -24,   -32,    12,   -32,   -32,   -23,   -31,   -30,
-     -29,   -32,   -32,   -32,   -32,   -32
+     -33,   -33,    48,   -28,   -33,    -6,   -33,   -33,    -5,   -33,
+     -33,   -26,   -25,   -33,    24,   -33,   -33,   -24,   -32,   -31,
+     -30,   -33,   -33,   -33,   -33,   -33
   };
 
   const signed char
   TOMLParser::yydefgoto_[] =
   {
-       0,    23,    30,    42,    31,    54,     8,    44,    62,    21,
-       9,    32,    33,    10,    11,    12,    34,    35,    13,    14,
-      15,    51,    58,    16,    17,     1
+       0,    24,    31,    43,    32,    55,     9,    45,    63,    22,
+      10,    33,    34,    11,    12,    13,    35,    36,    14,    15,
+      16,    52,    59,    17,    18,     1
   };
 
   const signed char
   TOMLParser::yytable_[] =
   {
-      55,    56,    57,    47,    52,    48,    49,    50,   -49,    36,
-       5,   -51,    37,   -49,    53,   -49,   -51,    20,   -51,    18,
-      19,    22,    41,     5,    61,    43,     7,   -49,   -49,     0,
-     -51,   -51,    64,    45,    69,    70,    71,    66,    67,    68,
-     -53,    38,    65,   -55,    39,   -53,     0,   -53,   -55,     0,
-     -55,   -57,    40,     0,    63,     0,   -57,     0,   -57,   -53,
-     -53,     2,   -55,   -55,    53,    60,     3,     0,     4,    46,
-     -57,   -57,     0,     0,     3,    41,     0,     0,    24,     0,
-       5,     6,    25,    26,     3,    27,    28,    29,    24,     0,
-       0,     0,    25,    26,    59,    27,    28,    29,     0,     0,
-      41,     0,     0,     0,     0,    60
+      56,    57,    58,    48,    53,    49,    50,    51,   -50,    37,
+      64,   -52,    38,   -50,    54,   -50,   -52,    21,   -52,    42,
+      54,    61,     5,     6,    62,    44,   -50,   -50,   -50,   -52,
+     -52,   -52,    19,    20,    70,    71,    72,    67,    68,    69,
+     -54,    39,    23,   -56,    40,   -54,    46,   -54,   -56,     8,
+     -56,     5,     6,    65,    66,     0,     0,     0,   -54,   -54,
+     -54,   -56,   -56,   -56,   -58,    41,     0,     2,     0,   -58,
+      60,   -58,     3,     0,     4,     0,    42,     0,     0,     0,
+       0,    61,   -58,   -58,   -58,     5,     6,     7,    47,     0,
+       0,     0,     0,     3,    42,     0,     0,    25,     0,     3,
+       0,    26,    27,    25,    28,    29,    30,    26,    27,     0,
+      28,    29,    30
   };
 
   const signed char
   TOMLParser::yycheck_[] =
   {
-      31,    31,    31,    30,     0,    30,    30,    30,     0,     1,
-      19,     0,     1,     5,    10,     7,     5,    12,     7,     7,
-       8,    15,     6,    19,    51,     8,     1,    19,    20,    -1,
-      19,    20,    58,    21,    65,    65,    65,    62,    62,    62,
-       0,     1,    58,     0,     1,     5,    -1,     7,     5,    -1,
-       7,     0,     1,    -1,     0,    -1,     5,    -1,     7,    19,
-      20,     0,    19,    20,    10,    11,     5,    -1,     7,     0,
-      19,    20,    -1,    -1,     5,     6,    -1,    -1,     9,    -1,
-      19,    20,    13,    14,     5,    16,    17,    18,     9,    -1,
-      -1,    -1,    13,    14,     0,    16,    17,    18,    -1,    -1,
-       6,    -1,    -1,    -1,    -1,    11
+      32,    32,    32,    31,     0,    31,    31,    31,     0,     1,
+       0,     0,     1,     5,    10,     7,     5,    12,     7,     6,
+      10,    11,    18,    19,    52,     8,    18,    19,    20,    18,
+      19,    20,     8,     9,    66,    66,    66,    63,    63,    63,
+       0,     1,    15,     0,     1,     5,    22,     7,     5,     1,
+       7,    18,    19,    59,    59,    -1,    -1,    -1,    18,    19,
+      20,    18,    19,    20,     0,     1,    -1,     0,    -1,     5,
+       0,     7,     5,    -1,     7,    -1,     6,    -1,    -1,    -1,
+      -1,    11,    18,    19,    20,    18,    19,    20,     0,    -1,
+      -1,    -1,    -1,     5,     6,    -1,    -1,     9,    -1,     5,
+      -1,    13,    14,     9,    16,    17,    18,    13,    14,    -1,
+      16,    17,    18
   };
 
   const signed char
   TOMLParser::yystos_[] =
   {
-       0,    46,     0,     5,     7,    19,    20,    23,    27,    31,
-      34,    35,    36,    39,    40,    41,    44,    45,    35,    35,
-      12,    30,    15,    22,     9,    13,    14,    16,    17,    18,
-      23,    25,    32,    33,    37,    38,     1,     1,     1,     1,
-       1,     6,    24,     8,    28,    35,     0,    24,    32,    33,
-      38,    42,     0,    10,    26,    39,    40,    41,    43,     0,
-      11,    24,    29,     0,    26,    29,    32,    33,    38,    39,
-      40,    41
+       0,    46,     0,     5,     7,    18,    19,    20,    23,    27,
+      31,    34,    35,    36,    39,    40,    41,    44,    45,    35,
+      35,    12,    30,    15,    22,     9,    13,    14,    16,    17,
+      18,    23,    25,    32,    33,    37,    38,     1,     1,     1,
+       1,     1,     6,    24,     8,    28,    35,     0,    24,    32,
+      33,    38,    42,     0,    10,    26,    39,    40,    41,    43,
+       0,    11,    24,    29,     0,    26,    29,    32,    33,    38,
+      39,    40,    41
   };
 
   const signed char
@@ -1786,10 +1801,10 @@ namespace wasp {
   {
        0,    21,    22,    23,    24,    25,    26,    27,    28,    29,
       30,    31,    32,    32,    32,    32,    33,    33,    33,    33,
-      34,    35,    35,    36,    37,    37,    37,    37,    37,    38,
-      39,    40,    41,    42,    42,    42,    42,    42,    42,    43,
-      43,    43,    43,    43,    43,    44,    45,    46,    46,    46,
-      46,    46,    46,    46,    46,    46,    46,    46,    46
+      34,    34,    35,    35,    36,    37,    37,    37,    37,    37,
+      38,    39,    40,    41,    42,    42,    42,    42,    42,    42,
+      43,    43,    43,    43,    43,    43,    44,    45,    46,    46,
+      46,    46,    46,    46,    46,    46,    46,    46,    46,    46
   };
 
   const signed char
@@ -1797,10 +1812,10 @@ namespace wasp {
   {
        0,     2,     1,     1,     1,     1,     1,     1,     1,     1,
        1,     1,     2,     2,     3,     3,     2,     2,     3,     3,
-       1,     1,     3,     2,     1,     1,     1,     1,     1,     1,
-       2,     2,     2,     1,     3,     1,     3,     1,     3,     1,
-       3,     1,     3,     1,     3,     3,     3,     0,     2,     2,
-       3,     2,     3,     2,     3,     2,     3,     2,     3
+       1,     1,     1,     3,     2,     1,     1,     1,     1,     1,
+       1,     2,     2,     2,     1,     3,     1,     3,     1,     3,
+       1,     3,     1,     3,     1,     3,     3,     3,     0,     2,
+       2,     3,     2,     3,     2,     3,     2,     3,     2,     3
   };
 
 
@@ -1829,10 +1844,10 @@ namespace wasp {
   {
        0,   205,   205,   212,   218,   224,   230,   236,   242,   249,
      255,   262,   270,   276,   282,   293,   299,   305,   311,   323,
-     329,   338,   343,   349,   356,   356,   356,   356,   356,   358,
-     364,   370,   380,   390,   399,   409,   418,   428,   433,   439,
-     444,   450,   455,   461,   466,   474,   490,   504,   505,   508,
-     511,   515,   518,   522,   525,   529,   532,   536,   539
+     329,   338,   347,   352,   358,   365,   365,   365,   365,   365,
+     367,   373,   379,   389,   399,   408,   418,   427,   437,   442,
+     448,   453,   459,   464,   470,   475,   483,   499,   513,   514,
+     517,   520,   524,   527,   531,   534,   538,   541,   545,   548
   };
 
   void
@@ -1913,9 +1928,9 @@ namespace wasp {
 
 #line 36 "TOML.bison"
 } // wasp
-#line 1917 "TOMLParser.cpp"
+#line 1932 "TOMLParser.cpp"
 
-#line 546 "TOML.bison"
+#line 555 "TOML.bison"
  /*** Additional Code ***/
 namespace wasp{
 void TOMLParser::error(const TOMLParser::location_type& l,

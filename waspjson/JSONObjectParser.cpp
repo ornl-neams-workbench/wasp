@@ -909,7 +909,7 @@ namespace wasp {
 #line 240 "JSONObjectParser.bison"
         {
             (yylhs.value.keyed_values) = new std::vector<std::pair<std::string,Value*>>();
-            (yylhs.value.keyed_values)->push_back(std::make_pair(wasp::strip_quotes(*(yystack_[2].value.string)),(yystack_[0].value.value)));
+            (yylhs.value.keyed_values)->push_back(std::make_pair(wasp::json_unescape_string(wasp::strip_quotes(*(yystack_[2].value.string))),(yystack_[0].value.value)));
             delete (yystack_[2].value.string);
         }
 #line 916 "JSONObjectParser.cpp"
@@ -919,7 +919,7 @@ namespace wasp {
 #line 245 "JSONObjectParser.bison"
         {
             (yylhs.value.keyed_values) = new std::vector<std::pair<std::string,Value*>>();
-            (yylhs.value.keyed_values)->push_back(std::make_pair(wasp::strip_quotes(*(yystack_[2].value.string)),(yystack_[0].value.value)));
+            (yylhs.value.keyed_values)->push_back(std::make_pair(wasp::json_unescape_string(wasp::strip_quotes(*(yystack_[2].value.string))),(yystack_[0].value.value)));
             delete (yystack_[2].value.string);
         }
 #line 926 "JSONObjectParser.cpp"
@@ -929,7 +929,7 @@ namespace wasp {
 #line 250 "JSONObjectParser.bison"
         {
             (yylhs.value.keyed_values) = new std::vector<std::pair<std::string,Value*>>();
-            (yylhs.value.keyed_values)->push_back(std::make_pair(wasp::strip_quotes(*(yystack_[2].value.string)),(yystack_[0].value.value)));
+            (yylhs.value.keyed_values)->push_back(std::make_pair(wasp::json_unescape_string(wasp::strip_quotes(*(yystack_[2].value.string))),(yystack_[0].value.value)));
             delete (yystack_[2].value.string);
         }
 #line 936 "JSONObjectParser.cpp"

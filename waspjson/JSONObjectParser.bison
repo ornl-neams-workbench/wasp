@@ -239,17 +239,17 @@ array_members :object
 keyed_member : decl ':' primitive
         {
             $$ = new std::vector<std::pair<std::string,Value*>>();
-            $$->push_back(std::make_pair(wasp::strip_quotes(*$1),$3));
+            $$->push_back(std::make_pair(wasp::json_unescape_string(wasp::strip_quotes(*$1)),$3));
             delete $1;
         }|decl ':' array
         {
             $$ = new std::vector<std::pair<std::string,Value*>>();
-            $$->push_back(std::make_pair(wasp::strip_quotes(*$1),$3));
+            $$->push_back(std::make_pair(wasp::json_unescape_string(wasp::strip_quotes(*$1)),$3));
             delete $1;
         }|decl ':' object
         {
             $$ = new std::vector<std::pair<std::string,Value*>>();
-            $$->push_back(std::make_pair(wasp::strip_quotes(*$1),$3));
+            $$->push_back(std::make_pair(wasp::json_unescape_string(wasp::strip_quotes(*$1)),$3));
             delete $1;
         }
 object_members : keyed_member

@@ -579,6 +579,8 @@ enabled = true
 	[servers.beta]
 	ip = "10.0.0.2"
 	dc = "eqdc10"
+  "My Precious" = "190.168.0.1"
+  'quoted "value"' = "value"
 
 [clients]
 data = [ ["gamma", "delta"], [1, 2], [true, false] ]
@@ -587,7 +589,10 @@ data = [ ["gamma", "delta"], [1, 2], [true, false] ]
 hosts = [
 	"alpha",
 	"omega"
-])INPUT";
+]
+
+site."google.com" = true  
+)INPUT";
     std::stringstream        error;
     DefaultTOMLInterpreter interpreter(error);
     ASSERT_TRUE(interpreter.parse(input));
@@ -675,6 +680,14 @@ hosts = [
 /servers/beta/dc/decl (dc)
 /servers/beta/dc/= (=)
 /servers/beta/dc/value ("eqdc10")
+/servers/beta/My Precious
+/servers/beta/My Precious/decl ("My Precious")
+/servers/beta/My Precious/= (=)
+/servers/beta/My Precious/value ("190.168.0.1")
+/servers/beta/quoted "value"
+/servers/beta/quoted "value"/decl ('quoted "value"')
+/servers/beta/quoted "value"/= (=)
+/servers/beta/quoted "value"/value ("value")
 /clients
 /clients/[ ([)
 /clients/decl (clients)
@@ -713,6 +726,13 @@ hosts = [
 /clients/hosts/, (,)
 /clients/hosts/value ("omega")
 /clients/hosts/] (])
+/clients/site
+/clients/site/google.com
+/clients/site/google.com/decl (site)
+/clients/site/google.com/. (.)
+/clients/site/google.com/decl ("google.com")
+/clients/site/google.com/= (=)
+/clients/site/google.com/value (true)
 )INPUT";
     ASSERT_EQ(expected_tree.str(), tree_print.str());
 
@@ -740,6 +760,9 @@ hosts = [
     "alpha"
     ,"omega"
   ]
+  ,"site" : {
+    "google.com" : true
+  }
 }
   ,"database" : {
     "connection_max" : 5000
@@ -761,8 +784,10 @@ hosts = [
     ,"ip" : "10.0.0.1"
   }
     ,"beta" : {
-      "dc" : "eqdc10"
+      "My Precious" : "190.168.0.1"
+      ,"dc" : "eqdc10"
       ,"ip" : "10.0.0.2"
+      ,"quoted \"value\"" : "value"
     }
   }
   ,"title" : "ImpalaPay Co."

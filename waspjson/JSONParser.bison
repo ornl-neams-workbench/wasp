@@ -153,8 +153,6 @@ primitive : PRIMITIVE
 decl : ANY_STRING
     {
         auto token_index = ($1);
-        std::string quote_less_data = interpreter.token_data(token_index);
-        quote_less_data = wasp::strip_quotes(quote_less_data);
         $$ = interpreter.push_leaf(wasp::DECL
                                    ,"decl"
                                    ,token_index);
@@ -237,7 +235,7 @@ keyed_primitive : declaration primitive
     {
         $1->push_back($2);
         std::string quote_less_data = interpreter.data($1->front());
-        quote_less_data = wasp::strip_quotes(quote_less_data);
+        quote_less_data = wasp::json_unescape_string(wasp::strip_quotes(quote_less_data));
         $$ = interpreter.push_parent(wasp::KEYED_VALUE
                                     ,quote_less_data.c_str()
                                     ,*$1);
@@ -250,7 +248,7 @@ keyed_object : declaration object
             $1->push_back($2->at(i));
         }
         std::string quote_less_data = interpreter.data($1->front());
-        quote_less_data = wasp::strip_quotes(quote_less_data);
+        quote_less_data = wasp::json_unescape_string(wasp::strip_quotes(quote_less_data));
         $$ = interpreter.push_parent(wasp::OBJECT
                                     ,quote_less_data.c_str()
                                     ,*$1);
@@ -264,7 +262,7 @@ keyed_array : declaration array
             $1->push_back($2->at(i));
         }
         std::string quote_less_data = interpreter.data($1->front());
-        quote_less_data = wasp::strip_quotes(quote_less_data);
+        quote_less_data = wasp::json_unescape_string(wasp::strip_quotes(quote_less_data));
         $$ = interpreter.push_parent(wasp::ARRAY
                                     ,quote_less_data.c_str()
                                     ,*$1);

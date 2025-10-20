@@ -812,14 +812,14 @@ bool DataObject::format_json(std::ostream& out,
     std::string indent = std::string(indent_level * (level + 1), ' ');
     out << indent;
     auto itr = begin();
-    out << "\"" << itr->first << "\" : ";
+    out << "\"" << json_escape_string(itr->first) << "\" : ";
     itr->second.format_json(out, indent_level, level);
     out << std::endl;
     ++itr;
     for (; itr != end(); ++itr)
     {
         out << indent << ",";
-        out << "\"" << itr->first << "\" : ";
+        out << "\"" << json_escape_string(itr->first) << "\" : ";
         if (!itr->second.format_json(out, indent_level, level + 1))
             return false;
         out << std::endl;
@@ -838,13 +838,13 @@ bool DataObject::pack_json(std::ostream& out) const
 
     out << "{";
     auto itr = begin();
-    out << "\"" << itr->first << "\":";
+    out << "\"" << json_escape_string(itr->first) << "\":";
     itr->second.pack_json(out);
     ++itr;
     for (; itr != end(); ++itr)
     {
         out << ",";
-        out << "\"" << itr->first << "\":";
+        out << "\"" << json_escape_string(itr->first) << "\":";
         if (!itr->second.pack_json(out))
             return false;
     }

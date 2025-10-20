@@ -96,11 +96,11 @@ TEST(JSON, simple_object)
 /object_mixed/o/{ ({)
 /object_mixed/o/} (})
 /object_mixed/, (,)
-/object_mixed/a bc \"esca ped\" de f
-/object_mixed/a bc \"esca ped\" de f/decl ("a bc \"esca ped\" de f")
-/object_mixed/a bc \"esca ped\" de f/: (:)
-/object_mixed/a bc \"esca ped\" de f/[ ([)
-/object_mixed/a bc \"esca ped\" de f/] (])
+/object_mixed/a bc "esca ped" de f
+/object_mixed/a bc "esca ped" de f/decl ("a bc \"esca ped\" de f")
+/object_mixed/a bc "esca ped" de f/: (:)
+/object_mixed/a bc "esca ped" de f/[ ([)
+/object_mixed/a bc "esca ped" de f/] (])
 /object_mixed/, (,)
 /object_mixed/k
 /object_mixed/k/decl ("k")

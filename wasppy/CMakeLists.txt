@@ -79,7 +79,7 @@ add_custom_command(
     MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/README.md)
 
 add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/../LICENSE
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/LICENSE
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE ${CMAKE_CURRENT_BINARY_DIR}/LICENSE
     MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/README.md)
 
@@ -112,16 +112,38 @@ else()
   file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/setup.py CONTENT "${WASPPY_SETUP_CONFIG}")
 endif()
 
+set (wheel_file_deps 
+      ${CMAKE_CURRENT_BINARY_DIR}/Database.py
+      ${CMAKE_CURRENT_BINARY_DIR}/sch2db.py
+      ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
+      ${CMAKE_CURRENT_BINARY_DIR}/MANIFEST.in
+      ${CMAKE_CURRENT_BINARY_DIR}/README.md
+      ${CMAKE_CURRENT_BINARY_DIR}/LICENSE
+      ${CMAKE_CURRENT_BINARY_DIR}/setup.cfg
+    )
+# MacOS is a universal build which requires manual plat_name
+if (APPLE)
+  #Execute the setup file to generate a wheel
+  add_custom_target(wasp_wheel ALL /usr/bin/env
+                  # distutils/setuptools will honor ARCHFLAGS for compiling the wrapper
+                  ARCHFLAGS=-arch\ x86_64\ -arch\ arm64
+                  # make sure we don't accidentally link to conda libs
+                  CFLAGS=""
+                  CXXFLAGS=""
+                  LDFLAGS=""
+                  LIBRARY_PATH=""
+                  DYLD_LIBRARY_PATH=""
+                  "${Python3_EXECUTABLE}" -m build --no-isolation
+                  -C"--build-option=--plat-name=macosx_10_16_universal2" > python_build.log 2>&1
+                  DEPENDS ${wheel_file_deps}
+                  )
+else() 
 #Execute the setup file to generate a wheel
-add_custom_target(wasp_wheel ALL "${Python3_EXECUTABLE}" -m build > python_build.log 2>&1
-                  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Database.py
-                          ${CMAKE_CURRENT_BINARY_DIR}/sch2db.py
-                          ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
-                          ${CMAKE_CURRENT_BINARY_DIR}/MANIFEST.in
-                          ${CMAKE_CURRENT_BINARY_DIR}/README.md
-                          ${CMAKE_CURRENT_BINARY_DIR}/../LICENSE
-                          ${CMAKE_CURRENT_BINARY_DIR}/setup.cfg                          
-                          )
+  add_custom_target(wasp_wheel ALL
+                  "${Python3_EXECUTABLE}" -m build --no-isolation > python_build.log 2>&1
+                  DEPENDS ${wheel_file_deps}                          
+                  )
+endif()
 add_dependencies(wasp_wheel wasppy waspcore waspson waspddi waspeddi wasphit waspsiren wasphive wasplsp)
 
 #Configure a basic unit test of the python bindings. In this case the wheels is 

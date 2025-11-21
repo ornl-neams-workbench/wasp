@@ -14,6 +14,7 @@ cmake -DBUILDNAME="$(uname -s)-Debug-${CI_COMMIT_REF_NAME}" \
       -DCMAKE_BUILD_TYPE=DEBUG \
       -DWASP_ENABLE_SWIG=ON \
       -Dwasp_ENABLE_TESTS=ON \
+      -DCMAKE_OSX_ARCHITECTURES='x86_64;arm64' \
       -Dwasp_ENABLE_ALL_PACKAGES=ON \
       ..
 

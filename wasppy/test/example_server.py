@@ -87,10 +87,10 @@ class ExampleServer(BaseServer):
     def gatherDocumentSymbols(self, document_symbols):
         '''Build hierarchical symbol tree of document in provided object'''
         success = True
-        document_symbols.push_back(DataObject())
 
         if self.document_text == "test doc text 02":
 
+            document_symbols.push_back(DataObject())
             symbol_doc_root = document_symbols.back().to_object()
             beg_line,     beg_char,     end_line,     end_char     = 11, 12, 61, 62
             beg_line_sel, beg_char_sel, end_line_sel, end_char_sel = 11, 12, 61, 62
@@ -230,6 +230,7 @@ class ExampleServer(BaseServer):
 
     def getHoverDisplayText(self, display_text, req_line, req_char):
         '''Return text that should be shown on hover at request position'''
+        display_text = ""
         if req_line == 56 and req_char == 78:
             display_text = "hover text of example test server"
         return display_text

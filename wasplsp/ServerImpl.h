@@ -23,6 +23,7 @@ class WASP_PUBLIC ServerImpl
         is_initialized(false)           ,
         client_snippet_support(false)   ,
         client_watcher_support(false)   ,
+        watcher_registration_enabled(false) ,
         server_request_id(1)            {}
 
     virtual ~ServerImpl() = default;
@@ -384,6 +385,8 @@ class WASP_PUBLIC ServerImpl
         if (!this->server_capabilities.contains(m_extensions_provider))
             this->server_capabilities[m_extensions_provider] = DataObject();
         this->server_capabilities[m_extensions_provider][method_name] = true;
+        if (method_name == "watcherRegistration")
+            this->watcher_registration_enabled = true;
     }
 
     /** Check if connected server supports provided extension method name
@@ -494,6 +497,11 @@ class WASP_PUBLIC ServerImpl
      * @brief client_watcher_support - watch files should be registered
      */
     bool client_watcher_support;
+
+    /**
+     * @brief watcher_registration_enabled - has watcher registration enabled
+     */
+    bool watcher_registration_enabled;
 
     /**
      * @brief client_extension_methods - client supported extension methods

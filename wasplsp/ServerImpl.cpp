@@ -140,7 +140,9 @@ bool ServerImpl::run()
 
         // send client list of document resources if symbols were just sent
         // if client supports watch file registration and relative patterns
-        if (method_name == m_method_documentsymbol && this->client_watcher_support)
+        // and only if derived server enabled watcherRegistration extension
+        if (method_name == m_method_documentsymbol &&
+            this->client_watcher_support && this->watcher_registration_enabled)
         {
             pass &= this->registerWatchFiles();
         }

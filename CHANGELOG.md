@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.4.1] - 11-24-2025
+
+### Fixed
+- LSP base server logic to only register watch files if enabled by derived server
+
 ## [4.4.0] - 11-03-2025
 
 ### Added

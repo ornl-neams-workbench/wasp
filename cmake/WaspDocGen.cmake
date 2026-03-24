@@ -47,6 +47,9 @@ FUNCTION(WASP_DOC_GEN)
     IF(NOT PANDOC_EXE_PATH STREQUAL "PANDOC_EXE_PATH-NOTFOUND")
       SET(PANDOC_EXE_PATH ${PANDOC_EXE_PATH} CACHE STRING "Path to pandoc executable.")
       MESSAGE(STATUS "Found pandoc : '${PANDOC_EXE_PATH}'")
+    ELSE()
+      MESSAGE(WARNING "Could not find pandoc; skipping WASP_DOC_GEN")
+      return()
     ENDIF()
   ENDIF()
   # Create make target to copy README.md files to build directory
@@ -73,12 +76,12 @@ FUNCTION(WASP_DOC_GEN)
                      ALL
                      WORKING_DIRECTORY "${wasp_BINARY_DIR}"
                     ${CUSTOM_COPY_LOGIC}
-                      )
+                   )
   add_custom_target(sed_md 
                      WORKING_DIRECTORY "${wasp_BINARY_DIR}"
                     ${CUSTOM_SED_LOGIC}
                     DEPENDS copy_md
-                      )
+                   )
   add_custom_target(doc_docx_gen 
                      WORKING_DIRECTORY "${wasp_BINARY_DIR}"
                      COMMAND ${PANDOC_EXE_PATH} ${PARSE_MD_FILES} 
@@ -97,10 +100,14 @@ FUNCTION(WASP_DOC_GEN)
 
   set(WASP_README "WASP_README.md")
   if( "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows" )
-      # Change file separator and add whitespace separator
-      string( REPLACE "/README.md" "\\README.md " WIN_PARSE_MD_FILES "${PARSE_MD_FILES}" )
-	  MESSAGE(STATUS "The files to concatenate are : ${WIN_PARSE_MD_FILES}")
-
+      # Normalize each path for Windows
+      foreach(MD_FILE ${PARSE_MD_FILES}) 
+        cmake_path(NATIVE_PATH MD_FILE NORMALIZE NORMED_MD)
+        # Only collate README.md files for generated targets
+        if(EXISTS "${wasp_BINARY_DIR}/${NORMED_MD}")
+          list(APPEND WIN_PARSE_MD_FILES ${NORMED_MD})
+        endif()
+      endforeach()
       add_custom_target(combine_md 
                      ALL
                      COMMENT "Combining ${WIN_PARSE_MD_FILES} into ${WASP_README}"

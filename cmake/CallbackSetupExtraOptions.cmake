@@ -71,16 +71,20 @@ MACRO(TRIBITS_REPOSITORY_SETUP_EXTRA_OPTIONS)
   ENDIF()
   # Set up wasp cmake directory, used by default option scripts
   SET(wasp_CMAKE_DIR "${wasp_SOURCE_DIR}/cmake" CACHE PATH "")
+ 
+  list(APPEND WASP_README_MD "README.md")
+  list(APPEND WASP_SUBPACKAGES "waspcore;waspdakota;waspddi;waspeddi;waspexpr;wasphalite;wasphit;wasphive;waaspjson;wasplsp;waspmcnpi;waspplot;wasppy;waspsiren;waspson;wasptoml;wasplutils")
+  foreach(SUBPACKAGE ${WASP_SUBPACKAGES})
+    if(EXISTS "${wasp_SOURCE_DIR}/${SUBPACKAGE}/README.md")
+      list(APPEND WASP_README_MD "${SUBPACKAGE}/README.md")
+    endif()
+  endforeach()
 
   # Setup documentation generation, if pandoc is available
   WASP_DOC_GEN( 
     DOCX_FILE "${wasp_BINARY_DIR}/WorkbenchAnalysisSequenceProcessor.docx"
     PDF_FILE "${wasp_BINARY_DIR}/WorkbenchAnalysisSequenceProcessor.pdf"
-    MD_FILES README.md waspcore/README.md waspexpr/README.md 
-             wasphive/README.md waspsiren/README.md
-              waspson/README.md waspddi/README.md waspeddi/README.md
-               wasphalite/README.md wasplsp/README.md wasputils/README.md
-               wasppy/README.md
+    MD_FILES ${WASP_README_MD}
   )
 
   ########################################

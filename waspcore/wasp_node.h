@@ -76,7 +76,17 @@ enum NODE : unsigned char
     DLBRACKET,  // [[
     DRBRACKET,  // ]]
     TABLE,
-    ARRAY_TABLE
+    ARRAY_TABLE,
+    ALTERNATE,
+    FILL, 
+    ADDRESS,
+    MOVE,
+    PREVIOUS_ALTERNATE,
+    PREVIOUS_REPEAT,
+    BACK_PREVIOUS,
+    LINEAR_INTERPOLATE,
+    LOG_INTERPOLATE,
+    REPEAT_ZERO
 };
 }
 #endif

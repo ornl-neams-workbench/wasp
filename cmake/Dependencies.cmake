@@ -3,6 +3,7 @@ TRIBITS_PACKAGE_DEFINE_DEPENDENCIES(
      core  waspcore    PT OPTIONAL
      siren waspsiren   PT OPTIONAL
      expr  waspexpr    PT OPTIONAL
+     filler waspfiller PT OPTIONAL
      son   waspson     PT OPTIONAL
      ddi   waspddi     PT OPTIONAL
      eddi   waspeddi   PT OPTIONAL

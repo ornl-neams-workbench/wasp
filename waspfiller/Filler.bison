@@ -298,6 +298,6 @@ namespace wasp{
 void FillerParser::error(const FillerParser::location_type& l,
                            const std::string& m)
 {
-    interpreter.error_diagnostic()<<"***Error : "<<l<<": "<<m<<"."<<std::endl;
+    interpreter.error_diagnostic()<<l<<" : "<<m<<"."<<std::endl;
 }
 } // end of namespace

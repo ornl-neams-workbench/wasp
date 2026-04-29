@@ -516,4 +516,240 @@ TEST(FillerTest, mixed2)
         ASSERT_EQ(expected[i], vector[i]);
     }
 }
+
+void parse_error_test(std::stringstream& stream, std::stringstream& expected)
+{
+    std::stringstream cerr;
+    DefaultFillerInterpreter interp(cerr);
+    // emulate parsing text from a parent document
+    interp.stream_name() = "prob.inp";
+    bool parsed = interp.parse(stream, 5, 3);
+    EXPECT_FALSE(parsed);
+    std::stringstream errors;
+    interp.dump_diagnostics(errors);
+    ASSERT_EQ(expected.str(), errors.str());
+    ASSERT_EQ(expected.str(), cerr.str());
+}
+void fill_error_test(std::stringstream& stream, std::stringstream& expected)
+{
+    std::stringstream cerr;
+    DefaultFillerInterpreter interp(cerr);
+    // emulate parsing text from a parent document
+    interp.stream_name() = "prob.inp";
+    bool parsed = interp.parse(stream, 5, 3);
+    ASSERT_TRUE(parsed);
+    std::vector<int> data;
+    interp.fill(data);
+    std::stringstream errors;
+    interp.dump_diagnostics(errors);
+    ASSERT_EQ(expected.str(), errors.str());
+    ASSERT_EQ(expected.str(), cerr.str());
+}
+// 
+TEST(FillerTest, error_provenance)
+{
+    std::stringstream stream("3R1 ) 2R5");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.7 : syntax error, unexpected invalid token.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_log_syntax)
+{
+    std::stringstream stream("-2L two hundred");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.7 : syntax error, unexpected invalid token, expecting integer or real.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_log_syntax2)
+{
+    std::stringstream stream("-2L 2 hundred");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.9 : syntax error, unexpected invalid token, expecting integer or real.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_log_count)
+{
+    std::stringstream stream("-2L2 100");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Log interpolate entry count requires a non-negative integer!\n");
+    fill_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_log_start)
+{
+    std::stringstream stream("2L -2 100");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Log interpolate requires positive start and end values!\n");
+    fill_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_log_end)
+{
+    std::stringstream stream("2L 2 -100");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Log interpolate requires positive start and end values!\n");
+    fill_error_test(stream, expected_errors);
+}
+
+TEST(FillerTest, error_lin_count_type)
+{
+    std::stringstream stream("-2.3I2 100");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.7 : syntax error, unexpected linear interpolate.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_lin_count)
+{
+    std::stringstream stream("-2I2 100");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Linear interpolate entry count requires a positive integer!\n");
+    fill_error_test(stream, expected_errors);
+}
+
+TEST(FillerTest, error_missing_repeat_count)
+{
+    std::stringstream stream("r3");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3 : syntax error, unexpected repeat.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_missing_repeat_value)
+{
+    std::stringstream stream("3r");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.5 : syntax error, unexpected end of file, expecting integer or real.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_missing_alternate_count)
+{
+    std::stringstream stream("p3");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3 : syntax error, unexpected alternate.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_missing_alternate_value)
+{
+    std::stringstream stream("3p");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.5 : syntax error, unexpected end of file, expecting integer or real.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_missing_fill_value)
+{
+    std::stringstream stream("f");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.4 : syntax error, unexpected end of file, expecting integer or real.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_missing_address_value)
+{
+    std::stringstream stream("A");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.4 : syntax error, unexpected end of file, expecting integer.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_missing_move_value)
+{
+    std::stringstream stream("S");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3 : syntax error, unexpected move.\n");
+    parse_error_test(stream, expected_errors);
+}
+
+TEST(FillerTest, error_prepeat_count)
+{
+    std::stringstream stream("-2Q4");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Previous Repeat component must be non-negative!\n");
+    fill_error_test(stream, expected_errors);
+}
+
+TEST(FillerTest, error_prepeat_entries)
+{
+    std::stringstream stream("2Q3");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Previous Repeat fill statement, 'i Q j', goes out of bounds at -3!\n");
+    fill_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_prepeat_entries2)
+{
+    std::stringstream stream("Q1");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.4: Previous Repeat fill statement, 'i Q j', goes out of bounds at -1!\n");
+    fill_error_test(stream, expected_errors);
+}
+
+TEST(FillerTest, error_palternate_count)
+{
+    std::stringstream stream("-2N4");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Previous Alternating Repeat component must be non-negative!\n");
+    fill_error_test(stream, expected_errors);
+}
+
+TEST(FillerTest, error_palternate_entries)
+{
+    std::stringstream stream("2N3");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Previous Alternating Repeat fill statement, 'i N j', goes out of bounds at -1!\n");
+    fill_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_palternate_entries2)
+{
+    std::stringstream stream("N1");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.4: Previous Alternating Repeat fill statement, 'i N j', goes out of bounds at -1!\n");
+    fill_error_test(stream, expected_errors);
+}
+
+TEST(FillerTest, error_back_count)
+{
+    std::stringstream stream("-2B4");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Back Previous component must be non-negative!\n");
+    fill_error_test(stream, expected_errors);
+}
+
+TEST(FillerTest, error_back_entries)
+{
+    std::stringstream stream("2B3");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Back Previous fill statement, 'i B j', goes out of bounds at 0!\n");
+    fill_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_back_entries2)
+{
+    std::stringstream stream("B1");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.4: Back Previous fill statement, 'i B j', goes out of bounds at -1!\n");
+    fill_error_test(stream, expected_errors);
+}
+
+TEST(FillerTest, error_zero)
+{
+    std::stringstream stream("z");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3 : syntax error, unexpected repeat zero.\n");
+    parse_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_zero_count)
+{
+    std::stringstream stream("-2z");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.3: Repeat Zero component must be positive!\n");
+    fill_error_test(stream, expected_errors);
+}
+TEST(FillerTest, error_address_count)
+{
+    std::stringstream stream("A -2");
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.5: Address component must be positive!\n");
+    fill_error_test(stream, expected_errors);
+}
+
+TEST(FillerTest, error_address_out_of_bounds)
+{
+    std::stringstream stream("A 2"); // test data array is size 0, so 2 is out of bounds
+    SCOPED_TRACE(stream.str());
+    std::stringstream expected_errors("prob.inp:5.5: Address statement, 'A i', is out of bounds at 1 compared to data size of 0!\n");
+    fill_error_test(stream, expected_errors);
+}
 }  // namespace wasp

@@ -31,7 +31,7 @@ bool FillerInterpreter<S>::parse(std::istream& in,
                                  std::size_t   startColumn)
 {
     return Interpreter<S>::template parse_impl<FillerParser>(
-        in, "input", startLine, startColumn);
+        in, Interpreter<S>::stream_name(), startLine, startColumn);
 }
 template<class S>
 template<class T>
@@ -76,7 +76,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (interior_count < 0)
                 {
                     error(node.child_at(0))
-                        << "Log interpolate entry count requires a non-negative integer!"
+                        << ": Log interpolate entry count requires a non-negative integer!"
                         << std::endl;
                     break;
                 }
@@ -102,7 +102,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (start <= T(0) || end <= T(0))
                 {
                     error(node)
-                        << "Log interpolate requires positive start and end values!"
+                        << ": Log interpolate requires positive start and end values!"
                         << std::endl;
                     break;
                 }
@@ -145,7 +145,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (node.child_at(0).type() != INTEGER)
                 {
                     error(node.child_at(0))
-                        << "Linear interpolate entry count requires an integer!"
+                        << ": Linear interpolate entry count requires an integer!"
                         << std::endl;
                     break;
                 }
@@ -154,7 +154,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (binCount <= 0)
                 {
                     error(node.child_at(0))
-                        << "Linear interpolate entry count requires a "
+                        << ": Linear interpolate entry count requires a "
                            "positive integer!"
                         << std::endl;
                     break;
@@ -164,7 +164,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (!ok)
                 {
                     error(node.child_at(1))
-                        << "failed to convert!" << std::endl;
+                        << ": failed to convert!" << std::endl;
                     break;
                 }
                 T end = 0;
@@ -172,7 +172,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (!ok)
                 {
                     error(node.child_at(2))
-                        << "failed to convert!" << std::endl;
+                        << ": failed to convert!" << std::endl;
                     break;
                 }
 
@@ -221,7 +221,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 // second - the value to repeat
                 if (node.child_count() != 2)
                 {
-                    error(node) << " Repeat filler requires 2 components, the "
+                    error(node) << ": Repeat filler requires 2 components, the "
                                    "repeat count and the value to repeat!"
                                 << std::endl;
                     break;
@@ -229,7 +229,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (node.child_at(0).type() != INTEGER)
                 {
                     error(node.child_at(0))
-                        << "Repeat filler requires an integer repeat "
+                        << ": Repeat filler requires an integer repeat "
                            "count!"
                         << std::endl;
                 }
@@ -237,7 +237,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                     node.child_at(1).type() != REAL)
                 {
                     error(node.child_at(1))
-                        << "Repeat filler requires an numeric repeat "
+                        << ": Repeat filler requires an numeric repeat "
                            "value!"
                         << std::endl;
                     break;
@@ -248,7 +248,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (!ok)
                 {
                     error(node.child_at(1))
-                        << "failed to convert!" << std::endl;
+                        << ": failed to convert!" << std::endl;
                     break;
                 }
                 for (size_t i = 0; i < node.child_at(0).to_int();
@@ -279,10 +279,23 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 else
                 {
                     error(node)
-                        << "Previous Repeat fill statement, 'i Q j', is "
+                        << ": Previous Repeat fill statement, 'i Q j', is "
                            "of an invalid form!"
                         << std::endl;
                     break;
+                }
+                
+                if (repeatCount < 0)
+                {
+                    error(node.child_at(0))
+                        << ": Previous Repeat component must be non-negative!" << std::endl;
+                        break;
+                }
+                if (previousCount < 0)
+                {
+                    error(node.child_at(node.child_count() - 1))
+                        << ": Previous Repeat component must be non-negative!" << std::endl;
+                        break;
                 }
                 // because the offset from the write head is constant
                 // we only need to update the write head and all else follows.
@@ -296,10 +309,10 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                         if (vi < 0 || vi >= int(vector.size()))
                         {
                             error(node)
-                                << " Previous Repeat fill statement, 'i Q "
-                                   "j', goes out of bounds!"
+                                << ": Previous Repeat fill statement, 'i Q "
+                                   "j', goes out of bounds at " << vi << "!"
                                 << std::endl;
-                            break;
+                            return count;
                         }
                         value = vector[vi];
                         put_data(index, value, vector);
@@ -331,10 +344,22 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 else
                 {
                     error(node)
-                        << "Previous Alternating Repeat fill statement, "
+                        << ": Previous Alternating Repeat fill statement, "
                            "'i N j', is of an invalid form!"
                         << std::endl;
                     break;
+                }
+                if (repeatCount < 0)
+                {
+                    error(node.child_at(0))
+                        << ": Previous Alternating Repeat component must be non-negative!" << std::endl;
+                        break;
+                }
+                if (previousCount < 0)
+                {
+                    error(node.child_at(node.child_count() - 1))
+                        << ": Previous Alternating Repeat component must be non-negative!" << std::endl;
+                        break;
                 }
                 int i      = index;
                 int offset = 0;
@@ -358,10 +383,10 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                         if (vi < 0 || vi >= int(vector.size()))
                         {
                             error(node)
-                                << "Previous Alternating Repeat fill "
-                                   "statement, 'i N j', goes out of bounds!"
-                                << std::endl;
-                            break;
+                                << ": Previous Alternating Repeat fill "
+                                   "statement, 'i N j', goes out of bounds at "
+                                   << vi << "!" << std::endl;
+                            return count;
                         }
                         value = vector[vi];
                         put_data(index, value, vector);
@@ -389,10 +414,22 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (node.child_count() < 1)
                 {
                     error(node)
-                        << "Back Previous fill statement, 'i B j', is of "
+                        << ": Back Previous fill statement, 'i B j', is of "
                            "an invalid form!"
                         << std::endl;
                     break;
+                }
+                if (backCount < 0)
+                {
+                    error(node.child_at(0))
+                        << ": Back Previous component must be non-negative!" << std::endl;
+                        break;
+                }
+                if (numberEntries < 0)
+                {
+                    error(node.child_at(node.child_count() - 1))
+                        << ": Previous Alternating Repeat component must be non-negative!" << std::endl;
+                        break;
                 }
                 int s = index - backCount;
                 int e = s + numberEntries - 1;
@@ -402,9 +439,9 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                     T   value = T(0);
                     if (vi < 0 || vi >= int(vector.size()))
                     {
-                        error(node) << " Back Previous fill statement, 'i B j', "
-                                       "goes out of bounds!"
-                                    << std::endl;
+                        error(node) << ": Back Previous fill statement, 'i B j', "
+                                       "goes out of bounds at "<< vi 
+                                       << "!" << std::endl;
                         break;
                     }
                     value = vector[vi];
@@ -424,10 +461,16 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 }
                 if (node.child_count() != 1)
                 {
-                    error(node) << " Repeat zero fill statement, 'iz', is of an "
+                    error(node) << ": Repeat zero fill statement, 'iz', is of an "
                                    "invalid form!"
                                 << std::endl;
                     break;
+                }
+                if (repeatCount < 0)
+                {
+                    error(node.child_at(0))
+                        << ": Repeat Zero component must be positive!" << std::endl;
+                        break;
                 }
                 T value = T(0);
                 for (size_t i = 0; i < repeatCount; i++, index++, count++)
@@ -443,7 +486,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (node.child_count() != 2)
                 {
                     error(node)
-                        << "Alternate filler requires 2 components, the "
+                        << ": Alternate filler requires 2 components, the "
                            "repeat count and the value to alternate!"
                         << std::endl;
                     break;
@@ -451,7 +494,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (node.child_at(0).type() != INTEGER)
                 {
                     error(node.child_at(0))
-                        << "Alternate filler requires an integer repeat "
+                        << ": Alternate filler requires an integer repeat "
                            "count!"
                         << std::endl;
                     break;
@@ -460,7 +503,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                     node.child_at(1).type() != REAL)
                 {
                     error(node.child_at(1))
-                        << "Alternate filler requires a numeric alternate "
+                        << ": Alternate filler requires a numeric alternate "
                            "value!"
                         << std::endl;
                     break;
@@ -471,7 +514,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (!ok)
                 {
                     error(node.child_at(1))
-                        << "failed to convert!" << std::endl;
+                        << ": failed to convert!" << std::endl;
                     break;
                 }
                 for (size_t i = 0; i < node.child_at(0).to_int();
@@ -486,7 +529,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 // first - 1-based position index
                 if (node.child_count() != 1)
                 {
-                    error(node) << " Address filler requires 1 component, the "
+                    error(node) << ": Address requires 1 component, the "
                                    "address index!"
                                 << std::endl;
                     break;
@@ -494,19 +537,27 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (node.child_at(0).type() != INTEGER)
                 {
                     error(node.child_at(0))
-                        << "Address filler requires an integer address "
+                        << ": Address requires an integer address "
                            "index!"
                         << std::endl;
                     break;
                 }
-
-                index = node.child_at(0).to_int() -
+                int moveTo = node.child_at(0).to_int();
+                if (moveTo < 1)
+                {
+                    error(node.child_at(0))
+                        << ": Address component must be positive!" << std::endl;
+                        break;
+                }
+                index =  moveTo -
                         1;  // 1-based user address 0-based code address
+                
                 if (index >= vector.size())
                 {
-                    error(node.child_at(0)) << "Address fill statement, 'A i', "
-                                               "goes out of bounds!"
-                                            << std::endl;
+                    error(node.child_at(0)) << ": Address statement, 'A i', "
+                                               "is out of bounds at " << index 
+                                               << " compared to data size of " << vector.size() 
+                                               << "!" << std::endl;
                     return count;
                 }
                 break;
@@ -523,14 +574,14 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 if (node.child_count() != 1)
                 {
                     error(node)
-                        << " Fill filler requires 1 component, the fill "
+                        << ": Fill filler requires 1 component, the fill "
                            "value!"
                         << std::endl;
                     break;
                 }
                 if (max == vector.max_size())
                 {
-                    error(node) << " Fill operation is unbounded!" << std::endl;
+                    error(node) << ": Fill operation is unbounded!" << std::endl;
                     break;
                 }
                 T value = T(0);

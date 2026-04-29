@@ -99,8 +99,8 @@ MOVE [sS]
     return token::REPEAT_ZERO;
 }
 {ALTERNATE} {
-    capture_token(yylval,wasp::ALTERNATE);
-    return token::ALTERNATE;
+    capture_token(yylval,wasp::ALTERNATE_NODE);
+    return token::ALTERNATE_NODE;
 }
 {PREVIOUS_ALTERNATE} {
     capture_token(yylval,wasp::PREVIOUS_ALTERNATE);

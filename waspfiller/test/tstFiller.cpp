@@ -24,8 +24,8 @@ TEST(FillerTest, components)
                           wasp::REAL,
                           wasp::REPEAT,
                           wasp::REPEAT,
-                          wasp::ALTERNATE,
-                          wasp::ALTERNATE,
+                          wasp::ALTERNATE_NODE,
+                          wasp::ALTERNATE_NODE,
                           wasp::INTEGER,
                           wasp::REAL,
                           wasp::FILL,
@@ -59,7 +59,7 @@ TEST(FillerTest, expansion1)
     NodeView root = interp.root();
     ASSERT_EQ(7, root.child_count());
     wasp::NODE types[] = {wasp::INTEGER,    wasp::REAL,      wasp::REPEAT,
-                          wasp::REPEAT,     wasp::ALTERNATE, wasp::ALTERNATE,
+                          wasp::REPEAT,     wasp::ALTERNATE_NODE, wasp::ALTERNATE_NODE,
                           wasp::REPEAT_ZERO};
     for (size_t i = 0; i < root.child_count(); i++)
     {
@@ -100,7 +100,7 @@ TEST(FillerTest, expansion2)
     NodeView root = interp.root();
     ASSERT_EQ(7, root.child_count());
     wasp::NODE types[] = {wasp::INTEGER, wasp::REAL,      wasp::REPEAT,
-                          wasp::REPEAT,  wasp::ALTERNATE, wasp::ALTERNATE,
+                          wasp::REPEAT,  wasp::ALTERNATE_NODE, wasp::ALTERNATE_NODE,
                           wasp::FILL};
     for (size_t i = 0; i < root.child_count(); i++)
     {
@@ -143,7 +143,7 @@ TEST(FillerTest, expansion3)
     NodeView root = interp.root();
     ASSERT_EQ(7, root.child_count());
     wasp::NODE types[] = {wasp::INTEGER, wasp::REAL,      wasp::REPEAT,
-                          wasp::REPEAT,  wasp::ALTERNATE, wasp::ALTERNATE,
+                          wasp::REPEAT,  wasp::ALTERNATE_NODE, wasp::ALTERNATE_NODE,
                           wasp::FILL};
     for (size_t i = 0; i < root.child_count(); i++)
     {
@@ -190,7 +190,7 @@ TEST(FillerTest, expansion4)
     NodeView root = interp.root();
     ASSERT_EQ(7, root.child_count());
     wasp::NODE types[] = {wasp::INTEGER, wasp::INTEGER,   wasp::REPEAT,
-                          wasp::REPEAT,  wasp::ALTERNATE, wasp::ALTERNATE,
+                          wasp::REPEAT,  wasp::ALTERNATE_NODE, wasp::ALTERNATE_NODE,
                           wasp::FILL};
     for (size_t i = 0; i < root.child_count(); i++)
     {

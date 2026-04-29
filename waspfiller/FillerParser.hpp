@@ -255,7 +255,7 @@ namespace wasp {
     REPEAT = 261,                  // "repeat"
     PREVIOUS_REPEAT = 262,         // "previous repeat"
     REPEAT_ZERO = 263,             // "repeat zero"
-    ALTERNATE = 264,               // "alternate"
+    ALTERNATE_NODE = 264,               // "alternate"
     PREVIOUS_ALTERNATE = 265,      // "previous alternate"
     BACK_PREVIOUS = 266,           // "back previous"
     LIN_INTERP = 267,              // "linear interpolate"

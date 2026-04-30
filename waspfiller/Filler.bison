@@ -78,7 +78,7 @@
 %token <token_index>       REPEAT         "repeat"
 %token <token_index>       PREVIOUS_REPEAT         "previous repeat"
 %token <token_index>       REPEAT_ZERO "repeat zero"
-%token <token_index>       ALTERNATE "alternate"
+%token <token_index>       ALTERNATE_NODE "alternate"
 %token <token_index>       PREVIOUS_ALTERNATE "previous alternate"
 %token <token_index>       BACK_PREVIOUS "back previous"
 %token <token_index>       LIN_INTERP "linear interpolate"
@@ -139,9 +139,9 @@ repeat : count REPEAT value
                                        ,"repeat"
                                        ,{$count,$value});
         }        
-alternate : count ALTERNATE value
+alternate : count ALTERNATE_NODE value
         {
-            $$ = interpreter.push_parent(wasp::ALTERNATE
+            $$ = interpreter.push_parent(wasp::ALTERNATE_NODE
                                        ,"alternate"
                                        ,{$count,$value});
         }

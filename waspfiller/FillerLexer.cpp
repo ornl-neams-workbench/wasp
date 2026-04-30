@@ -1753,8 +1753,8 @@ case 7:
 YY_RULE_SETUP
 #line 102 "Filler.lex"
 {
-    capture_token(yylval,wasp::ALTERNATE);
-    return token::ALTERNATE;
+    capture_token(yylval,wasp::ALTERNATE_NODE);
+    return token::ALTERNATE_NODE;
 }
 	YY_BREAK
 case 8:

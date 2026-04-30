@@ -680,7 +680,7 @@ namespace wasp {
   case 6: // alternate: count "alternate" value
 #line 143 "Filler.bison"
         {
-            (yylhs.value.node_index) = interpreter.push_parent(wasp::ALTERNATE
+            (yylhs.value.node_index) = interpreter.push_parent(wasp::ALTERNATE_NODE
                                        ,"alternate"
                                        ,{(yystack_[2].value.node_index),(yystack_[0].value.node_index)});
         }

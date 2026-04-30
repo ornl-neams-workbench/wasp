@@ -479,7 +479,7 @@ FillerInterpreter<S>::fill(std::vector<T>& vector, size_t index, size_t max)
                 }
                 break;
             }
-            case ALTERNATE: {
+            case ALTERNATE_NODE: {
                 // alternates have two children
                 // first - repeat count
                 // second - the value to alternate

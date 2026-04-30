@@ -77,7 +77,7 @@ enum NODE : unsigned char
     DRBRACKET,  // ]]
     TABLE,
     ARRAY_TABLE,
-    ALTERNATE,
+    ALTERNATE_NODE,
     FILL, 
     ADDRESS,
     MOVE,

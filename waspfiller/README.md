@@ -246,7 +246,7 @@ Produces:
 ### Mixed
 
 ```text
-F0 3R1 2P2 A3 2R8 2S 2I0 4
+F0 A1 3R1 2P2 A3 2R8 2S 2I0 4
 ```
 
 Produces:

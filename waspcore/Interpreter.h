@@ -331,6 +331,10 @@ class WASP_PUBLIC AbstractInterpreter
     */
     const std::vector<Diagnostic>& error_diagnostics()const{return m_error_diagnostics;}
     std::vector<Diagnostic>& error_diagnostics(){return m_error_diagnostics;}
+    void dump_diagnostics(std::ostream& out) const
+    {
+        for (auto& d : error_diagnostics()) out << d.str();
+    }
     /**
      * @brief token_count acquires the number of tokens so far interpreted
      * @return the number of tokens

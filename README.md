@@ -11,6 +11,7 @@ The fast lexical analyzer generator (flex - https://www.gnu.org/software/flex/) 
 1. [Components](#components) - the primary packages in WASP
     * [Core](/waspcore/README.md#core-package)
     * [Expr](/waspexpr/README.md#expression-engine)
+    * [Filler](/waspfiller/README.md#filler)
     * [HIVE](/wasphive/README.md#hive)
     * [SIREN](/waspsiren/README.md#sequence-input-retrieval-engine-siren)
     * [SON](/waspson/README.md#standard-object-notation-son)

@@ -73,7 +73,7 @@ MACRO(TRIBITS_REPOSITORY_SETUP_EXTRA_OPTIONS)
   SET(wasp_CMAKE_DIR "${wasp_SOURCE_DIR}/cmake" CACHE PATH "")
  
   list(APPEND WASP_README_MD "README.md")
-  list(APPEND WASP_SUBPACKAGES "waspcore;waspdakota;waspddi;waspeddi;waspexpr;wasphalite;wasphit;wasphive;waaspjson;wasplsp;waspmcnpi;waspplot;wasppy;waspsiren;waspson;wasptoml;wasplutils")
+  list(APPEND WASP_SUBPACKAGES "waspcore;waspdakota;waspddi;waspeddi;waspfiller;waspexpr;wasphalite;wasphit;wasphive;waaspjson;wasplsp;waspmcnpi;waspplot;wasppy;waspsiren;waspson;wasptoml;wasplutils")
   foreach(SUBPACKAGE ${WASP_SUBPACKAGES})
     if(EXISTS "${wasp_SOURCE_DIR}/${SUBPACKAGE}/README.md")
       list(APPEND WASP_README_MD "${SUBPACKAGE}/README.md")

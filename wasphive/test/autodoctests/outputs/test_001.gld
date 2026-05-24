@@ -15,6 +15,7 @@
     - [root_tagged_array](#root_tagged_array)
     - [cce_build_check](#cce_build_check)
         - [cce_option](#cce_build_checkcce_option)
+    - [explicit_value_check](#explicit_value_check)
 - [Referenced Choice Lists](#refchoicelists)
 
 ---
@@ -30,6 +31,7 @@ root_string<a name="root_string"></a>|KeyedValue|0 or more|String|__Choices__<br
 [root_tagged_value](#root_tagged_value)|TaggedValue|5 or 6|||Description for root_tagged_value|
 [root_tagged_array](#root_tagged_array)|TaggedValue|5 to 7|||Description for root_tagged_array|
 [cce_build_check](#cce_build_check)|SubObject|0 or more|||Description for ChildCountEqual build check object|
+[explicit_value_check](#explicit_value_check)|SubObject|0 or more|||Description for explicit value check object|
 
 ---
 
@@ -191,6 +193,19 @@ Name|Type|HowMany|ValueType|Restrictions|Description
 :---:|:---:|:---:|:---:|:---:|:---:|
 id<a name="cce_build_checkcce_optionid"></a>|Tag|1|String|__Choices__<br>all<br>select<br>random<br>||
 value<a name="cce_build_checkcce_optionvalue"></a>|Value|1|String|||
+
+---
+
+### <a name="explicit_value_check"></a>[/](#root_anchor)[explicit_value_check](#explicit_value_check)
+#### Description for explicit value check object
+
+##### How Many: 0 or more
+
+Name|Type|HowMany|ValueType|Restrictions|Description
+:---:|:---:|:---:|:---:|:---:|:---:|
+explicit_value_int<a name="explicit_value_checkexplicit_value_int"></a>|KeyedValue|1|Integer|__Range__<br>\(-INF,[explicit_value_real](#explicit_value_checkexplicit_value_real)\]<br><br>__Choices__<br>444<br>555<br>REF:[ReferencedEnumsDigit1](#ref-referencedenumsdigit1)<br>1000<br>2000<br>REF:[ReferencedEnumsDigit2](#ref-referencedenumsdigit2)<br><br>__InputKeys__<br>[root_tagged_value id](#root_tagged_valueid)<br>|Explicit value type int|
+explicit_value_real<a name="explicit_value_checkexplicit_value_real"></a>|KeyedValue|2|Real|__Range__<br>\[[explicit_value_int](#explicit_value_checkexplicit_value_int),+INF\)<br><br>__Choices__<br>4.4<br>5.5<br>REF:[ReferencedEnumsFloat1](#ref-referencedenumsfloat1)<br>10.1<br>20.2<br>REF:[ReferencedEnumsFloat2](#ref-referencedenumsfloat2)<br><br>__InputKeys__<br>[root_tagged_array value](#root_tagged_arrayvalue)<br>|Explicit value type real|
+explicit_value_string<a name="explicit_value_checkexplicit_value_string"></a>|KeyedValue|3|String|__Choices__<br>first<br>last<br>REF:[ReferencedEnumsColors](#ref-referencedenumscolors)<br>none<br>all<br>REF:[ReferencedEnumsShapes](#ref-referencedenumsshapes)<br><br>__InputKeys__<br>[root_tagged_value value](#root_tagged_valuevalue)<br>|Explicit value type string|
 
 ---
 

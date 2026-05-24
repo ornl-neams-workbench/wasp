@@ -535,9 +535,8 @@ void InputDefinition::printMarkdownDocumentation(IDObject * IDNode)
         
         *xout << "|" << howManyString(child,0) << "|";
 
-        IDObject * childValueNode;
-        if (child->getObjectType() == "flagarray") childValueNode = child->getValueNode();
-        else                                       childValueNode = child;
+        IDObject * childValueNode = child->getValueNode();
+        if (!childValueNode) childValueNode = child;
         wasp_insist(childValueNode, "flagarray has null value node");
 
         std::string valueType = "String";

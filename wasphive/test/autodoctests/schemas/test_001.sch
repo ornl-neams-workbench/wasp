@@ -374,6 +374,52 @@ cce_build_check{
         }
     }
 }
+explicit_value_check{
+    Description = "Description for explicit value check object"
+    explicit_value_int{
+        Description = "Explicit value type int"
+        MinOccurs   = 1
+        MaxOccurs   = 1
+        value{
+            MinOccurs = 1
+            MaxOccurs = 1
+            ValType   = Int
+            MinValExc = NoLimit
+            MaxValInc = "../../explicit_value_real/value"
+            ValEnums=[ REF:ReferencedEnumsDigit1 444 555 ]
+            ExistsIn=[ EXTRA:1000 EXTRA:2000 EXTRAREF:ReferencedEnumsDigit2
+                       "../../../root_tagged_value/id" ]
+        }
+    }
+    explicit_value_real{
+        Description = "Explicit value type real"
+        MinOccurs = 2
+        MaxOccurs = 2
+        value{
+            MinOccurs = 1
+            MaxOccurs = 1
+            ValType   = Real
+            MinValInc = "../../explicit_value_int/value"
+            MaxValExc = NoLimit
+            ValEnums=[ REF:ReferencedEnumsFloat1 4.4 5.5 ]
+            ExistsIn=[ EXTRA:10.1 EXTRA:20.2 EXTRAREF:ReferencedEnumsFloat2
+                       "../../../root_tagged_array/value" ]
+        }
+    }
+    explicit_value_string{
+        Description = "Explicit value type string"
+        MinOccurs = 3
+        MaxOccurs = 3
+        value{
+            MinOccurs = 1
+            MaxOccurs = 1
+            ValType   = String
+            ValEnums=[ REF:ReferencedEnumsColors First Last ]
+            ExistsIn=[ EXTRA:None EXTRA:All EXTRAREF:ReferencedEnumsShapes
+                       "../../../root_tagged_value/value" ]
+        }
+    }
+}
 
 ReferencedEnumsNumtxt=[ zero one two three four five six seven eight nine ]
 ReferencedEnumsColors=[ red orange yellow green blue indigo violet ]

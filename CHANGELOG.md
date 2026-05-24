@@ -8,10 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added 
 - Filler numeric data array interpolator package. See [waspfiller/README.md](waspfiller/README.md).
 
+### Fixed
+- docprint markdown documentation generation utility handling of explicit schema value child nodes
+
 ## [4.4.1] - 11-24-2025
 
 ### Fixed
 - LSP base server logic to only register watch files if enabled by derived server
+
 
 ## [4.4.0] - 11-03-2025
 

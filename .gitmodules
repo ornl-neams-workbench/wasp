@@ -1,10 +1,10 @@
 [submodule "googletest"]
 	path = googletest
-	url = https://code.ornl.gov/neams-workbench/external/googletest.git
+	url = ../googletest.git
 [submodule "TriBITS"]
 	path = TriBITS
-	url = https://code.ornl.gov/neams-workbench/external/TriBITS.git
+	url = ../TriBITS.git
 [submodule "testframework"]
 	path = testframework
-	url = https://code.ornl.gov/neams-workbench/external/testframework.git
+	url = ../testframework.git
     

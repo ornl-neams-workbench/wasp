@@ -458,20 +458,13 @@ bool Interpreter<NodeStorage>::load_document(size_t node_index,
 
         auto * interp = create_nested_interpreter(this);
         wasp_check(interp);
-        if ( !interp->parseFile(document_path) )
-        {
-            passed &= false;
-            delete interp;
-        }
-        else
-        {
-            wasp_check(m_node_interp.find(node_index)
-                       == m_node_interp.end());
-            wasp_check(m_interp_node.find(interp)
-                       == m_interp_node.end());
-            m_node_interp[node_index] = interp;
-            m_interp_node[interp] = node_index;
-        }
+
+        // parse and store included file with return indicating its success
+        passed &= interp->parseFile(document_path);
+        wasp_check(m_node_interp.find(node_index) == m_node_interp.end());
+        wasp_check(m_interp_node.find(interp) == m_interp_node.end());
+        m_node_interp[node_index] = interp;
+        m_interp_node[interp] = node_index;
     }
     else
     {

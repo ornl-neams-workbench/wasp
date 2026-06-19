@@ -1822,3 +1822,162 @@ TEST(SON, only_include)
 )INPUT";
     ASSERT_EQ(expected_xml, xml.str());
 }
+
+/**
+ * @brief Test processing import file that has syntax error and other input
+ */
+TEST(SON, import_file_with_syntax_error_plus_input)
+{
+    std::stringstream input_base;
+    input_base << R"INPUT(
+Block01
+{
+  param01a = 11
+  `import ("input_incl.son")
+  param01d = 14
+}
+)INPUT";
+
+    std::ofstream input_incl("input_incl.son");
+    input_incl << R"INPUT(
+param01b = 12
+Block02
+{
+    param02a = 21
+    param02b =
+    param02c = 23
+}
+param01c = 13
+)INPUT";
+    input_incl.close();
+
+    std::string expected_errors = R"INPUT(
+./input_incl.son:7.14: syntax error, unexpected =
+)INPUT";
+
+    std::string expected_paths = R"INPUT(/
+/Block01
+/Block01/decl (Block01)
+/Block01/{ ({)
+/Block01/param01a
+/Block01/param01a/decl (param01a)
+/Block01/param01a/= (=)
+/Block01/param01a/value (11)
+/Block01/param01b
+/Block01/param01b/decl (param01b)
+/Block01/param01b/= (=)
+/Block01/param01b/value (12)
+/Block01/param01d
+/Block01/param01d/decl (param01d)
+/Block01/param01d/= (=)
+/Block01/param01d/value (14)
+/Block01/} (})
+)INPUT";
+
+    // Check parse failure, error message, non-null root, and tree contents
+    std::stringstream actual_errors, actual_paths;
+    DefaultSONInterpreter interpreter(actual_errors);
+    ASSERT_FALSE(interpreter.parse(input_base));
+    EXPECT_EQ(expected_errors, "\n" + actual_errors.str());
+    SONNodeView root = interpreter.root();
+    ASSERT_FALSE(root.is_null());
+    wasp::tree_list(root, actual_paths);
+    EXPECT_EQ(expected_paths, actual_paths.str());
+}
+
+/**
+ * @brief Test processing import file that has only syntax error on its own
+ */
+TEST(SON, import_file_with_syntax_error_on_its_own)
+{
+    std::stringstream input_base;
+    input_base << R"INPUT(
+Block01
+{
+  param01a = 11
+  `import ("input_incl.son")
+  param01b = 12
+}
+)INPUT";
+
+    std::ofstream input_incl("input_incl.son");
+    input_incl << R"INPUT(
+}
+)INPUT";
+    input_incl.close();
+
+    std::string expected_errors = R"INPUT(
+./input_incl.son:2.1: syntax error, unexpected }
+)INPUT";
+
+    std::string expected_paths = R"INPUT(/
+/Block01
+/Block01/decl (Block01)
+/Block01/{ ({)
+/Block01/param01a
+/Block01/param01a/decl (param01a)
+/Block01/param01a/= (=)
+/Block01/param01a/value (11)
+/Block01/import (`import ("input_incl.son"))
+/Block01/param01b
+/Block01/param01b/decl (param01b)
+/Block01/param01b/= (=)
+/Block01/param01b/value (12)
+/Block01/} (})
+)INPUT";
+
+    // Check parse failure, error message, non-null root, and tree contents
+    std::stringstream actual_errors, actual_paths;
+    DefaultSONInterpreter interpreter(actual_errors);
+    ASSERT_FALSE(interpreter.parse(input_base));
+    EXPECT_EQ(expected_errors, "\n" + actual_errors.str());
+    SONNodeView root = interpreter.root();
+    ASSERT_FALSE(root.is_null());
+    wasp::tree_list(root, actual_paths);
+    EXPECT_EQ(expected_paths, actual_paths.str());
+}
+
+/**
+ * @brief Test processing import file that does not have any content inside
+ */
+TEST(SON, import_file_that_contains_nothing_inside)
+{
+    std::stringstream input_base;
+    input_base << R"INPUT(
+Block01
+{
+  param01a = 11
+  `import ("input_incl.son")
+  param01b = 12
+}
+)INPUT";
+
+    std::ofstream input_incl("input_incl.son");
+    input_incl.close();
+
+    std::string expected_paths = R"INPUT(/
+/Block01
+/Block01/decl (Block01)
+/Block01/{ ({)
+/Block01/param01a
+/Block01/param01a/decl (param01a)
+/Block01/param01a/= (=)
+/Block01/param01a/value (11)
+/Block01/import (`import ("input_incl.son"))
+/Block01/param01b
+/Block01/param01b/decl (param01b)
+/Block01/param01b/= (=)
+/Block01/param01b/value (12)
+/Block01/} (})
+)INPUT";
+
+    // Check parse pass, no error message, non-null root, and tree contents
+    std::stringstream actual_errors, actual_paths;
+    DefaultSONInterpreter interpreter(actual_errors);
+    ASSERT_TRUE(interpreter.parse(input_base));
+    EXPECT_TRUE(actual_errors.str().empty());
+    SONNodeView root = interpreter.root();
+    ASSERT_FALSE(root.is_null());
+    wasp::tree_list(root, actual_paths);
+    EXPECT_EQ(expected_paths, actual_paths.str());
+}

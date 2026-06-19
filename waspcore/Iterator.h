@@ -54,6 +54,7 @@ struct FilePush
         auto interp = n.node_pool()->document(n.node_index());
         return n.type() == wasp::FILE 
         && interp != nullptr
+        && !interp->root().is_null()
         && interp->root().child_count() > 0;
     }
 
@@ -95,6 +96,9 @@ class WASP_PUBLIC Iterator
     // Initialize the iterator to iterate the children of the given node
     Iterator(const Node& n)
     {
+        // empty include files may be null nodes
+        if (n.is_null()) return;
+
         // Children to iterate? If none this Iterator is null (no stacked nodes)
         if (n.child_count() == 0) return;
 

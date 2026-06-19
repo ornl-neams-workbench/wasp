@@ -524,6 +524,9 @@ fe_non_decorative_children_count(const Node& n)
 template<class Node>
 WASP_PUBLIC std::size_t fe_child_count(const Node& n)
 {
+    // return zero when node is null which could be from empty include file
+    if (n.is_null()) return 0;
+
     if( n.type() == wasp::FILE )
     {
         auto * interp = n.node_pool()->document(n.node_index());

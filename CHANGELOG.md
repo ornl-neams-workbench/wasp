@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added 
 - Filler numeric data array interpolator package. See [waspfiller/README.md](waspfiller/README.md).
+- Error recovery for included files that have syntax errors instead of discarding
 
 ### Fixed
 - docprint markdown documentation generation utility handling of explicit schema value child nodes

@@ -5888,3 +5888,182 @@ TEST(HITInterpreter, override_assigns)
     ASSERT_EQ(expect_paths_and_types, "\n" + actual_paths_and_types.str());
     ASSERT_EQ(input_stream.str(), "\n" + interpreter.root().data() + "\n");
 }
+
+/**
+ * @brief Test recovery from include file with syntax error and other input
+ */
+TEST(HITInterpreter, recovery_include_file_with_syntax_error_plus_input)
+{
+    std::stringstream input_base;
+    input_base << R"INPUT(
+[Block01]
+  param01a = 11
+  !include input_incl.i
+  param01d = 14
+[]
+)INPUT";
+
+    std::ofstream input_incl("input_incl.i");
+    input_incl << R"INPUT(
+param01b = 12
+[Block02]
+    param02a = 21
+    param02b =
+    param02c = 23
+[]
+param01c = 13
+)INPUT";
+    input_incl.close();
+
+    std::string expected_errors = R"INPUT(
+./input_incl.i:6.1: syntax error, unexpected end of line
+./input_incl.i:5.14: syntax error, 'param02b' has a missing or malformed value
+)INPUT";
+
+    std::string expected_paths = R"INPUT(/
+/Block01
+/Block01/[ ([)
+/Block01/decl (Block01)
+/Block01/] (])
+/Block01/param01a
+/Block01/param01a/decl (param01a)
+/Block01/param01a/= (=)
+/Block01/param01a/value (11)
+/Block01/param01b
+/Block01/param01b/decl (param01b)
+/Block01/param01b/= (=)
+/Block01/param01b/value (12)
+/Block01/Block02
+/Block01/Block02/[ ([)
+/Block01/Block02/decl (Block02)
+/Block01/Block02/] (])
+/Block01/Block02/param02a
+/Block01/Block02/param02a/decl (param02a)
+/Block01/Block02/param02a/= (=)
+/Block01/Block02/param02a/value (21)
+/Block01/Block02/param02b
+/Block01/Block02/param02b/decl (param02b)
+/Block01/Block02/param02b/= (=)
+/Block01/Block02/param02c
+/Block01/Block02/param02c/decl (param02c)
+/Block01/Block02/param02c/= (=)
+/Block01/Block02/param02c/value (23)
+/Block01/Block02/term ([])
+/Block01/param01c
+/Block01/param01c/decl (param01c)
+/Block01/param01c/= (=)
+/Block01/param01c/value (13)
+/Block01/param01d
+/Block01/param01d/decl (param01d)
+/Block01/param01d/= (=)
+/Block01/param01d/value (14)
+/Block01/term ([])
+)INPUT";
+
+    // Check parse failure, error message, non-null root, and tree contents
+    std::stringstream actual_errors, actual_paths;
+    DefaultHITInterpreter interpreter(actual_errors);
+    ASSERT_FALSE(interpreter.parse(input_base));
+    EXPECT_EQ(expected_errors, "\n" + actual_errors.str());
+    HITNodeView root = interpreter.root();
+    ASSERT_FALSE(root.is_null());
+    wasp::tree_list(root, actual_paths);
+    EXPECT_EQ(expected_paths, actual_paths.str());
+}
+
+/**
+ * @brief Test recovery from include file with only syntax error on its own
+ */
+TEST(HITInterpreter, recovery_include_file_with_syntax_error_on_its_own)
+{
+    std::stringstream input_base;
+    input_base << R"INPUT(
+[Block01]
+  param01a = 11
+  !include input_incl.i
+  param01b = 12
+[]
+)INPUT";
+
+    std::ofstream input_incl("input_incl.i");
+    input_incl << R"INPUT(
+]
+)INPUT";
+    input_incl.close();
+
+    std::string expected_errors = R"INPUT(
+./input_incl.i:2.1: syntax error, unexpected invalid token
+)INPUT";
+
+    std::string expected_paths = R"INPUT(/
+/Block01
+/Block01/[ ([)
+/Block01/decl (Block01)
+/Block01/] (])
+/Block01/param01a
+/Block01/param01a/decl (param01a)
+/Block01/param01a/= (=)
+/Block01/param01a/value (11)
+/Block01/incl (!include input_incl.i)
+/Block01/param01b
+/Block01/param01b/decl (param01b)
+/Block01/param01b/= (=)
+/Block01/param01b/value (12)
+/Block01/term ([])
+)INPUT";
+
+    // Check parse failure, error message, non-null root, and tree contents
+    std::stringstream actual_errors, actual_paths;
+    DefaultHITInterpreter interpreter(actual_errors);
+    ASSERT_FALSE(interpreter.parse(input_base));
+    EXPECT_EQ(expected_errors, "\n" + actual_errors.str());
+    HITNodeView root = interpreter.root();
+    ASSERT_FALSE(root.is_null());
+    wasp::tree_list(root, actual_paths);
+    EXPECT_EQ(expected_paths, actual_paths.str());
+}
+
+/**
+ * @brief Test success using include file that has no content at all inside
+ */
+TEST(HITInterpreter, success_using_include_file_that_has_nothing_inside)
+{
+    std::stringstream input_base;
+    input_base << R"INPUT(
+[Block01]
+  param01a = 11
+  !include input_incl.i
+  param01b = 12
+[]
+)INPUT";
+
+    std::ofstream input_incl("input_incl.i");
+    input_incl.close();
+
+    std::string expected_paths = R"INPUT(/
+/Block01
+/Block01/[ ([)
+/Block01/decl (Block01)
+/Block01/] (])
+/Block01/param01a
+/Block01/param01a/decl (param01a)
+/Block01/param01a/= (=)
+/Block01/param01a/value (11)
+/Block01/incl (!include input_incl.i)
+/Block01/param01b
+/Block01/param01b/decl (param01b)
+/Block01/param01b/= (=)
+/Block01/param01b/value (12)
+/Block01/term ([])
+)INPUT";
+
+    // Check parse pass, no error message, non-null root, and tree contents
+    std::stringstream actual_errors, actual_paths;
+    DefaultHITInterpreter interpreter(actual_errors);
+    ASSERT_TRUE(interpreter.parse(input_base));
+    EXPECT_TRUE(actual_errors.str().empty());
+    HITNodeView root = interpreter.root();
+    ASSERT_FALSE(root.is_null());
+    wasp::tree_list(root, actual_paths);
+    EXPECT_EQ(expected_paths, actual_paths.str());
+}

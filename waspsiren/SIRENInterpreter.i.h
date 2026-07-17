@@ -409,27 +409,18 @@ SIRENInterpreter<S>::evaluate_expression(
                 return result;
             }
 
-            std::vector<TAdapter> selected(1, node);
-            NodeView selection = context;
             if (context.type() == wasp::VALUE)
             {
-                for (auto child = node.begin(); child != node.end(); child.next())
-                    if (wildcard_string_match(text.c_str(), child.get().name()))
-                        result.nodes.push_back(child.get().data());
-            }
-            else
-            {
-                evaluate(selection, selected);
-                for (std::size_t i = 0; i < selected.size(); ++i)
-                    result.nodes.push_back(selected[i].data());
-            }
-            if (!result.nodes.empty())
-            {
-                result.kind = ExpressionValue::NODE_SET;
+                result.kind = ExpressionValue::STRING;
+                result.string = text;
                 return result;
             }
-            result.kind = ExpressionValue::STRING;
-            result.string = text;
+
+            std::vector<TAdapter> selected(1, node);
+            evaluate(context, selected);
+            result.kind = ExpressionValue::NODE_SET;
+            for (std::size_t i = 0; i < selected.size(); ++i)
+                result.nodes.push_back(selected[i].data());
             return result;
         }
 
@@ -500,8 +491,7 @@ SIRENInterpreter<S>::evaluate_expression(
 
         if (name == "count" && arguments.size() == 1)
         {
-            if (arguments[0].type() == wasp::VALUE ||
-                arguments[0].type() == wasp::DECL)
+            if (arguments[0].type() == wasp::DECL)
             {
                 std::string path = wasp::strip_quotes(arguments[0].data());
                 std::size_t count = 0;
@@ -530,8 +520,7 @@ SIRENInterpreter<S>::evaluate_expression(
             arguments.size() == 2)
         {
             ExpressionValue left_value;
-            if (arguments[0].type() == wasp::VALUE ||
-                arguments[0].type() == wasp::DECL)
+            if (arguments[0].type() == wasp::DECL)
             {
                 std::string path = wasp::strip_quotes(arguments[0].data());
                 left_value.kind = ExpressionValue::NODE_SET;
@@ -677,10 +666,7 @@ bool SIRENInterpreter<S>::predicate_matches(
         double number = std::strtod(text.c_str(), &end);
         if (!text.empty() && end != text.c_str() && *end == '\0')
             return static_cast<double>(position) == number;
-        for (auto child = node.begin(); child != node.end(); child.next())
-            if (wildcard_string_match(text.c_str(), child.get().name()))
-                return true;
-        return false;
+        return !text.empty();
     }
     ExpressionValue value = evaluate_expression(context, node, position, size);
     if (value.kind == ExpressionValue::NUMBER)

@@ -656,6 +656,8 @@ TEST(SIREN, xpath_inspired_navigation_predicates_and_sets)
 
     EXPECT_EQ(3u, result_count("/item[name]"));
     EXPECT_EQ(3u, result_count("/item[not(missing)]"));
+    EXPECT_EQ(0u, result_count("/item[missing = 'missing']"));
+    EXPECT_EQ(3u, result_count("/item['nonempty']"));
     EXPECT_EQ(2u, result_count("/item[name != 'beta' and name]"));
     EXPECT_EQ(2u, result_count("/item[name = 'alpha' or name = 'beta']"));
     EXPECT_EQ(2u, result_count("/item[name != 'beta'][name]"));
@@ -663,6 +665,7 @@ TEST(SIREN, xpath_inspired_navigation_predicates_and_sets)
     EXPECT_EQ(3u, result_count("/item[count(name) = 1]"));
     EXPECT_EQ(3u, result_count("/item[count(missing) = 0]"));
     EXPECT_EQ(2u, result_count("/item[contains(name, 'alpha')]"));
+    EXPECT_EQ(3u, result_count("/item[contains('alpha', 'ph')]"));
     EXPECT_EQ(2u, result_count("/item[starts-with(name, 'alpha')]"));
     EXPECT_EQ(2u, result_count("/item[position() mod 2 = 1]"));
     EXPECT_EQ(1u, result_count("/item[position() = last()]"));

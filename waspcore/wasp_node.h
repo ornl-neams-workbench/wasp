@@ -86,7 +86,14 @@ enum NODE : unsigned char
     BACK_PREVIOUS,
     LINEAR_INTERPOLATE,
     LOG_INTERPOLATE,
-    REPEAT_ZERO
+    REPEAT_ZERO,
+    // SIREN XPath-inspired expression and set operators
+    MODULUS,
+    UNION,
+    INTERSECT,
+    EXCEPT,
+    FOLLOWING_SIBLING,
+    PRECEDING_SIBLING
 };
 }
 #endif

@@ -41,15 +41,9 @@ typedef wasp::SIRENParser::token_type token_type;
  /* enables the use of start condition stacks */
  // %option stack
 
- // consume everthing,
- // escaped characters like '\/'
- // until control character
- // decl =
- // decl \n
- // decl /
- // this includes whitespace to provide for
- // declarators that are multi word
-DECL ([0-9A-Za-z_\*?]((\.|[^\n/<>:\[=])*[A-Za-z_0-9?])?\*?)|\.
+ // Unquoted names use XPath-like name characters. Names containing whitespace
+ // or expression punctuation remain available through quoted strings.
+DECL ([0-9A-Za-z_?][0-9A-Za-z_.\*?\-]*)|(\*[0-9A-Za-z_.\*?\-]+)|\.
 
 INTEGER [0-9]+([eE]\+?[0-9]+)?
 EXPONENT [eE][\+\-]?{INTEGER}
@@ -72,10 +66,17 @@ EQ =
 NEQ \!=
 AND &&
 OR \|\|
+UNION_OP \|
+MOD mod
+DIV_WORD div
+AND_WORD and
+OR_WORD or
+INTERSECT intersect
+EXCEPT except
+FOLLOWING_AXIS following-sibling::
+PRECEDING_AXIS preceding-sibling::
 LBRACKET \[
 RBRACKET \]
-LBRACE \{
-RBRACE \}
 LPAREN \(
 RPAREN \)
 COMMA ,
@@ -103,6 +104,38 @@ COLON :
 {ANY}  {
     capture_token(yylval,wasp::ANY);
     return token::ANY;
+}
+{FOLLOWING_AXIS} {
+    capture_token(yylval,wasp::FOLLOWING_SIBLING);
+    return token::FOLLOWING_AXIS;
+}
+{PRECEDING_AXIS} {
+    capture_token(yylval,wasp::PRECEDING_SIBLING);
+    return token::PRECEDING_AXIS;
+}
+position/[ \t\r]*\( {
+    capture_token(yylval,wasp::DECL);
+    return token::POSITION_FN;
+}
+last/[ \t\r]*\( {
+    capture_token(yylval,wasp::DECL);
+    return token::LAST_FN;
+}
+count/[ \t\r]*\( {
+    capture_token(yylval,wasp::DECL);
+    return token::COUNT_FN;
+}
+contains/[ \t\r]*\( {
+    capture_token(yylval,wasp::DECL);
+    return token::CONTAINS_FN;
+}
+starts-with/[ \t\r]*\( {
+    capture_token(yylval,wasp::DECL);
+    return token::STARTS_WITH_FN;
+}
+not/[ \t\r]*\( {
+    capture_token(yylval,wasp::DECL);
+    return token::NOT_FN;
 }
 {COMMA}  {
     capture_token(yylval,wasp::WASP_COMMA);
@@ -149,6 +182,34 @@ COLON :
     capture_token(yylval,wasp::WASP_OR);
     return token::OR;
 }
+{AND_WORD} {
+    capture_token(yylval,wasp::WASP_AND);
+    return token::AND;
+}
+{OR_WORD} {
+    capture_token(yylval,wasp::WASP_OR);
+    return token::OR;
+}
+{MOD} {
+    capture_token(yylval,wasp::MODULUS);
+    return token::MOD;
+}
+{DIV_WORD} {
+    capture_token(yylval,wasp::DIVIDE);
+    return token::DIVIDE;
+}
+{INTERSECT} {
+    capture_token(yylval,wasp::INTERSECT);
+    return token::INTERSECT_OP;
+}
+{EXCEPT} {
+    capture_token(yylval,wasp::EXCEPT);
+    return token::EXCEPT_OP;
+}
+{UNION_OP} {
+    capture_token(yylval,wasp::UNION);
+    return token::UNION_OP;
+}
 {LBRACKET} {
     capture_token(yylval,wasp::LBRACKET);
     return token::LBRACKET;
@@ -156,14 +217,6 @@ COLON :
 {RBRACKET} {
     capture_token(yylval,wasp::RBRACKET);
     return token::RBRACKET;
-}
-{LBRACE} {
-    capture_token(yylval,wasp::LBRACE);
-    return token::LBRACE;
-}
-{RBRACE} {
-    capture_token(yylval,wasp::RBRACE);
-    return token::RBRACE;
 }
 {LPAREN} {
     capture_token(yylval,wasp::LPAREN);

@@ -1067,6 +1067,18 @@ class WASP_PUBLIC Interpreter : public AbstractInterpreter
         }
     }
 
+    /** Commit the staged document when it contains no parsed nodes.
+     * This is opt-in because some interpreters historically represent empty
+     * input with a null root.
+     */
+    void commit_empty_document()
+    {
+        if (m_nodes.size() == 0 && m_staged.size() == 1)
+        {
+            m_root_index = commit_staged(0);
+        }
+    }
+
   public:  // variables
     /**
      * @brief m_start_column - the starting colum to start parsing at (default

@@ -48,13 +48,31 @@ bool HaliteInterpreter<S>::parseStream(std::istream&      in,
                                        size_t             start_line,
                                        size_t             start_column)
 {
+    if (Interpreter<S>::staged_count() == 0)
+    {
+        Interpreter<S>::error_diagnostic()
+            << "***Error : HaliteInterpreter instances cannot be parsed more "
+               "than once."
+            << std::endl;
+        return false;
+    }
+
     Interpreter<S>::stream_name()  = sname;
-    Interpreter<S>::start_line()   = start_line;
-    Interpreter<S>::start_column() = start_column;
+    Interpreter<S>::set_start_line(start_line);
+    Interpreter<S>::set_start_column(start_column);
 
     bool parsed = parse_content(in);
 
     Interpreter<S>::commit_stages();
+    // An empty template is a valid document. Commit its empty root so callers
+    // can traverse and evaluate it just like any other parsed template.
+    if (Interpreter<S>::node_count() == 0 &&
+        Interpreter<S>::staged_count() == 1)
+    {
+        Interpreter<S>::commit_empty_document();
+    }
+
+    Interpreter<S>::set_failed(!parsed);
 
     return parsed;
 }
@@ -101,6 +119,27 @@ bool HaliteInterpreter<S>::parse_content(std::istream& in)
         Interpreter<S>::error_diagnostic() 
                         << position(&Interpreter<S>::stream_name(),Interpreter<S>::line_count())
                         << " - error while reading" << std::endl;
+        return false;
+    }
+
+    size_t open_conditionals = 0;
+    for (size_t i = 1; i < Interpreter<S>::staged_count(); ++i)
+    {
+        if (Interpreter<S>::staged_type(i) == wasp::PREDICATED_CHILD)
+        {
+            ++open_conditionals;
+        }
+    }
+    if (open_conditionals > 0)
+    {
+        Interpreter<S>::error_diagnostic()
+            << "***Error : at "
+            << position(&Interpreter<S>::stream_name(),
+                        Interpreter<S>::line_count() + 1)
+            << " reached the end of the template with " << open_conditionals
+            << " unterminated conditional block"
+            << (open_conditionals == 1 ? "" : "s")
+            << ". Expected #endif." << std::endl;
         return false;
     }
 
@@ -179,6 +218,7 @@ bool HaliteInterpreter<S>::parse_line(const std::string& line)
     bool               is_else      = false;  // assume false
     static std::string endif_stmt   = "#endif";
     bool               is_endif     = false;  // assume false
+    bool               line_processed = true;
 
     if (is_directive &&
         (is_import = line.compare(0, import_stmt.size(), import_stmt) == 0))
@@ -378,27 +418,47 @@ bool HaliteInterpreter<S>::parse_line(const std::string& line)
     else
     {
         // capture the condition
+        size_t remaining_length = line.size() - current_column_index;
+        std::string remaining =
+            line.substr(current_column_index, remaining_length);
+        bool has_remaining = remaining_length > 0;
+        bool has_condition_content =
+            remaining.find_first_not_of(" \t") != std::string::npos;
         bool is_condition = (is_ifdef || is_ifndef || is_if || is_elseif);
-        if (is_condition && !condition_captured)
+        if (is_condition && !condition_captured && has_condition_content)
         {
             // push condition
             Interpreter<S>::push_staged(wasp::EXPRESSION, "C", {});
         }
         // current_column index has been updated by capture(), etc.
         size_t offset           = m_file_offset + current_column_index;
-        size_t remaining_length = line.size() - current_column_index;
-        wasp_check(current_column_index + remaining_length <= line.size());
 
-        if (remaining_length > 0)
+        wasp_check(current_column_index + remaining_length <= line.size());
+        if (has_remaining && (!is_condition || has_condition_content))
         {
-            capture_leaf("txt", wasp::STRING,
-                         line.substr(current_column_index, remaining_length),
-                         wasp::STRING, offset);
+            capture_leaf("txt", wasp::STRING, remaining, wasp::STRING, offset);
+        }
+        else if (is_condition && !condition_captured) // No remaining and no conditions
+        {
+            // Keep source-backed whitespace on the incomplete conditional so
+            // editor clients can reconstruct and inspect the partial line.
+            if (!remaining.empty())
+            {
+                capture_leaf("txt", wasp::STRING, remaining, wasp::STRING,
+                             offset);
+            }
+            Interpreter<S>::error_stream()
+                << "***Error : line " << Interpreter<S>::line_count() + 1
+                << " is missing the conditional statement - '" << line << "'."
+                << std::endl;
+            line_processed = false;
         }
 
         // when closing import/repeat statement or condition expression, commit
         // the tree
-        if (is_import || is_repeat || is_condition)
+        if (is_import || is_repeat ||
+            (is_condition &&
+             (condition_captured || has_condition_content)))
         {
             Interpreter<S>::commit_staged(Interpreter<S>::staged_count() - 1);
         }
@@ -406,7 +466,8 @@ bool HaliteInterpreter<S>::parse_line(const std::string& line)
         // when conditional is in play, we need to stage all
         // template components that are to be emitted when
         // the conditional evaluates as TRUE
-        if (is_condition)
+        if (is_condition &&
+            (condition_captured || has_condition_content))
         {
             // push condition
             Interpreter<S>::push_staged(wasp::WASP_TRUE, "T", {});
@@ -418,7 +479,7 @@ bool HaliteInterpreter<S>::parse_line(const std::string& line)
     wasp_tagged_line("Pushed line " << Interpreter<S>::line_count()
                                     << " offset " << m_file_offset
                                     << " for line '" << line << "'");
-    return true;
+    return line_processed;
 }
 template<class S>
 void HaliteInterpreter<S>::capture(
@@ -507,7 +568,19 @@ bool HaliteInterpreter<S>::evaluate(std::ostream& out,
                                     DataAccessor& data,
                                     std::ostream* activity_log)
 {
+    if (Interpreter<S>::failed())
+    {
+        Interpreter<S>::error_diagnostic()
+            << "***Error : cannot evaluate a template that did not parse "
+               "successfully."
+            << std::endl;
+        return false;
+    }
     auto   tree_view = Interpreter<S>::root();
+    if (tree_view.is_null())
+    {
+        return true;
+    }
     size_t line = 1, column = 1;
     data.store(attr_start_name(), attr_start_delim());
     data.store(attr_end_name(), attr_end_delim());
@@ -929,7 +1002,11 @@ bool HaliteInterpreter<S>::conditional(DataAccessor&   data,
                 ++line;  // account for #if, etc.
                 column                       = 1;
                 const auto& action_true_view = child_view.child_at(2);
-                int         delta            = action_true_view.line() - line;
+                if (action_true_view.child_count() == 0)
+                {
+                    break;
+                }
+                int delta = action_true_view.line() - line;
                 if (delta > 0)
                 {
                     wasp_tagged_line("inserting " << delta << " newline(s).");
@@ -1003,6 +1080,10 @@ bool HaliteInterpreter<S>::conditional(DataAccessor&   data,
                     (result.is_string() && data.exists(result.string())))
                 {
                     const auto& action_true_view = child_view.child_at(2);
+                    if (action_true_view.child_count() == 0)
+                    {
+                        break;
+                    }
                     line   = cline + 1;  // account for #if, etc.
                     column = 1;
                     if (!evaluate(data, action_true_view, out, line, column))

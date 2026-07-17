@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - docprint markdown documentation generation utility handling of explicit schema value child nodes
+- halite incomplete syntax recovery
 
 ## [4.4.1] - 11-24-2025
 

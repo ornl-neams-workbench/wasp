@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <functional>
 #include "wasphalite/HaliteInterpreter.h"
+#include "wasphalite/HaliteNodeView.h"
 
 #include "gtest/gtest.h"
 using namespace std;
@@ -68,6 +69,112 @@ ZXCVBNM  ?.,mnbvcxz)INPUT";
     document.paths(paths);
     ASSERT_EQ(expected_paths, paths.str());
     ASSERT_EQ(input.str(), document.data());
+}
+
+TEST(Halite, incomplete_condition_preserves_partial_tree)
+{
+    const std::vector<std::string> inputs = {"#if", "#if ", "#if\t",
+                                              "#if  \t  "};
+    for (const auto& input_text : inputs)
+    {
+        SCOPED_TRACE(input_text);
+        std::stringstream input(input_text);
+        std::stringstream errors;
+        DefaultHaliteInterpreter interpreter(errors);
+
+        ASSERT_FALSE(interpreter.parse(input));
+        HaliteNodeView document = interpreter.root();
+        ASSERT_FALSE(document.is_null());
+        ASSERT_EQ(input_text, document.data());
+        ASSERT_EQ(1u, document.child_count());
+
+        const auto action = document.child_at(0);
+        ASSERT_EQ("A", std::string(action.name()));
+        ASSERT_EQ(1u, action.child_count());
+
+        const auto condition = action.child_at(0);
+        ASSERT_EQ("if", std::string(condition.name()));
+        ASSERT_GE(condition.child_count(), 1u);
+        ASSERT_EQ("decl", std::string(condition.child_at(0).name()));
+        ASSERT_TRUE(condition.first_child_by_name("C").is_null());
+        ASSERT_TRUE(condition.first_child_by_name("T").is_null());
+        ASSERT_EQ(1u, condition.line());
+        ASSERT_NE(std::string::npos,
+                  errors.str().find("is missing the conditional statement"));
+    }
+}
+
+TEST(Halite, unterminated_condition_preserves_partial_tree)
+{
+    const std::string input_text = "#if condition\nbody";
+    std::stringstream input(input_text);
+    std::stringstream errors;
+    DefaultHaliteInterpreter interpreter(errors);
+
+    ASSERT_FALSE(interpreter.parse(input));
+    HaliteNodeView document = interpreter.root();
+    ASSERT_FALSE(document.is_null());
+    ASSERT_EQ(input_text, document.data());
+
+    const auto condition = document.child_at(0).child_at(0);
+    ASSERT_FALSE(condition.first_child_by_name("C").is_null());
+    const auto true_branch = condition.first_child_by_name("T");
+    ASSERT_FALSE(true_branch.is_null());
+    ASSERT_EQ(1u, true_branch.child_count());
+    ASSERT_EQ("body", true_branch.child_at(0).data());
+    ASSERT_NE(std::string::npos,
+              errors.str().find("unterminated conditional block"));
+
+    DataAccessor data;
+    std::stringstream output;
+    ASSERT_FALSE(interpreter.evaluate(output, data));
+    ASSERT_TRUE(output.str().empty());
+}
+
+TEST(Halite, empty_conditional_body_is_positioned_and_evaluable)
+{
+    std::stringstream input("#ifdef enabled\n#endif");
+    std::stringstream errors;
+    DefaultHaliteInterpreter interpreter(errors);
+    ASSERT_TRUE(interpreter.parse(input));
+
+    HaliteNodeView document = interpreter.root();
+    const auto condition = document.child_at(0).child_at(0);
+    const auto true_branch = condition.first_child_by_name("T");
+    ASSERT_FALSE(true_branch.is_null());
+    ASSERT_EQ(0u, true_branch.child_count());
+    ASSERT_EQ(1u, true_branch.line());
+    ASSERT_EQ(1u, true_branch.last_line());
+
+    const auto generic_condition =
+        interpreter.root().child_at(0).child_at(0);
+    const auto generic_true_branch = generic_condition.child_at(2);
+    ASSERT_EQ(0u, generic_true_branch.child_count());
+    ASSERT_EQ(1u, generic_true_branch.line());
+    ASSERT_EQ(1u, generic_true_branch.column());
+
+    DataAccessor data;
+    data.store("enabled", true);
+    std::stringstream output;
+    ASSERT_TRUE(interpreter.evaluate(output, data));
+}
+
+TEST(Halite, empty_template_has_traversable_root)
+{
+    std::stringstream input;
+    DefaultHaliteInterpreter interpreter;
+    ASSERT_TRUE(interpreter.parse(input, 7, 4));
+
+    HaliteNodeView document = interpreter.root();
+    ASSERT_FALSE(document.is_null());
+    ASSERT_EQ(0u, document.child_count());
+    ASSERT_EQ(7u, document.line());
+    ASSERT_EQ(4u, document.column());
+
+    DataAccessor data;
+    std::stringstream output;
+    ASSERT_TRUE(interpreter.evaluate(output, data));
+    ASSERT_TRUE(output.str().empty());
 }
 TEST(Halite, attribute_options_symbols)
 {

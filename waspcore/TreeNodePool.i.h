@@ -254,6 +254,8 @@ template<typename NTS, typename NIS, class TP>
 std::size_t TreeNodePool<NTS, NIS, TP>::line(NIS node_index) const
 {
     auto leaf_node_index = leaf_index(node_index);
+    if (leaf_node_index >= size())
+        return m_start_line;
     auto node_basic_data = m_node_basic_data[leaf_node_index];
     // obtain the token's line
     if (node_basic_data.is_leaf())
@@ -270,6 +272,8 @@ template<typename NTS, typename NIS, class TP>
 std::size_t TreeNodePool<NTS, NIS, TP>::column(NIS node_index) const
 {
     auto leaf_node_index = leaf_index(node_index);
+    if (leaf_node_index >= size())
+        return m_start_column;
     auto node_basic_data = m_node_basic_data[leaf_node_index];
     // obtain the token's column
     if (node_basic_data.is_leaf())
@@ -308,6 +312,8 @@ std::size_t TreeNodePool<NTS, NIS, TP>::last_line(NIS node_index) const
     }
 
     auto leaf_node_index = leaf_index(node_index);
+    if (leaf_node_index >= size())
+        return m_start_line;
     auto node_basic_data = m_node_basic_data[leaf_node_index];
 
     if (node_basic_data.is_leaf())
@@ -337,6 +343,8 @@ std::size_t TreeNodePool<NTS, NIS, TP>::last_column(NIS node_index) const
     }
 
     auto leaf_node_index = leaf_index(node_index);
+    if (leaf_node_index >= size())
+        return m_start_column;
     auto node_basic_data = m_node_basic_data[leaf_node_index];
 
     if (node_basic_data.is_leaf())

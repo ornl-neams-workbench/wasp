@@ -125,6 +125,9 @@ class WASP_PUBLIC HaliteInterpreter : public Interpreter<S>
      * @param in        input stream
      * @param sname     stream name for error messages
      * @return          true if successfully parsed
+     * On failure, root() exposes the structurally safe partial tree captured
+     * before the error so diagnostic and editor clients can inspect it. A
+     * failed partial tree cannot be evaluated.
      */
     bool parseStream(std::istream&      in,
                      const std::string& sname       = "stream input",

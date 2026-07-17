@@ -129,7 +129,7 @@ class WASP_PUBLIC HaliteNodeView
      */
     bool is_null() const
     {
-        return m_pool == nullptr || m_node_index == m_pool->size();
+        return m_pool == nullptr || m_node_index >= m_pool->size();
     }
 
     /**

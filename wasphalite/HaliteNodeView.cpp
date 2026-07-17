@@ -1,8 +1,65 @@
 #include "wasphalite/HaliteNodeView.h"
 #include "waspcore/utils.h"
+#include <functional>
 
 namespace wasp
 {
+namespace
+{
+bool find_position_leaf(const HaliteNodeView& view,
+                        bool                  reverse,
+                        std::size_t&          leaf_index)
+{
+    if (view.is_null())
+        return false;
+    if (view.is_leaf())
+    {
+        leaf_index = view.node_index();
+        return true;
+    }
+
+    const std::size_t count = view.child_count();
+    for (std::size_t offset = 0; offset < count; ++offset)
+    {
+        const std::size_t i = reverse ? count - offset - 1 : offset;
+        if (find_position_leaf(view.child_at(i), reverse, leaf_index))
+            return true;
+    }
+    return false;
+}
+
+/** Find a source-backed leaf suitable for positioning a Halite node.
+ *
+ * Structural nodes normally derive their location from a descendant leaf, but
+ * valid Halite constructs such as an empty conditional true branch have no
+ * descendants. First search the requested node. If it has no leaf, walk up its
+ * ancestors and search the surrounding tree for a contextual source anchor.
+ * Searching forward selects a starting-position anchor; searching in reverse
+ * selects an ending-position anchor.
+ *
+ * @param view node whose contextual position is requested
+ * @param reverse false to find the first leaf, true to find the last leaf
+ * @param leaf_index receives the source-backed leaf node index when found
+ * @return true if a source-backed leaf was found, false if the tree has none
+ */
+bool find_position_leaf_in_context(const HaliteNodeView& view,
+                                   bool                  reverse,
+                                   std::size_t&          leaf_index)
+{
+    if (find_position_leaf(view, reverse, leaf_index))
+        return true;
+
+    HaliteNodeView ancestor = view;
+    while (!ancestor.is_null() && ancestor.has_parent())
+    {
+        ancestor = ancestor.parent();
+        if (find_position_leaf(ancestor, reverse, leaf_index))
+            return true;
+    }
+    return false;
+}
+}  // namespace
+
 HaliteNodeView::HaliteNodeView(std::size_t                node_index,
                          AbstractInterpreter& pool)
     : m_node_index(node_index), m_pool(&pool)
@@ -32,17 +89,23 @@ bool HaliteNodeView::operator==(const HaliteNodeView& b) const
 
 bool HaliteNodeView::operator<(const HaliteNodeView& b) const
 {
+    if (m_pool != b.m_pool)
+        return std::less<AbstractInterpreter*>()(m_pool, b.m_pool);
     return m_node_index < b.m_node_index;
 }
 
 HaliteNodeView HaliteNodeView::parent() const
 {
+    if (is_null() || !has_parent())
+        return HaliteNodeView();
     HaliteNodeView view(m_pool->parent_node_index(m_node_index), *m_pool);
     return view;
 }
 
 bool HaliteNodeView::has_parent() const
 {
+    if (is_null())
+        return false;
     return m_pool->has_parent(m_node_index);
 }
 
@@ -151,6 +214,8 @@ std::size_t  // return type
 
 HaliteNodeView HaliteNodeView::child_at(std::size_t index) const
 {
+    if (is_null() || index >= child_count())
+        return HaliteNodeView();
     auto child_node_pool_index = m_pool->child_at(m_node_index, index);
     return HaliteNodeView(child_node_pool_index, *m_pool);
 }
@@ -214,22 +279,42 @@ const char* HaliteNodeView::name() const
 
 std::size_t HaliteNodeView::line() const
 {
-    return m_pool->line(m_node_index);
+    if (is_null())
+        return 0;
+    std::size_t leaf_index = 0;
+    if (find_position_leaf_in_context(*this, false, leaf_index))
+        return m_pool->line(leaf_index);
+    return m_pool->start_line();
 }
 
 std::size_t HaliteNodeView::column() const
 {
-    return m_pool->column(m_node_index);
+    if (is_null())
+        return 0;
+    std::size_t leaf_index = 0;
+    if (find_position_leaf_in_context(*this, false, leaf_index))
+        return m_pool->column(leaf_index);
+    return m_pool->start_column();
 }
 
 std::size_t HaliteNodeView::last_line() const
 {
-    return m_pool->last_line(m_node_index);
+    if (is_null())
+        return 0;
+    std::size_t leaf_index = 0;
+    if (find_position_leaf_in_context(*this, true, leaf_index))
+        return m_pool->last_line(leaf_index);
+    return m_pool->start_line();
 }
 
 std::size_t HaliteNodeView::last_column() const
 {
-    return m_pool->last_column(m_node_index);
+    if (is_null())
+        return 0;
+    std::size_t leaf_index = 0;
+    if (find_position_leaf_in_context(*this, true, leaf_index))
+        return m_pool->last_column(leaf_index);
+    return m_pool->start_column();
 }
 
 bool HaliteNodeView::to_bool(bool* ok) const

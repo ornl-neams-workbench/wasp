@@ -22,7 +22,7 @@ The fast lexical analyzer generator (flex - https://www.gnu.org/software/flex/) 
     * [LSP](/wasplsp/README.md#language-server-protocol)
     * [Plot](/waspplot/README.md#CustomPlot)
     * [Utils](/wasputils/README.md#command-line-utilities)
-    * [Python](/wasppy/README.md#wasp-python-interfaces-wasppy)
+    * [Python](/wasppy/README.md#wasppy)
 2. [Getting Started](#getting-started) - code compilation requirements and instructions
     * [Requirements](#requirements)
     * [Code Configuration and Compilation](#code-configuration-and-compilation)
@@ -186,8 +186,8 @@ For individuals wanting to compile the code from source, below are the tested re
     * LLVM-7.0.2 tested on Mac OS
     * Visual Studio 2022 for Windows
 * Git 1.7+
-* CMake-3.20+
-* Python-3.8+
+* CMake-3.26+
+* Python-3.10+
 
 ## Code Configuration and Compilation
 * Save the ssh-key in [code-int.ornl.gov](https://code-int.ornl.gov/profile/keys).
@@ -269,6 +269,3 @@ cp waspConfig_install.cmake install/lib/cmake/wasp/waspConfig.cmake
 ```
 
 After configuration is complete, conduct the compilation via the make system available (make, NMake, Ninja, MSBuild, etc.)
-
-
-

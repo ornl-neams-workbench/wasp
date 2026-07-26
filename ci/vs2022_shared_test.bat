@@ -40,4 +40,27 @@ ctest -VV --output-on-failure ^
       -D ExperimentalTest 
 
 REM This command will "repair" the wheel and overwrite the existing wheel.
-FOR /F "usebackq delims=" %%g IN (`WHERE /R %BLD_DIR%\wasppy\dist\ *.whl`) DO delvewheel repair -w %BLD_DIR%\wasppy\dist %%g
+SET "WHEELHOUSE=%BLD_DIR%\wasppy\wheelhouse"
+mkdir "%WHEELHOUSE%"
+FOR %%g IN ("%BLD_DIR%\wasppy\dist\*.whl") DO delvewheel repair -w "%WHEELHOUSE%" "%%g"
+IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
+FOR %%g IN ("%WHEELHOUSE%\*.whl") DO delvewheel show "%%g"
+IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
+FOR %%g IN ("%WHEELHOUSE%\*.whl") DO python -m twine check "%%g"
+IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
+python "%SRC_DIR%\ci\verify_wheel.py" ^
+       --wheel-dir "%WHEELHOUSE%" ^
+       --test-dir "%SRC_DIR%\wasppy\test"
+IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
+
+SET "PYTHON314_ENV=%BLD_DIR%\python314"
+CALL conda create --yes ^
+     --prefix "%PYTHON314_ENV%" ^
+     --channel conda-forge ^
+     --override-channels ^
+     python=3.14
+IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
+"%PYTHON314_ENV%\python.exe" "%SRC_DIR%\ci\verify_wheel.py" ^
+       --wheel-dir "%WHEELHOUSE%" ^
+       --test-dir "%SRC_DIR%\wasppy\test"
+IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%

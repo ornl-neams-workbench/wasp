@@ -1,526 +1,126 @@
-# Wasp Python Interfaces (WaspPy)
+# WASPPY
 
-WaspPy provides a python interface for utilizing WASP's parsing and validation functionality. The primary design consideration is to enable access to data represented in SON, DDI, EDDI, HIT, and HALITE formats.
+WASPPY provides Python bindings for the Workbench Analysis Sequence Processor
+(WASP). It exposes WASP parsers, parse-tree navigation, schema validation,
+diagnostics, and language-server components to Python applications.
 
-WaspPy places an emphasis on client convenience and provides overloading of the ".", dot operator. This is intended to allow a client to interact with their input with calls of the following form, `doc.subnode1.subnode2`, where doc is the object containing the parsed input and `subnode*` are branches of the parse tree defined in either a static input schema file or inline via an InputObject definition database.
+This document covers development and testing in the WASP source tree. For the
+package-installation guide shown on PyPI, see [PYPI.md](PYPI.md). The extended
+Python API example is in
+[docs/chemistry_example.md](docs/chemistry_example.md).
 
+## Package structure
 
-## Example
+WASPPY combines generated and hand-written Python code with a native extension:
 
-WASP supports structured and definition-driven syntaxes. Structured syntaxes (SON, HIT), do not require an input schema to be brought into memory. Definition-driven syntaxes (DDI, EDDI) require an input schema to construct the hierarchy of the desired parse tree. The following example illustrates how to bring input data into a program using structured and definition-driven syntax.
+| Component | Purpose |
+|---|---|
+| `wasp.i` | SWIG interface for the C++ APIs |
+| `wasp.py` | SWIG-generated Python module |
+| `_wasp` | Native extension linked from the CMake-built WASP libraries |
+| `Database.py` | Programmatic input-definition API |
+| `sch2db.py` | Schema-to-database conversion support |
+| `test/` | Binding, API, and wheel tests |
 
-### Problem Description
-The following fictional application is a general chemistry code describing salts and property interpolation. Specifically, the input is composed of a collection of salts and series of temperatures at which to query salt density.
+CMake compiles the WASP libraries and links their objects into `_wasp`. The
+wheel target packages that prebuilt extension; setuptools does not compile a
+second copy of the C++ sources.
 
-The input schema that describes the input hierarchy and parameter constraint is [below](input_schema). A legal input follows and depicts 2 salts, `LiF` and `NaF`, and temperatures queries at `1100, 1200, 1300, 1400`:
+The extension uses Python's stable ABI with Python 3.10 as its minimum version.
+Release wheels are platform-specific: Linux x86-64, Windows x86-64, and macOS
+universal2 (`arm64` and `x86_64`).
 
-```javascript
-salts {
-    % Favorite salt
-    salt(LiF) {
-        MeltTemp : 1121.2
-        MolecularWeight : 25.9394
-        BoilTemp : 2512
-        Density
-        {
-            A : 2.37
-            B : 5.0e-4
-            MinTemp : 1123.6
-            MaxTemp : 1367.5
-        }
-    }
-    salt(NaF) {
-        MolecularWeight : 41.9882
-        MeltTemp : 1268
-        BoilTemp : 1978
-        Density
-        {
-            A : 2.76
-            B : 6.36e-4
-            MinTemp : 1273
-            MaxTemp : 1373
-        }
-    }
-}
-queries {
-    temperatures = [1100 1200 1300 1400]
-}
-```
+## Configure and build
 
-#### Python program
-
-```python
-from wasp import *
-import math
-
-class LinearModel:
-    ''' _b*x + _c*y = _a '''
-    def __init__(self, params):
-        self._a = 0.0
-        self._b = 1.0
-        self._c = 1.0
-        self._minT = math.inf
-        self._maxT = -math.inf
-
-        for it in params:
-            if it.name() == "MinTemp":
-                self._maxT = float(it)
-            elif it.name() == "MaxTemp":
-                self._minT = float(it)
-            elif it.name() == "A":
-                self._a = float(it)
-            elif it.name() == "B":
-                self._b = float(it)
-            elif it.name() == "C":
-                self._c = float(it)
-
-    def get_y(self, x: float) -> "float":
-        if self._c == 0.0:
-            return math.inf
-
-        return (self._a - (self._b * x)) / self._c
-
-class Salt:
-    def __init__(self,params):
-        self._name = ""
-        self._molew = 0.0
-        self._meltT = 0.0
-        self._boilT = 0.0
-        self._density: LinearModel
-
-        # Loop over salt parameters
-        for it in params:
-            if it.name() == "id":
-                self._name = str(it)
-            elif it.name() == "MolecularWeight":
-                self._molew = float(it)
-            elif it.name() == "MeltTemp":
-                self._meltT = float(it)
-            elif it.name() == "BoilTemp":
-                self._boilT = float(it)
-            elif it.name() == "Density":
-                self._density = LinearModel(it)
-
-    def density(self,T: float) -> "float":
-        return self._density.get_y(T)
-
-if __name__ == '__main__':
-    import sys
-    schemapath = "path/to/application/schema.sch or schema data"
-    input_file = sys.argv[1]
-    interpreter = Interpreter(Syntax.SON, schema=schemapath, path=input_file)
-
-    errors = interpreter.errors()
-    if errors:
-        print ("\n".join(errors))
-        sys.exit(1)
-
-    document = interpreter.root()
-
-    # Obtain required queries parameter
-    queries = document.queries
-
-    # Obtain required salts
-    salts = []
-    for component in document.salts.salt:
-        salts.append(Salt(component))
-
-    # Obtain each salt's melt temperature value
-    for v in document.salts.salt.MeltTemp.value:
-        # Print salt's id (located at ../../id of value node) and melt temperature
-        print ("MeltTemp of", str(v.parent().parent().id), "is", float(v))
-
-    # Obtain query temperatures
-    temperatures = []
-    for t in queries.temperatures.value:
-        temperatures.append(float(t))
-
-    # Evaluate salt density for each temperature
-    for s in salts:
-        for t in temperatures:
-            print ("Salt", s._name, "density at",t, "is", s.density(t))
-
-```
-
-When executing the above program and providing the given input you can expect the following output:
-
-```
-MeltTemp of LiF is 1121.2
-MeltTemp of NaF is 1268.0
-Salt LiF density at 1100.0 is 1.82
-Salt LiF density at 1200.0 is 1.77
-Salt LiF density at 1300.0 is 1.7200000000000002
-Salt LiF density at 1400.0 is 1.67
-Salt NaF density at 1100.0 is 2.0603999999999996
-Salt NaF density at 1200.0 is 1.9968
-Salt NaF density at 1300.0 is 1.9331999999999998
-Salt NaF density at 1400.0 is 1.8695999999999997
-```
-
-If an input error is encountered, as defined in the input schema, the program will emit a user-friendly diagnostic and exit. For example, if a `MaxTemp` value violates the `MinTemp` value constraint the following diagnostic is emitted.
-
-```
-line:12 column:29 - Validation Error: MaxTemp value "1367.5" is less than or equal to the allowed minimum exclusive value of "1523.6" from "../../MinTemp/value"
-```
-
-
-### Accessors
-
-The dot operator provides the ability to navigate the hierarchy of the parse tree given the name of the subcomponents. When a subcomponent name conflicts with a Python reserved keyword the bracket operator `[]` can be used.
-
-### Syntaxes
-The syntax can be specified using the `Syntax.X` where `X` is one of `HIT`, `SON`, `DDI`, and `EDDI`.
-
-For example, the input above is equivalent to the followiing HIT-formatted input and will produce the same out with only changing the one line:
-
-```diff
-- interpreter = Interpreter(Syntax.SON, schema=schemapath, path=input_file)
-+ interpreter = Interpreter(Syntax.HIT, schema=schemapath, path=input_file)
-...
-```
-
-```
-[salts]
-    # Favorite salt
-    [salt]
-        id = LiF
-        MeltTemp = 1121.2
-        MolecularWeight = 25.9394
-        BoilTemp = 2512
-        [Density]
-            A = 2.37
-            B = 5.0e-4
-            MinTemp = 1123.6
-            MaxTemp = 1367.5
-        []
-    []
-    [salt]
-        id = NaF
-        MolecularWeight = 41.9882
-        MeltTemp = 1268
-        BoilTemp = 1978
-        [Density]
-            A = 2.76
-            B = 6.36e-4
-            MinTemp = 1273
-            MaxTemp = 1373
-        []
-    []
-[]
-[queries]
-    temperatures = '1100 1200 1300 1400'
-[]
-```
-
-#### Input Schema
-```javascript
-salts{
-    Description = "The collection of salts in the system"
-    MinOccurs = 1
-    MaxOccurs = 1
-
-    salt{
-        MinOccurs = 1
-        MaxOccurs = NoLimit
-        id{
-            MinOccurs = 1
-            MaxOccurs = 1
-            ValEnums = [LiF NaF CaF2 NH4F NaCl]
-        }
-        BoilTemp{
-            MinOccurs = 1
-            MaxOccurs = 1
-            value{
-                MinOccurs = 1
-                MaxOccurs = 1
-                ValType   = Real
-            } % end value
-        } % end BoilTemp
-
-        Density{
-            MinOccurs = 1
-            MaxOccurs = 1
-            A{
-                MinOccurs = 0
-                MaxOccurs = 1
-                value{
-                    MinOccurs = 1
-                    MaxOccurs = 1
-                    ValType   = Real
-                } % end value
-            } % end A
-
-            B{
-                MinOccurs = 0
-                MaxOccurs = 1
-                value{
-                    MinOccurs = 1
-                    MaxOccurs = 1
-                    ValType   = Real
-                    MinValInc = 0
-                } % end value
-            } % end B
-
-            MaxTemp{
-                MinOccurs = 0
-                MaxOccurs = 1
-                value{
-                    MinOccurs = 1
-                    MaxOccurs = 1
-                    ValType   = Real
-                    MinValExc = "../../MinTemp/value"
-                } % end value
-            } % end MaxTemp
-
-            MinTemp{
-                MinOccurs = 0
-                MaxOccurs = 1
-                value{
-                    MinOccurs = 1
-                    MaxOccurs = 1
-                    ValType   = Real
-                    MinValExc = 0
-                } % end value
-            } % end MinTemp
-        } % end Density
-
-        MeltTemp{
-            MinOccurs = 1
-            MaxOccurs = 1
-
-            value{
-                MinOccurs = 1
-                MaxOccurs = 1
-                ValType   = Real
-                MinValInc = 0
-            } % end value
-        } % end MeltTemp
-
-        MolecularWeight{
-            MinOccurs = 0
-            MaxOccurs = 1
-            InputDefault = "1.0"
-            value{
-                MinOccurs = 1
-                MaxOccurs = 1
-                ValType   = Real
-                MinValExc = 0
-            } % end value
-        } % end MolecularWeight
-    } % end salt
-} % end salts
-
-queries{
-    Description = "Parameters for queries salt properties"
-    MinOccurs = 1
-    MaxOccurs = 1
-
-    temperatures{
-        Description = "Temperatures (C) at which to query density"
-        MinOccurs = 1
-        MaxOccurs = 1
-        value{
-            MinOccurs = 1
-            MaxOccurs = NoLimit
-            ValType   = Real
-            MinValInc = 0
-        } % end value
-    } % end temperatures
-} % end queries
-```
-
-#### Equivalent Program Using InputObject Definition
-The Database.py module's InputObject allows Python programs to provide a definition of their input data with enhanced program-specific diagnostic abilities. Here is the same program updated with an embedded InputObject definition:
-
-```python
-from wasp import *
-from Database import InputObject, storeFloat, storeStr
-import math
-
-class LinearModel:
-    Definition = None
-    @staticmethod
-    def definition():
-        if LinearModel.Definition is not None: return LinearModel.Definition
-        dens = InputObject(Desc="Salt density")
-        dens.createRequiredSingle("A", Desc="Density A Coefficient").createRequiredSingle("value", Action=storeFloat)
-        dens.createRequiredSingle("B", Desc="Density B Coefficient").createRequiredSingle("value", Action=storeFloat)
-        dens.createSingle("C", Default=1.0, Desc="Density C Coefficient").createRequiredSingle("value", Action=storeFloat)
-        dens.createRequiredSingle("MinTemp", Desc="Minimum temperature").createRequiredSingle("value", MinValExc=0, Action=storeFloat)
-        dens.createRequiredSingle("MaxTemp", Desc="Maximum temperature").createRequiredSingle("value", Action=storeFloat)
-        dens.createSingle("Type", Default="linear", Desc="interpolation type").createRequiredSingle("value", Enums=["linear"], Action=storeStr)
-
-        LinearModel.Definition = dens
-        return LinearModel.Definition
-
-    @staticmethod
-    def createFrom(do:'DeserializedObject'):
-
-        result = LinearModel()
-        result._a = do["A"].value()
-        result._b = do["B"].value()
-        result._c = do["C"].value()
-        result._minT = do["MinTemp"].value()
-        result._maxT = do["MaxTemp"].value()
-
-        # Conduct temperature check
-        if result._maxT < result._minT:
-            do.interpreter.createErrorDiagnostic(do["MaxTemp"].node,
-            "value of "+str(result._maxT)+" is less than or equal to the allowed minimum exclusive value of "
-            +str(result._minT)+ " located at "+do["MinTemp"].node.info()+"!")
-
-        theType = do["Type"].value()
-
-        # Require Type to be a supported enumeration
-        # This demonstrates post deserialization diagnostic generation
-        enumerations = result.definition()["Type"]["value"].enumerations()
-        if theType not in enumerations:
-            do.interpreter.createWarningDiagnostic(do["Type"].node, "has value of "+str(do["Type"].node)+" which is not listed in "+str(enumerations))
-
-        return result
-
-    ''' _b*x + _c*y = _a '''
-    def __init__(self):
-        self._a = 0.0
-        self._b = 1.0
-        self._c = 1.0
-        self._minT = math.inf
-        self._maxT = -math.inf
-
-    def get_y(self,x: float) -> "float":
-        if self._c == 0.0:
-            return math.inf
-
-        return (self._a - (self._b * x)) / self._c
-
-class Salt:
-    Definition = None
-    @staticmethod
-    def definition():
-        '''
-            return inputObject - the definition of this object
-
-        '''
-        if Salt.Definition is not None: return Salt.Definition
-        salt = InputObject(Desc="Single Salt instance")
-        salt.createRequiredSingle("id", Enums=["LiF", "NaF", "CaF2", "NH4F", "NaCl"], Desc="Salt type", Action=storeStr)
-        salt.createRequiredSingle("BoilTemp", Desc="Salting boiling temperature") \
-                .createRequiredSingle("value", MinValExc=0, Action=storeFloat)
-        salt.createRequiredSingle("MeltTemp", Desc="Salt melting temperature").createRequiredSingle("value", Action=storeFloat)
-        salt.createSingle("MolecularWeight", Desc="Salt's molecular weight").createRequiredSingle("value", MinValExc=0, Action=storeFloat)
-        salt.addRequiredSingle("Density", LinearModel.definition())
-
-        Salt.Definition = salt
-        return Salt.Definition
-
-    @staticmethod
-    def createFrom(do:'DeserializedObject'):
-        '''
-            deserializedObject - Salt object data deserialized from user input
-            Create a Salt object from the given data and return it to the caller
-        '''
-
-        result = Salt()
-        result.id = do["id"] # not an id=value, just salt(id)
-        result.moleweight = do["MolecularWeight"].value() # is a key=value MolecularWeight=value
-        result.meltTemp = do["MeltTemp"].value()
-        result.boilTemp = do["BoilTemp"].value()
-        result._density = LinearModel.createFrom(do["Density"])
-
-        return result
-
-    def __init__(self):
-        self.id = ""
-        self.moleweight = 0.0
-        self.meltTemp = 0.0
-        self.boilTemp = 0.0
-        self._density: LinearModel
-
-    def density(self,T: float) -> "float":
-        return self._density.get_y(T)
-
-class TheInput:
-    Definition = None
-    @staticmethod
-    def definition():
-        if TheInput.Definition is not None: return TheInput.Definition
-        db = InputObject()
-        salts = db.createRequiredSingle("salts", Desc="The collection of salts in the system")
-        salts.addRequired("salt", Salt.definition())
-        salts.addUniqueConstraint(["salt/id"])
-        db.createRequiredSingle("queries", Desc="Parameters for queries salt properties") \
-            .createRequiredSingle("temperatures", Desc="Temperatures (C) at which to query density") \
-                .createRequired("value", MinValExc=0, Action=storeFloat)
-        TheInput.Definition = db
-        return TheInput.Definition
-
-    def createFrom(do:'DeserializedObject'):
-
-        result = TheInput()
-        result.salts = [Salt.createFrom(salt) for salt in do["salts"]["salt"]]
-        result.queryTemps = do["queries"]["temperatures"].valuelist()
-
-        return result
-
-    def __init__(self):
-        self.salts = None
-        self.queryTemps = None
-
-if __name__ == '__main__':
-    import sys
-    input_file = sys.argv[1]
-    interpreter = Interpreter(Syntax.SON, path=input_file)
-
-    errors = interpreter.errors()
-    if errors:
-        print ("\n".join(errors))
-        sys.exit(1)
-
-    document = interpreter.root()
-
-    # Obtain the input's definition database
-    definition = TheInput.definition()
-
-    # instance the user database with the interpreter user data
-    db = definition.deserialize(interpreter.root(), interpreter)
-
-    # Emit deserialize diagnostics and quit
-    if interpreter.deserializeDiagnostics():
-        print("".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
-        sys.exit(1)
-
-    # instance the program input structure from the definition instanced user database
-    theInput = TheInput.createFrom(db)
-
-    # Emit creation diagnostics and quit
-    if interpreter.deserializeDiagnostics():
-        print("".join(str(x)+"\n" for x in interpreter.deserializeDiagnostics()))
-        sys.exit(1)
-
-    # Obtain each salt's melt temperature value
-    for salt in theInput.salts:
-        # Print salt's id and melt temperature
-        print ("MeltTemp of", str(salt.id), "is", float(salt.meltTemp))
-
-    # Evaluate salt density for each temperature
-    for s in theInput.salts:
-        for t in theInput.queryTemps:
-            print ("Salt", s.id, "density at",t, "is", s.density(t))
-```
-
-When executed with the SON-formatted Salt input the expected output is produced:
+WASPPY requires CMake 3.26 or newer, Python 3.10 or newer, SWIG, and the usual
+C++ build tools. From the repository root:
 
 ```shell
-MeltTemp of LiF is 1121.2
-...
-Salt NaF density at 1400.0 is 1.8695999999999997
+cmake -S . -B build \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -Dwasp_ENABLE_ALL_PACKAGES=ON \
+  -Dwasp_ENABLE_TESTS=ON \
+  -DWASP_ENABLE_SWIG=ON \
+  -DPython3_EXECUTABLE="$(command -v python)"
+cmake --build build --parallel
 ```
 
-Similarly, if a validation error is introduced an informative diagnostic is emitted with applicable providence of the issue:
+See the repository [README](../README.md) for the complete build options and
+[CONTRIBUTING.md](../CONTRIBUTING.md) for development environment and
+multi-configuration generator guidance.
+
+## Test the bindings
+
+Run the configured WASPPY tests with:
 
 ```shell
-problem.son:12.19: MaxTemp value of 1367.5 is less than or equal to the allowed minimum exclusive value of 1523.6 located at MinTemp on line 11 column 19!
- ```
+ctest --test-dir build -R "(WaspPy|wasppy)" --output-on-failure
+```
 
+The binding tests exercise the generated Python layer against the native
+extension. When changing packaging, also build and test the artifact that users
+will install:
 
+```shell
+cmake --build build --target wasp_wheel --parallel
+python ci/verify_wheel.py \
+  --wheel-dir build/wasppy/dist \
+  --test-dir wasppy/test
+```
 
+The wheel verifier installs the wheel into an isolated virtual environment,
+checks its metadata and native extension, imports the public modules from
+outside the source tree, runs a parser smoke test, and executes the packaged
+binding test suite.
+
+On macOS, a universal2 build must contain both requested architectures in the
+extension. Configure with:
+
+```shell
+cmake -S . -B build \
+  -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+  -DWASP_ENABLE_SWIG=ON
+```
+
+The build fails rather than silently publishing a single-architecture wheel if
+either architecture is missing.
+
+## Python interfaces
+
+The primary Python interfaces are:
+
+- `Interpreter` and `Syntax` for SON, HIT, DDI, and EDDI documents
+- `WaspNode` and `VectorWaspNode` for parse-tree navigation
+- `Database.InputObject` for programmatic input definitions and conversion
+- the LSP bindings for language-server integrations
+
+Nodes are non-owning views into interpreter-managed storage. Keep the
+`Interpreter` alive for as long as any nodes obtained from it are in use.
+
+For installation and introductory examples, read [PYPI.md](PYPI.md). For a
+complete schema, navigation, and `InputObject` walkthrough, read the
+[chemistry tutorial](docs/chemistry_example.md).
+
+## Packaging documentation
+
+The two top-level WASPPY documents intentionally serve different audiences:
+
+- `README.md` is the repository and developer guide. Its relative links resolve
+  on the GitLab instance hosting the working checkout.
+- `PYPI.md` is the public package description. It uses absolute links to the
+  public WASP repository because PyPI cannot resolve repository-relative links.
+
+During the CMake build, `PYPI.md` is copied to the build directory as
+`README.md`. `setup.py` reads that generated file as the wheel's long
+description. Edit `PYPI.md` for PyPI-facing installation or usage changes, and
+edit this file for source-tree build or maintenance changes.
+
+Before publishing, run:
+
+```shell
+python -m twine check build/wasppy/dist/*
+```
+
+The release workflow and required checks are documented in
+[CONTRIBUTING.md](../CONTRIBUTING.md).

@@ -1,3 +1,5 @@
+set -eo pipefail
+
 function ecc () {
     "$@"
     if [[ $? -ne 0 ]]; then exit 1; fi
@@ -62,7 +64,28 @@ ecc cmake -DBUILDNAME="$(uname -s)-GCC-4.8.5-Bundle-${CI_COMMIT_REF_NAME}" \
 
 ecc make -j 8 package
 
-auditwheel repair -w ${CI_PROJECT_DIR}/build/wasppy/dist --plat manylinux_2_34_x86_64 ${CI_PROJECT_DIR}/build/wasppy/dist/ornl_wasp*.whl
+WHEELHOUSE=${CI_PROJECT_DIR}/build/wasppy/wheelhouse
+mkdir -p "${WHEELHOUSE}"
+ecc auditwheel repair \
+    -w "${WHEELHOUSE}" \
+    --plat manylinux_2_34_x86_64 \
+    "${CI_PROJECT_DIR}"/build/wasppy/dist/ornl_wasp*.whl
+ecc auditwheel show "${WHEELHOUSE}"/*.whl
+ecc python -m twine check "${WHEELHOUSE}"/*.whl
+ecc python "${CI_PROJECT_DIR}/ci/verify_wheel.py" \
+    --wheel-dir "${WHEELHOUSE}" \
+    --test-dir "${CI_PROJECT_DIR}/wasppy/test"
+
+PYTHON314_ENV=${CI_PROJECT_DIR}/build/python314
+ecc conda create \
+    --yes \
+    --prefix "${PYTHON314_ENV}" \
+    --channel conda-forge \
+    --override-channels \
+    python=3.14
+ecc "${PYTHON314_ENV}/bin/python" "${CI_PROJECT_DIR}/ci/verify_wheel.py" \
+    --wheel-dir "${WHEELHOUSE}" \
+    --test-dir "${CI_PROJECT_DIR}/wasppy/test"
 
 # Copy bundle parts up to parent directory to avoid artifact
 # having build directory

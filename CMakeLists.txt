@@ -52,9 +52,31 @@ SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 IF (NOT TRIBITS_PROCESSING_PACKAGE)
   # This CMakeLists.txt file is being processed as the wasp TriBITS projects's base
   # CMakeLists.txt file!  (See comments at bottom of this file.)
-  CMAKE_MINIMUM_REQUIRED(VERSION 3.20 FATAL_ERROR)
+  CMAKE_MINIMUM_REQUIRED(VERSION 3.26 FATAL_ERROR)
   INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/ProjectName.cmake")
   PROJECT(${PROJECT_NAME} NONE)
+  # A universal Python wheel must be backed by universal object files.  Set the
+  # architecture list before TriBITS enables C/C++ and creates any libraries;
+  # setting ARCHFLAGS only for setuptools produces a falsely tagged wheel.
+  IF(APPLE AND WASP_ENABLE_SWIG)
+    SET(
+      CMAKE_OSX_ARCHITECTURES
+      "arm64;x86_64"
+      CACHE STRING
+      "Architectures used by the universal2 WASP Python wheel"
+      FORCE
+    )
+    # macOS 11 is the first release supporting Apple Silicon.
+    IF(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+      SET(
+        CMAKE_OSX_DEPLOYMENT_TARGET
+        "11.0"
+        CACHE STRING
+        "Minimum macOS version for the universal2 WASP Python wheel"
+        FORCE
+      )
+    ENDIF()
+  ENDIF()
   # enable C++11 by default
   SET(wasp_ENABLE_CXX11 ON CACHE BOOL "Compile using the C++11 standard" FORCE)
   # disable generating HTML dependencies webpage and xml files

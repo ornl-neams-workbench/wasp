@@ -18,7 +18,7 @@ mac_clang_testing:
     paths:
       - "WASP*Darwin.sh"
       - waspConfig_install.cmake
-      - build/wasppy/dist/*.whl
+      - build/wasppy/wheelhouse/*.whl
 
 doc_gen:
   tags:
@@ -47,7 +47,7 @@ linux_gcc_testing:
   artifacts:
     paths:
       - "WASP*Linux.sh"
-      - build/wasppy/dist/*.whl
+      - build/wasppy/wheelhouse/*.whl
       - waspConfig_install.cmake
 
 linux_gcc_analysis:
@@ -71,5 +71,4 @@ windows_shared_vs2022_testing:
     - .\ci\vs2022_shared_test.bat
   artifacts:
     paths:
-      - build/wasppy/dist/*.whl
-
+      - build/wasppy/wheelhouse/*.whl

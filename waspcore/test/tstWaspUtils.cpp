@@ -20,6 +20,14 @@ TEST(utils, string_wilds)
     EXPECT_TRUE(wildcard_string_match("*c*d", "abcd"));            // Yes
     EXPECT_TRUE(wildcard_string_match("*?c*d", "abcd"));           // Yes
     EXPECT_TRUE(wildcard_string_match("*", "could_be_anything"));  // Yes
+    EXPECT_TRUE(wildcard_string_match("**a**b**", "xxaYYbzz"));
+    EXPECT_FALSE(wildcard_string_match("**a**b**c", "xxaYYbzz"));
+
+    // Exercise a pattern that caused exponential recursion in the previous
+    // implementation.
+    EXPECT_FALSE(wildcard_string_match(
+        "*a*a*a*a*a*a*a*a*a*a*b",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
 }
 
 TEST(utils, trim)

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added 
 - Filler numeric data array interpolator package. See [waspfiller/README.md](waspfiller/README.md).
 - Error recovery for included files that have syntax errors instead of discarding
+- Expanded SIREN XPath-inspired navigation, predicates, functions, arithmetic, set operations, wildcards, and documentation. See [waspsiren/README.md](waspsiren/README.md).
+- HIVE schema-path validation for supported SIREN expressions.
 
 ### Fixed
 - docprint markdown documentation generation utility handling of explicit schema value child nodes
@@ -345,4 +347,3 @@ the alternative boolean operator (7.gt.8=> 7.ERROR, instead of 7.gt.8=> 7 > 8)
 - utilities for listing input formats
 - utilities for validating input data
 - utilities for input format conversion
-

@@ -12,6 +12,9 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
 
 #include "waspcore/TreeNodePool.h"
 #include "waspsiren/SIRENParser.hpp"
@@ -132,11 +135,34 @@ class WASP_PUBLIC SIRENInterpreter : public Interpreter<S>
      * node.
      * bool TAdapter::has_parent()const - indicate the node has a parent.
      * std::string TAdapter::data()const - acquires the data of the node.
+     * bool TAdapter::operator==(const TAdapter&)const - identifies the same
+     * node when result sets are combined.
      */
     template<typename TAdapter>
     size_t evaluate(TAdapter& node, SIRENResultSet<TAdapter>& result) const;
 
   private:
+    struct ExpressionValue
+    {
+        enum Kind { BOOLEAN, NUMBER, STRING, NODE_SET } kind;
+        bool boolean;
+        double number;
+        std::string string;
+        std::vector<std::string> nodes;
+
+        ExpressionValue() : kind(BOOLEAN), boolean(false), number(0.0) {}
+    };
+
+    template<typename TAdapter>
+    void evaluate_selection(const NodeView& context,
+                            TAdapter& node,
+                            std::vector<TAdapter>& stage) const;
+
+    template<typename TAdapter>
+    void evaluate_selection_expression(const NodeView& context,
+                                       TAdapter& node,
+                                       std::vector<TAdapter>& stage) const;
+
     /**
      * @brief evaluate a node in a given context
      * @param context the context of the evaluation (any, child, predicated
@@ -148,9 +174,8 @@ class WASP_PUBLIC SIRENInterpreter : public Interpreter<S>
      * given context
      */
     template<typename TAdapter>
-    size_t evaluate(const NodeView&           context,
-                    SIRENResultSet<TAdapter>& result,
-                    std::vector<TAdapter>&    stage) const;
+    size_t evaluate(const NodeView& context,
+                    std::vector<TAdapter>& stage) const;
 
     /**
      * @brief search_child_name searches the staged node's children for
@@ -163,39 +188,32 @@ class WASP_PUBLIC SIRENInterpreter : public Interpreter<S>
     template<typename TAdapter>
     void search_child_name(const NodeView&        context,
                            std::vector<TAdapter>& stage) const;
-    /**
-     * @brief search_conditional_predicated_child searches the staged node's
-     * children for specifically named children with grandchild attributes
-     * @param context the context to search for ( the child's name pattern )
-     * @param stage the stage on which to search
-     * Loops through each staged node searching its children for specifically
-     * named child nodes
-     * that contain some predicated selection criteria. E.g., 'obj[name=fred]'
-     * reads select nodes named 'obj'
-     * only where the obj node has a child node 'name' with value 'fred'.
-     */
-    template<typename TAdapter>
-    void
-    search_conditional_predicated_child(const NodeView&        context,
-                                        std::vector<TAdapter>& stage) const;
-
-    /**
-     * @brief search_index_predicated_child searches the staged node's children
-     * for specifically named children at given indices
-     * @param context the context to search for ( the child's name pattern )
-     * @param stage the stage on which to search
-     * Loops through each staged node searching its children for specifically
-     * named child nodes
-     * that contain some predicated selection criteria. E.g., 'obj[1:10:3]'
-     * reads select nodes named 'obj'
-     * only where the obj node is at the 1-10 index and every 3rd
-     */
-    template<typename TAdapter>
-    void search_index_predicated_child(const NodeView&        context,
-                                       std::vector<TAdapter>& stage) const;
     template<typename TAdapter>
     void recursive_child_select(const NodeView&        context,
                                 std::vector<TAdapter>& stage) const;
+
+    template<typename TAdapter>
+    void search_siblings(const NodeView& context,
+                         std::vector<TAdapter>& stage,
+                         bool following) const;
+
+    template<typename TAdapter>
+    bool predicate_matches(const NodeView& context,
+                           TAdapter& node,
+                           std::size_t position,
+                           std::size_t size) const;
+
+    template<typename TAdapter>
+    ExpressionValue evaluate_expression(const NodeView& context,
+                                        TAdapter& node,
+                                        std::size_t position,
+                                        std::size_t size) const;
+
+    static bool expression_boolean(const ExpressionValue& value);
+    static bool expression_number(const ExpressionValue& value,
+                                  double& number);
+    static std::vector<std::string>
+    expression_strings(const ExpressionValue& value);
 };  // end of SIRENInterpreter class
 
 #include "waspsiren/SIRENInterpreter.i.h"

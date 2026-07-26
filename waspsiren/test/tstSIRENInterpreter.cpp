@@ -625,3 +625,59 @@ TEST(SIREN, selection_on_keyed_values)
         }
     }
 }
+
+TEST(SIREN, xpath_inspired_navigation_predicates_and_sets)
+{
+    DummyInterp<TreeNodePool<>> interp;
+    std::vector<std::size_t> items;
+    const char* values[] = {"alpha", "alphabet", "beta"};
+    for (std::size_t i = 0; i < 3; ++i)
+    {
+        std::size_t token_i = interp.token_count();
+        interp.push_token(values[i], wasp::STRING, i * 10);
+        std::size_t value_i = interp.push_leaf(wasp::VALUE, "name", token_i);
+        items.push_back(interp.push_parent(wasp::OBJECT, "item", {value_i}));
+    }
+    std::size_t root_i =
+        interp.push_parent(wasp::DOCUMENT_ROOT, "document", items);
+    NodeView document(root_i, interp);
+
+    auto result_count = [&document](const std::string& expression) -> std::size_t {
+        DefaultSIRENInterpreter siren;
+        if (!siren.parseString(expression))
+            return static_cast<std::size_t>(-1);
+        SIRENResultSet<NodeView> result;
+        return siren.evaluate(document, result);
+    };
+
+    EXPECT_EQ(3u, result_count("//name"));
+    EXPECT_EQ(2u, result_count("/item[1]/following-sibling::item"));
+    EXPECT_EQ(2u, result_count("/item[3]/preceding-sibling::item"));
+
+    EXPECT_EQ(3u, result_count("/item[name]"));
+    EXPECT_EQ(3u, result_count("/item[not(missing)]"));
+    EXPECT_EQ(0u, result_count("/item[missing = 'missing']"));
+    EXPECT_EQ(3u, result_count("/item['nonempty']"));
+    EXPECT_EQ(2u, result_count("/item[name != 'beta' and name]"));
+    EXPECT_EQ(2u, result_count("/item[name = 'alpha' or name = 'beta']"));
+    EXPECT_EQ(2u, result_count("/item[name != 'beta'][name]"));
+
+    EXPECT_EQ(3u, result_count("/item[count(name) = 1]"));
+    EXPECT_EQ(3u, result_count("/item[count(missing) = 0]"));
+    EXPECT_EQ(2u, result_count("/item[contains(name, 'alpha')]"));
+    EXPECT_EQ(3u, result_count("/item[contains('alpha', 'ph')]"));
+    EXPECT_EQ(2u, result_count("/item[starts-with(name, 'alpha')]"));
+    EXPECT_EQ(2u, result_count("/item[position() mod 2 = 1]"));
+    EXPECT_EQ(1u, result_count("/item[position() = last()]"));
+    EXPECT_EQ(1u, result_count("/item[position() - 1 = 1]"));
+    EXPECT_EQ(1u, result_count("/item[position() * 2 = 4]"));
+    EXPECT_EQ(1u, result_count("/item[position() div 2 > 1]"));
+    EXPECT_EQ(2u, result_count("/item[position() >= 2]"));
+    EXPECT_EQ(2u, result_count("/item[position() <= 2]"));
+    EXPECT_EQ(1u, result_count("/item[position() < 2]"));
+    EXPECT_EQ(3u, result_count("/item[name/..]"));
+
+    EXPECT_EQ(2u, result_count("/item[1] | /item[3]"));
+    EXPECT_EQ(1u, result_count("/item intersect /item[2]"));
+    EXPECT_EQ(2u, result_count("/item except /item[2]"));
+}

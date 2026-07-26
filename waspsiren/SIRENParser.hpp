@@ -1,4 +1,4 @@
-// A Bison parser, made by GNU Bison 3.7.6.
+// A Bison parser, made by GNU Bison 3.8.2.
 
 // Skeleton interface for Bison LALR(1) parsers in C++
 
@@ -45,7 +45,7 @@
 #ifndef YY_YY_SIRENPARSER_HPP_INCLUDED
 # define YY_YY_SIRENPARSER_HPP_INCLUDED
 // "%code requires" blocks.
-#line 10 "SIRENParser.bison"
+#line 7 "SIRENParser.bison"
 
 #include <memory>
 #include "waspcore/utils.h"
@@ -122,12 +122,18 @@
 # define YY_USE(E) /* empty */
 #endif
 
-#if defined __GNUC__ && ! defined __ICC && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
 /* Suppress an incorrect diagnostic about yylval being uninitialized.  */
-# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                            \
+#if defined __GNUC__ && ! defined __ICC && 406 <= __GNUC__ * 100 + __GNUC_MINOR__
+# if __GNUC__ * 100 + __GNUC_MINOR__ < 407
+#  define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                           \
+    _Pragma ("GCC diagnostic push")                                     \
+    _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")
+# else
+#  define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                           \
     _Pragma ("GCC diagnostic push")                                     \
     _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")              \
     _Pragma ("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
+# endif
 # define YY_IGNORE_MAYBE_UNINITIALIZED_END      \
     _Pragma ("GCC diagnostic pop")
 #else
@@ -179,9 +185,9 @@
 # define YYDEBUG 0
 #endif
 
-#line 33 "SIRENParser.bison"
+#line 18 "SIRENParser.bison"
 namespace wasp {
-#line 185 "SIRENParser.hpp"
+#line 191 "SIRENParser.hpp"
 
 
 
@@ -190,22 +196,28 @@ namespace wasp {
   class WASP_PUBLIC SIRENParser
   {
   public:
-#ifndef YYSTYPE
+#ifdef YYSTYPE
+# ifdef __GNUC__
+#  pragma GCC message "bison: do not #define YYSTYPE in C++, use %define api.value.type"
+# endif
+    typedef YYSTYPE value_type;
+#else
     /// Symbol semantic values.
-    union semantic_type
+    union value_type
     {
-#line 64 "SIRENParser.bison"
+#line 36 "SIRENParser.bison"
 
-        std::size_t token_index;
-        std::size_t node_index;
-        std::vector<size_t>* node_indices;
+    std::size_t token_index;
+    std::size_t node_index;
+    std::vector<std::size_t>* node_indices;
 
-#line 204 "SIRENParser.hpp"
+#line 215 "SIRENParser.hpp"
 
     };
-#else
-    typedef YYSTYPE semantic_type;
 #endif
+    /// Backward compatibility (Bison 3.8).
+    typedef value_type semantic_type;
+
     /// Symbol locations.
     typedef location location_type;
 
@@ -236,46 +248,52 @@ namespace wasp {
     END = 0,                       // "end of file"
     YYerror = 256,                 // error
     YYUNDEF = 257,                 // "invalid token"
-    EOL = 258,                     // "end of line"
-    ANY = 259,                     // "//"
-    MINUS = 260,                   // "-"
-    LPAREN = 261,                  // "("
-    RPAREN = 262,                  // ")"
-    LBRACKET = 263,                // "["
-    RBRACKET = 264,                // "]"
-    LBRACE = 265,                  // "{"
-    RBRACE = 266,                  // "}"
-    COMMA = 267,                   // ","
-    COLON = 268,                   // ":"
-    GTE = 269,                     // ">="
-    LT = 270,                      // "<"
-    GT = 271,                      // ">"
-    LTE = 272,                     // "<="
-    NEQ = 273,                     // "!="
-    EQ = 274,                      // "="
-    AND = 275,                     // "&&"
-    PARENT = 276,                  // ".."
-    OR = 277,                      // "||"
-    BANG = 278,                    // "!"
-    MULTIPLY = 279,                // "*"
-    DIVIDE = 280,                  // "division operator"
-    SEPARATOR = 281,               // "path separator"
-    PLUS = 282,                    // "+"
-    EXPONENT = 283,                // "^"
-    INTEGER = 284,                 // "integer"
-    DOUBLE = 285,                  // "double"
-    DECL = 286,                    // "decl"
-    QSTRING = 287,                 // "quoted string"
-    ASSIGN = 288,                  // ASSIGN
-    UMINUS = 289,                  // UMINUS
-    UNOT = 290                     // UNOT
+    ANY = 258,                     // "//"
+    MINUS = 259,                   // "-"
+    LPAREN = 260,                  // "("
+    RPAREN = 261,                  // ")"
+    LBRACKET = 262,                // "["
+    RBRACKET = 263,                // "]"
+    COMMA = 264,                   // ","
+    COLON = 265,                   // ":"
+    GTE = 266,                     // ">="
+    LT = 267,                      // "<"
+    GT = 268,                      // ">"
+    LTE = 269,                     // "<="
+    NEQ = 270,                     // "!="
+    EQ = 271,                      // "="
+    AND = 272,                     // "&&"
+    PARENT = 273,                  // ".."
+    OR = 274,                      // "||"
+    BANG = 275,                    // "!"
+    MULTIPLY = 276,                // "*"
+    DIVIDE = 277,                  // "div"
+    SEPARATOR = 278,               // "/"
+    PLUS = 279,                    // "+"
+    EXPONENT = 280,                // "^"
+    MOD = 281,                     // "mod"
+    UNION_OP = 282,                // "|"
+    INTERSECT_OP = 283,            // "intersect"
+    EXCEPT_OP = 284,               // "except"
+    FOLLOWING_AXIS = 285,          // "following-sibling::"
+    PRECEDING_AXIS = 286,          // "preceding-sibling::"
+    POSITION_FN = 287,             // "position"
+    LAST_FN = 288,                 // "last"
+    COUNT_FN = 289,                // "count"
+    CONTAINS_FN = 290,             // "contains"
+    STARTS_WITH_FN = 291,          // "starts-with"
+    NOT_FN = 292,                  // "not"
+    INTEGER = 293,                 // "integer"
+    DOUBLE = 294,                  // "double"
+    DECL = 295,                    // "decl"
+    QSTRING = 296                  // "quoted string"
       };
       /// Backward compatibility alias (Bison 3.6).
       typedef token_kind_type yytokentype;
     };
 
     /// Token kind, as returned by yylex.
-    typedef token::yytokentype token_kind_type;
+    typedef token::token_kind_type token_kind_type;
 
     /// Backward compatibility alias (Bison 3.6).
     typedef token_kind_type token_type;
@@ -285,85 +303,114 @@ namespace wasp {
     {
       enum symbol_kind_type
       {
-        YYNTOKENS = 37, ///< Number of tokens.
+        YYNTOKENS = 42, ///< Number of tokens.
         S_YYEMPTY = -2,
         S_YYEOF = 0,                             // "end of file"
         S_YYerror = 1,                           // error
         S_YYUNDEF = 2,                           // "invalid token"
-        S_EOL = 3,                               // "end of line"
-        S_ANY = 4,                               // "//"
-        S_MINUS = 5,                             // "-"
-        S_LPAREN = 6,                            // "("
-        S_RPAREN = 7,                            // ")"
-        S_LBRACKET = 8,                          // "["
-        S_RBRACKET = 9,                          // "]"
-        S_LBRACE = 10,                           // "{"
-        S_RBRACE = 11,                           // "}"
-        S_COMMA = 12,                            // ","
-        S_COLON = 13,                            // ":"
-        S_GTE = 14,                              // ">="
-        S_LT = 15,                               // "<"
-        S_GT = 16,                               // ">"
-        S_LTE = 17,                              // "<="
-        S_NEQ = 18,                              // "!="
-        S_EQ = 19,                               // "="
-        S_AND = 20,                              // "&&"
-        S_PARENT = 21,                           // ".."
-        S_OR = 22,                               // "||"
-        S_BANG = 23,                             // "!"
-        S_MULTIPLY = 24,                         // "*"
-        S_DIVIDE = 25,                           // "division operator"
-        S_SEPARATOR = 26,                        // "path separator"
-        S_PLUS = 27,                             // "+"
-        S_EXPONENT = 28,                         // "^"
-        S_INTEGER = 29,                          // "integer"
-        S_DOUBLE = 30,                           // "double"
-        S_DECL = 31,                             // "decl"
-        S_QSTRING = 32,                          // "quoted string"
-        S_ASSIGN = 33,                           // ASSIGN
-        S_UMINUS = 34,                           // UMINUS
-        S_UNOT = 35,                             // UNOT
-        S_36_exp_ = 36,                          // "exp"
-        S_YYACCEPT = 37,                         // $accept
-        S_any_selection = 38,                    // any_selection
-        S_parent_selection = 39,                 // parent_selection
-        S_colon = 40,                            // colon
-        S_multiply = 41,                         // multiply
-        S_divide = 42,                           // divide
-        S_separator = 43,                        // separator
-        S_multiply_divide = 44,                  // multiply_divide
-        S_plus = 45,                             // plus
-        S_minus = 46,                            // minus
-        S_exponent = 47,                         // exponent
-        S_boolean_numeric_op = 48,               // boolean_numeric_op
-        S_eq = 49,                               // eq
-        S_neq = 50,                              // neq
-        S_gte = 51,                              // gte
-        S_gt = 52,                               // gt
-        S_lte = 53,                              // lte
-        S_lt = 54,                               // lt
-        S_boolean_logic_op = 55,                 // boolean_logic_op
-        S_and = 56,                              // and
-        S_or = 57,                               // or
+        S_ANY = 3,                               // "//"
+        S_MINUS = 4,                             // "-"
+        S_LPAREN = 5,                            // "("
+        S_RPAREN = 6,                            // ")"
+        S_LBRACKET = 7,                          // "["
+        S_RBRACKET = 8,                          // "]"
+        S_COMMA = 9,                             // ","
+        S_COLON = 10,                            // ":"
+        S_GTE = 11,                              // ">="
+        S_LT = 12,                               // "<"
+        S_GT = 13,                               // ">"
+        S_LTE = 14,                              // "<="
+        S_NEQ = 15,                              // "!="
+        S_EQ = 16,                               // "="
+        S_AND = 17,                              // "&&"
+        S_PARENT = 18,                           // ".."
+        S_OR = 19,                               // "||"
+        S_BANG = 20,                             // "!"
+        S_MULTIPLY = 21,                         // "*"
+        S_DIVIDE = 22,                           // "div"
+        S_SEPARATOR = 23,                        // "/"
+        S_PLUS = 24,                             // "+"
+        S_EXPONENT = 25,                         // "^"
+        S_MOD = 26,                              // "mod"
+        S_UNION_OP = 27,                         // "|"
+        S_INTERSECT_OP = 28,                     // "intersect"
+        S_EXCEPT_OP = 29,                        // "except"
+        S_FOLLOWING_AXIS = 30,                   // "following-sibling::"
+        S_PRECEDING_AXIS = 31,                   // "preceding-sibling::"
+        S_POSITION_FN = 32,                      // "position"
+        S_LAST_FN = 33,                          // "last"
+        S_COUNT_FN = 34,                         // "count"
+        S_CONTAINS_FN = 35,                      // "contains"
+        S_STARTS_WITH_FN = 36,                   // "starts-with"
+        S_NOT_FN = 37,                           // "not"
+        S_INTEGER = 38,                          // "integer"
+        S_DOUBLE = 39,                           // "double"
+        S_DECL = 40,                             // "decl"
+        S_QSTRING = 41,                          // "quoted string"
+        S_YYACCEPT = 42,                         // $accept
+        S_any_separator = 43,                    // any_separator
+        S_separator = 44,                        // separator
+        S_parent_step = 45,                      // parent_step
+        S_lparen = 46,                           // lparen
+        S_rparen = 47,                           // rparen
+        S_lbracket = 48,                         // lbracket
+        S_rbracket = 49,                         // rbracket
+        S_comma = 50,                            // comma
+        S_colon = 51,                            // colon
+        S_plus = 52,                             // plus
+        S_minus = 53,                            // minus
+        S_multiply = 54,                         // multiply
+        S_divide = 55,                           // divide
+        S_modulus = 56,                          // modulus
+        S_exponent = 57,                         // exponent
         S_unary_not = 58,                        // unary_not
-        S_lparen = 59,                           // lparen
-        S_rparen = 60,                           // rparen
-        S_lbracket = 61,                         // lbracket
-        S_rbracket = 62,                         // rbracket
-        S_ANY_STRING = 63,                       // ANY_STRING
-        S_PRIMITIVE = 64,                        // PRIMITIVE
-        S_integer = 65,                          // integer
-        S_value = 66,                            // value
-        S_component = 67,                        // component
-        S_exp = 68,                              // exp
-        S_decl = 69,                             // decl
-        S_key_declaration = 70,                  // key_declaration
-        S_tag = 71,                              // tag
-        S_keyedvalue = 72,                       // keyedvalue
-        S_indices_selection = 73,                // indices_selection
-        S_relative_selection = 74,               // relative_selection
-        S_root_based_selection = 75,             // root_based_selection
-        S_start = 76                             // start
+        S_eq = 59,                               // eq
+        S_neq = 60,                              // neq
+        S_gte = 61,                              // gte
+        S_gt = 62,                               // gt
+        S_lte = 63,                              // lte
+        S_lt = 64,                               // lt
+        S_and = 65,                              // and
+        S_or = 66,                               // or
+        S_comparison_operator = 67,              // comparison_operator
+        S_union_operator = 68,                   // union_operator
+        S_intersect_operator = 69,               // intersect_operator
+        S_except_operator = 70,                  // except_operator
+        S_path_name = 71,                        // path_name
+        S_predicate_name = 72,                   // predicate_name
+        S_wildcard_name = 73,                    // wildcard_name
+        S_axis_step = 74,                        // axis_step
+        S_predicate_axis_step = 75,              // predicate_axis_step
+        S_path_base = 76,                        // path_base
+        S_predicate_path_base = 77,              // predicate_path_base
+        S_predicate_clause = 78,                 // predicate_clause
+        S_path_step = 79,                        // path_step
+        S_predicate_path_step = 80,              // predicate_path_step
+        S_relative_path = 81,                    // relative_path
+        S_predicate_relative_path = 82,          // predicate_relative_path
+        S_absolute_path = 83,                    // absolute_path
+        S_integer_index = 84,                    // integer_index
+        S_index_range = 85,                      // index_range
+        S_numeric_value = 86,                    // numeric_value
+        S_string_value = 87,                     // string_value
+        S_function_name = 88,                    // function_name
+        S_function_arguments = 89,               // function_arguments
+        S_function_call = 90,                    // function_call
+        S_predicate_primary = 91,                // predicate_primary
+        S_predicate_power = 92,                  // predicate_power
+        S_predicate_unary = 93,                  // predicate_unary
+        S_predicate_multiplicative = 94,         // predicate_multiplicative
+        S_predicate_additive = 95,               // predicate_additive
+        S_predicate_comparison = 96,             // predicate_comparison
+        S_predicate_and = 97,                    // predicate_and
+        S_predicate_or = 98,                     // predicate_or
+        S_predicate_expression = 99,             // predicate_expression
+        S_predicate_content = 100,               // predicate_content
+        S_selection = 101,                       // selection
+        S_intersection_expression = 102,         // intersection_expression
+        S_union_expression = 103,                // union_expression
+        S_selection_expression = 104,            // selection_expression
+        S_start = 105                            // start
       };
     };
 
@@ -386,7 +433,7 @@ namespace wasp {
       typedef Base super_type;
 
       /// Default constructor.
-      basic_symbol ()
+      basic_symbol () YY_NOEXCEPT
         : value ()
         , location ()
       {}
@@ -408,7 +455,7 @@ namespace wasp {
 
       /// Constructor for symbols with semantic value.
       basic_symbol (typename Base::kind_type t,
-                    YY_RVREF (semantic_type) v,
+                    YY_RVREF (value_type) v,
                     YY_RVREF (location_type) l);
 
       /// Destroy the symbol.
@@ -416,6 +463,8 @@ namespace wasp {
       {
         clear ();
       }
+
+
 
       /// Destroy contents, and record that is empty.
       void clear () YY_NOEXCEPT
@@ -439,7 +488,7 @@ namespace wasp {
       void move (basic_symbol& s);
 
       /// The semantic value.
-      semantic_type value;
+      value_type value;
 
       /// The location.
       location_type location;
@@ -454,22 +503,24 @@ namespace wasp {
     /// Type access provider for token (enum) based symbols.
     struct by_kind
     {
-      /// Default constructor.
-      by_kind ();
-
-#if 201103L <= YY_CPLUSPLUS
-      /// Move constructor.
-      by_kind (by_kind&& that);
-#endif
-
-      /// Copy constructor.
-      by_kind (const by_kind& that);
-
       /// The symbol kind as needed by the constructor.
       typedef token_kind_type kind_type;
 
+      /// Default constructor.
+      by_kind () YY_NOEXCEPT;
+
+#if 201103L <= YY_CPLUSPLUS
+      /// Move constructor.
+      by_kind (by_kind&& that) YY_NOEXCEPT;
+#endif
+
+      /// Copy constructor.
+      by_kind (const by_kind& that) YY_NOEXCEPT;
+
       /// Constructor from (external) token numbers.
-      by_kind (kind_type t);
+      by_kind (kind_type t) YY_NOEXCEPT;
+
+
 
       /// Record that this symbol is empty.
       void clear () YY_NOEXCEPT;
@@ -497,7 +548,7 @@ namespace wasp {
     {};
 
     /// Build a parser object.
-    SIRENParser (class AbstractInterpreter& interpreter_yyarg, std::istream &input_stream_yyarg, std::shared_ptr<class SIRENLexerImpl> lexer_yyarg);
+    SIRENParser (class AbstractInterpreter& interpreter_yyarg, std::istream& input_stream_yyarg, std::shared_ptr<class SIRENLexerImpl> lexer_yyarg);
     virtual ~SIRENParser ();
 
 #if 201103L <= YY_CPLUSPLUS
@@ -571,7 +622,7 @@ namespace wasp {
 
 
     /// Stored state numbers (used for stacks).
-    typedef signed char state_type;
+    typedef unsigned char state_type;
 
     /// The arguments of the error message.
     int yy_syntax_error_arguments_ (const context& yyctx,
@@ -587,19 +638,19 @@ namespace wasp {
 
     /// Whether the given \c yypact_ value indicates a defaulted state.
     /// \param yyvalue   the value to check
-    static bool yy_pact_value_is_default_ (int yyvalue);
+    static bool yy_pact_value_is_default_ (int yyvalue) YY_NOEXCEPT;
 
     /// Whether the given \c yytable_ value indicates a syntax error.
     /// \param yyvalue   the value to check
-    static bool yy_table_value_is_error_ (int yyvalue);
+    static bool yy_table_value_is_error_ (int yyvalue) YY_NOEXCEPT;
 
     static const signed char yypact_ninf_;
     static const signed char yytable_ninf_;
 
     /// Convert a scanner token kind \a t to a symbol kind.
     /// In theory \a t should be a token_kind_type, but character literals
-    /// are valid, yet not members of the token_type enum.
-    static symbol_kind_type yytranslate_ (int t);
+    /// are valid, yet not members of the token_kind_type enum.
+    static symbol_kind_type yytranslate_ (int t) YY_NOEXCEPT;
 
     /// Convert the symbol name \a n to a form suitable for a diagnostic.
     static std::string yytnamerr_ (const char *yystr);
@@ -611,7 +662,7 @@ namespace wasp {
     // Tables.
     // YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
     // STATE-NUM.
-    static const signed char yypact_[];
+    static const short yypact_[];
 
     // YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
     // Performed when YYTABLE does not specify something else to do.  Zero
@@ -622,23 +673,23 @@ namespace wasp {
     static const signed char yypgoto_[];
 
     // YYDEFGOTO[NTERM-NUM].
-    static const signed char yydefgoto_[];
+    static const unsigned char yydefgoto_[];
 
     // YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
     // positive, shift that token.  If negative, reduce the rule whose
     // number is the opposite.  If YYTABLE_NINF, syntax error.
-    static const signed char yytable_[];
+    static const short yytable_[];
 
-    static const signed char yycheck_[];
+    static const short yycheck_[];
 
-    // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
-    // symbol of state STATE-NUM.
+    // YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
+    // state STATE-NUM.
     static const signed char yystos_[];
 
-    // YYR1[YYN] -- Symbol number of symbol that rule YYN derives.
+    // YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.
     static const signed char yyr1_[];
 
-    // YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.
+    // YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.
     static const signed char yyr2_[];
 
 
@@ -737,7 +788,7 @@ namespace wasp {
       typedef typename S::size_type size_type;
       typedef typename std::ptrdiff_t index_type;
 
-      stack (size_type n = 200)
+      stack (size_type n = 200) YY_NOEXCEPT
         : seq_ (n)
       {}
 
@@ -816,7 +867,7 @@ namespace wasp {
       class slice
       {
       public:
-        slice (const stack& stack, index_type range)
+        slice (const stack& stack, index_type range) YY_NOEXCEPT
           : stack_ (stack)
           , range_ (range)
         {}
@@ -866,28 +917,28 @@ namespace wasp {
     void yypush_ (const char* m, state_type s, YY_MOVE_REF (symbol_type) sym);
 
     /// Pop \a n symbols from the stack.
-    void yypop_ (int n = 1);
+    void yypop_ (int n = 1) YY_NOEXCEPT;
 
     /// Constants.
     enum
     {
-      yylast_ = 120,     ///< Last index in yytable_.
-      yynnts_ = 40,  ///< Number of nonterminal symbols.
-      yyfinal_ = 20 ///< Termination state number.
+      yylast_ = 215,     ///< Last index in yytable_.
+      yynnts_ = 64,  ///< Number of nonterminal symbols.
+      yyfinal_ = 41 ///< Termination state number.
     };
 
 
     // User arguments.
     class AbstractInterpreter& interpreter;
-    std::istream &input_stream;
+    std::istream& input_stream;
     std::shared_ptr<class SIRENLexerImpl> lexer;
 
   };
 
 
-#line 33 "SIRENParser.bison"
+#line 18 "SIRENParser.bison"
 } // wasp
-#line 891 "SIRENParser.hpp"
+#line 942 "SIRENParser.hpp"
 
 
 

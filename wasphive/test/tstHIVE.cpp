@@ -178,6 +178,147 @@ TEST(HIVE, ExistsIn)
 {
     do_test("ExistsIn");
 }
+
+/**
+ * Exercise advanced SIREN expressions in an ExistsIn rule from schema
+ * creation through input validation. The passing input selects allowed values
+ * with predicates, functions, result-set difference, wildcard names, and a
+ * sibling axis. The failing input verifies that each excluded value produces
+ * a diagnostic for the corresponding input element.
+ */
+TEST(HIVE, ExistsInWithSIRENExpressions)
+{
+    const std::string schema_text = R"SON(
+test{
+    definition{ enabled{} name{} }
+    group{ member{ name{} } }
+    phase1{ name{} }
+    phaseA{ name{} }
+    phase10{ name{} }
+    marker{}
+    choice{ name{} }
+    filtered{
+        value{
+            ExistsIn=[
+                "../../definition[enabled/value = 'true']/name/value"
+            ]
+        }
+    }
+    last_definition{
+        value{
+            ExistsIn=[
+                "../../definition[position() = last()]/name/value"
+            ]
+        }
+    }
+    available{
+        value{
+            ExistsIn=[
+                "../../definition/name/value except ../../definition[enabled/value = 'false']/name/value"
+            ]
+        }
+    }
+    populated_group{
+        value{
+            ExistsIn=[
+                "../../group[count(member) >= 2]/member/name/value"
+            ]
+        }
+    }
+    prefixed{
+        value{
+            ExistsIn=[
+                "../../definition[starts-with(name/value, 'a')]/name/value"
+            ]
+        }
+    }
+    single_character_wildcard{
+        value{
+            ExistsIn=[ "../../phase?/name/value" ]
+        }
+    }
+    following_choice{
+        value{
+            ExistsIn=[
+                "../../marker/following-sibling::choice/name/value"
+            ]
+        }
+    }
+}
+)SON";
+
+    const std::string passing_input = R"SON(
+test{
+    definition{ enabled=true name=alpha }
+    definition{ enabled=false name=beta }
+    group{ member{ name=solo } }
+    group{ member{ name=team_a } member{ name=team_b } }
+    phase1{ name=first }
+    phaseA{ name=lettered }
+    phase10{ name=tenth }
+    marker=begin
+    choice{ name=selected }
+    filtered=alpha
+    last_definition=beta
+    available=alpha
+    populated_group=team_b
+    prefixed=alpha
+    single_character_wildcard=lettered
+    following_choice=selected
+}
+)SON";
+
+    const std::string failing_input = R"SON(
+test{
+    definition{ enabled=true name=alpha }
+    definition{ enabled=false name=beta }
+    group{ member{ name=solo } }
+    group{ member{ name=team_a } member{ name=team_b } }
+    phase1{ name=first }
+    phaseA{ name=lettered }
+    phase10{ name=tenth }
+    marker=begin
+    choice{ name=selected }
+    filtered=beta
+    last_definition=alpha
+    available=beta
+    populated_group=solo
+    prefixed=beta
+    single_character_wildcard=tenth
+    following_choice=alpha
+}
+)SON";
+
+    DefaultSONInterpreter schema_interpreter;
+    DefaultSONInterpreter passing_input_interpreter;
+    DefaultSONInterpreter failing_input_interpreter;
+    ASSERT_TRUE(schema_interpreter.parseString(schema_text));
+    ASSERT_TRUE(passing_input_interpreter.parseString(passing_input));
+    ASSERT_TRUE(failing_input_interpreter.parseString(failing_input));
+
+    HIVE                     hive;
+    std::vector<std::string> errors;
+    SONNodeView schema = schema_interpreter.root();
+    SONNodeView input  = passing_input_interpreter.root();
+    EXPECT_TRUE(hive.validate(schema, input, errors)) << HIVE::combine(errors);
+
+    errors.clear();
+    input = failing_input_interpreter.root();
+    EXPECT_FALSE(hive.validate(schema, input, errors));
+    const std::string messages = HIVE::combine(errors);
+    EXPECT_NE(std::string::npos, messages.find("filtered value \"beta\""));
+    EXPECT_NE(std::string::npos,
+              messages.find("last_definition value \"alpha\""));
+    EXPECT_NE(std::string::npos, messages.find("available value \"beta\""));
+    EXPECT_NE(std::string::npos,
+              messages.find("populated_group value \"solo\""));
+    EXPECT_NE(std::string::npos, messages.find("prefixed value \"beta\""));
+    EXPECT_NE(std::string::npos,
+              messages.find("single_character_wildcard value \"tenth\""));
+    EXPECT_NE(std::string::npos,
+              messages.find("following_choice value \"alpha\""));
+}
+
 TEST(HIVE, Extras)
 {
     do_test("Extras");

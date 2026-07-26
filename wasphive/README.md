@@ -1,6 +1,6 @@
 # HIVE
 
-The Hierarchical Input Validation Engine (HIVE) uses a set of rules to describe the schema of an application's input. These rules describe scalar and relational input restrictions. They can use a [Sequence Input Retrieval Engine (SIREN) Expression](/waspsiren/README.md#sequence-input-retrieval-engine-siren) path to define restrictions related to relative sets of input elements. Schema files for HIVE are written using the [Standard Object Notation (SON) Syntax](/waspson/README.md#standard-object-notation-son). Applications use HIVE and schema files to facilitate input validation, introspection, and input creation assistance. SIREN Expressions, SON Syntax, and Template Files are beyond the scope of this section.
+The Hierarchical Input Validation Engine (HIVE) uses a set of rules to describe the schema of an application's input. These rules describe scalar and relational input restrictions. They can use a [Sequence Input Retrieval Engine (SIREN) Expression](/waspsiren/README.md#sequence-input-retrieval-engine-siren) path to define restrictions related to relative sets of input elements. Schema files for HIVE are written using the [Standard Object Notation (SON) Syntax](/waspson/README.md#standard-object-notation-son). Applications use HIVE and schema files to facilitate input validation, introspection, and input creation assistance. The complete SIREN expression language, SON syntax, and template files are documented separately.
 
 The section layout is as follows:
 
@@ -11,6 +11,75 @@ The section layout is as follows:
 * The [Input Assistance Details](#input-assistance-details) section provides descriptions and details of the rules that may be used by input generation applications for input assistance and autocompletion.
 
 In this document, the term ***input*** is used when referring to a file that is to be validated, and ***schema*** is used when referring to the file that describes the definition and rules against which the input is validated. Currently, schema files must be written in the SON syntax, which is used herein for example input files.
+
+## **Using SIREN Expressions in HIVE Lookup Paths**
+
+Rules that accept input lookup paths, including `ExistsIn`, `NotExistsIn`, the
+`Child*` rules, and `InputChoices` `PATH` entries, can use SIREN predicates,
+functions, axes, wildcards, and result-set operators. HIVE evaluates the
+expression relative to the input element being validated and applies the rule
+to the selected nodes.
+
+SON scalar elements contain a child named `value`. Select that child when a
+predicate needs the scalar text or when the final result must contain scalar
+values. For example, this rule allows `use` to refer only to an enabled
+definition:
+
+```javascript
+test{
+    definition{
+        enabled{}
+        name{}
+    }
+    use{
+        value{
+            ExistsIn=[
+                "../../definition[enabled/value = 'true']/name/value"
+            ]
+        }
+    }
+}
+```
+
+This input passes because `alpha` is selected by the predicate:
+
+```javascript
+test{
+    definition{ enabled=true  name=alpha }
+    definition{ enabled=false name=beta  }
+    use=alpha
+}
+```
+
+Changing `use` to `beta` fails because the disabled definition is excluded
+from the lookup set.
+
+Additional lookup-path examples include:
+
+| Expression | Selected input |
+| --- | --- |
+| `../../definition[position() = last()]/name/value` | The last definition's name |
+| `../../definition/name/value except ../../definition[enabled/value = 'false']/name/value` | Names not belonging to disabled definitions |
+| `../../group[count(member) >= 2]/member/name/value` | Member names from groups containing at least two members |
+| `../../definition[starts-with(name/value, 'prod')]/name/value` | Definition names beginning with `prod` |
+| `../../phase?/name/value` | Names below `phase` elements with exactly one additional character, such as `phase1`, but not `phase10` |
+| `../../group//name/value` | Name values at any depth below a group |
+| `../../marker/following-sibling::choice/name/value` | Choice names occurring after a sibling named `marker` |
+
+Predicate string comparisons and wildcard matching are case-sensitive.
+Subsequent HIVE rule comparisons may differ; for example, `ExistsIn` compares
+the selected values case-insensitively. `position()` and `last()` are evaluated
+for the candidates in each current context. `intersect` and `except` compare
+node identity, not equal text, so both sides must select overlapping nodes for
+those operators to remove or retain anything.
+
+Functions and arithmetic compute values for predicates but do not produce
+standalone values for HIVE. For example, `count(member)` can filter `group`
+nodes, while a top-level lookup such as `count(../../group)` cannot supply a
+number to a HIVE rule. When `contains()`, `starts-with()`, or arithmetic receives
+a path that selects multiple nodes, it uses the first selected value. See the
+[SIREN documentation](/waspsiren/README.md#sequence-input-retrieval-engine-siren)
+for the complete syntax and precedence rules.
 
 
 ## **Input Validation Rules Summary**

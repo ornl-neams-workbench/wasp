@@ -66,6 +66,13 @@ TEST(HIVE, definition_strided)
     }
 }
 
+/**
+ * Verify that InputDefinition validates advanced SIREN paths against the
+ * schema hierarchy. This covers predicates, descendant and sibling
+ * navigation, wildcards, result-set operators, invalid expressions, reuse of
+ * a cached expression in different contexts, and traversal of deep and wide
+ * schemas.
+ */
 TEST(HIVE, definition_validates_siren_paths)
 {
     std::stringstream schema_text;

@@ -76,6 +76,26 @@ IF (NOT TRIBITS_PROCESSING_PACKAGE)
         FORCE
       )
     ENDIF()
+    # Conda cross-toolchains can select a GNU-format archiver that accepts
+    # universal object files but produces archives Apple's linker cannot read.
+    # Select the native archive tools before TriBITS enables C and C++, while
+    # preserving an explicit toolchain choice from the caller.
+    IF(NOT DEFINED CMAKE_AR AND EXISTS "/usr/bin/ar")
+      SET(
+        CMAKE_AR
+        "/usr/bin/ar"
+        CACHE FILEPATH
+        "Archiver used for macOS universal libraries"
+      )
+    ENDIF()
+    IF(NOT DEFINED CMAKE_RANLIB AND EXISTS "/usr/bin/ranlib")
+      SET(
+        CMAKE_RANLIB
+        "/usr/bin/ranlib"
+        CACHE FILEPATH
+        "Archive indexer used for macOS universal libraries"
+      )
+    ENDIF()
   ENDIF()
   # enable C++11 by default
   SET(wasp_ENABLE_CXX11 ON CACHE BOOL "Compile using the C++11 standard" FORCE)

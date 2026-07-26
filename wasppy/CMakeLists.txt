@@ -206,14 +206,20 @@ IF(WASP_ENABLE_SWIG)
     GET_FILENAME_COMPONENT(WASP_COMPILER_PREFIX "${WASP_COMPILER_BIN_DIR}" DIRECTORY)
     SET(WASP_COMPILER_LIB_DIR "${WASP_COMPILER_PREFIX}/lib")
     IF(EXISTS "${WASP_COMPILER_LIB_DIR}/libc++.dylib")
-      FIND_PROGRAM(WASP_INSTALL_NAME_TOOL install_name_tool REQUIRED)
+      SET_PROPERTY(
+        TARGET _wasp
+        APPEND
+        PROPERTY LINK_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/remove_macos_rpath.cmake"
+      )
       ADD_CUSTOM_COMMAND(
         TARGET _wasp
         POST_BUILD
         COMMAND
-          "${WASP_INSTALL_NAME_TOOL}"
-          -delete_rpath "${WASP_COMPILER_LIB_DIR}"
-          "$<TARGET_FILE:_wasp>"
+          "${CMAKE_COMMAND}"
+          "-DINPUT_FILE=$<TARGET_FILE:_wasp>"
+          "-DRPATH=${WASP_COMPILER_LIB_DIR}"
+          -P "${CMAKE_CURRENT_SOURCE_DIR}/remove_macos_rpath.cmake"
         COMMENT "Removing the compiler environment rpath from _wasp"
         VERBATIM
       )

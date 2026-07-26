@@ -86,7 +86,7 @@ void SIRENInterpreter<S>::evaluate_selection_expression(
     }
     else if (context.type() == wasp::INTERSECT)
     {
-        stage.reserve(std::min(left.size(), right.size()));
+        stage.reserve((std::min)(left.size(), right.size()));
         for (std::size_t i = 0; i < left.size(); ++i)
             if (std::find(right.begin(), right.end(), left[i]) != right.end())
                 stage.push_back(left[i]);

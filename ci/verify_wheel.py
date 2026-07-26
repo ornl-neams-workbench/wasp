@@ -35,18 +35,31 @@ def find_wheel(wheel_dir):
 
 
 def verify_tags(wheel):
-    """Ensure the filename and embedded wheel tags agree on cp310-abi3."""
+    """Ensure the filename and embedded wheel tags agree on cp310-abi3.
+
+    A wheel filename compresses multiple Python, ABI, or platform tags by
+    joining each group with dots. The WHEEL metadata stores every expanded
+    combination as a separate ``Tag:`` entry.
+    """
     try:
         _, _, python_tag, abi_tag, platform_tag = wheel.stem.rsplit("-", 4)
     except ValueError as error:
         raise RuntimeError(f"Invalid wheel filename: {wheel.name}") from error
 
-    if (python_tag, abi_tag) != ("cp310", "abi3"):
+    python_tags = set(python_tag.split("."))
+    abi_tags = set(abi_tag.split("."))
+    platform_tags = set(platform_tag.split("."))
+    if python_tags != {"cp310"} or abi_tags != {"abi3"}:
         raise RuntimeError(
             f"Expected a cp310-abi3 wheel, found {python_tag}-{abi_tag}"
         )
 
-    filename_tag = f"{python_tag}-{abi_tag}-{platform_tag}"
+    filename_tags = {
+        f"{python}-{abi}-{platform}"
+        for python in python_tags
+        for abi in abi_tags
+        for platform in platform_tags
+    }
     with ZipFile(wheel) as archive:
         metadata_files = [
             name for name in archive.namelist() if name.endswith(".dist-info/WHEEL")
@@ -62,9 +75,9 @@ def verify_tags(wheel):
         for line in metadata.splitlines()
         if line.startswith("Tag: ")
     }
-    if filename_tag not in metadata_tags:
+    if filename_tags != metadata_tags:
         raise RuntimeError(
-            f"Filename tag {filename_tag!r} is not present in WHEEL metadata: "
+            f"Filename tags {sorted(filename_tags)} do not match WHEEL metadata: "
             f"{sorted(metadata_tags)}"
         )
 

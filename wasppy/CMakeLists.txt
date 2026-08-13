@@ -57,6 +57,7 @@ add_custom_target(wasppy ALL
     -I${wasp_SOURCE_DIR}/waspddi 
     -I${wasp_SOURCE_DIR}/waspeddi 
     -I${wasp_SOURCE_DIR}/wasphit 
+    -I${wasp_SOURCE_DIR}/wasphalite
     -I${wasp_SOURCE_DIR}/waspsiren 
     -I${wasp_SOURCE_DIR}/wasphive 
     -I${wasp_SOURCE_DIR}/wasplsp
@@ -103,6 +104,11 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test/test_swig_bindings.py ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/test/test_swig_bindings.py)
 
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test/test_database_coverage.py
+  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test/test_database_coverage.py ${CMAKE_CURRENT_BINARY_DIR}/test/test_database_coverage.py
+  MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/test/test_database_coverage.py)
+
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in WASPPY_SETUP)
 string(CONFIGURE "${WASPPY_SETUP}" WASPPY_SETUP_CONFIG)
@@ -116,6 +122,7 @@ set (wheel_file_deps
       ${CMAKE_CURRENT_BINARY_DIR}/Database.py
       ${CMAKE_CURRENT_BINARY_DIR}/sch2db.py
       ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
+      ${CMAKE_CURRENT_BINARY_DIR}/test/test_database_coverage.py
       ${CMAKE_CURRENT_BINARY_DIR}/MANIFEST.in
       ${CMAKE_CURRENT_BINARY_DIR}/README.md
       ${CMAKE_CURRENT_BINARY_DIR}/LICENSE
@@ -144,7 +151,7 @@ else()
                   DEPENDS ${wheel_file_deps}                          
                   )
 endif()
-add_dependencies(wasp_wheel wasppy waspcore waspson waspddi waspeddi wasphit waspsiren wasphive wasplsp)
+add_dependencies(wasp_wheel wasppy waspcore waspson waspddi waspeddi waspexpr wasphit waspsiren wasphive wasphalite wasplsp)
 
 #Configure a basic unit test of the python bindings. In this case the wheels is 
 #installed as editable to test in a "natural" way and removed at the end.
@@ -167,6 +174,9 @@ TRIBITS_ADD_ADVANCED_TEST( test_swig_all
     CMND "${Python3_EXECUTABLE}"
     ARGS -m unittest test/test_lsp_server_running.py -v
   TEST_4
+    CMND "${Python3_EXECUTABLE}"
+    ARGS -m unittest test/test_database_coverage.py -v
+  TEST_5
     CMND "${Python3_EXECUTABLE}"
     ARGS -m pip uninstall --yes ornl-wasp
   TIMEOUT 3000

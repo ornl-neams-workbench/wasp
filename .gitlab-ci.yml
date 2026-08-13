@@ -20,7 +20,7 @@ mac_clang_testing:
       - waspConfig_install.cmake
       - build/wasppy/dist/*.whl
 
-doc_gen:
+.doc_gen:
   tags:
     - pandoc, mac
   script:

@@ -10,10 +10,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Error recovery for included files that have syntax errors instead of discarding
 - Expanded SIREN XPath-inspired navigation, predicates, functions, arithmetic, set operations, wildcards, and documentation. See [waspsiren/README.md](waspsiren/README.md).
 - HIVE schema-path validation for supported SIREN expressions.
+- HALITE expand_template to wasppy 
+- WASPPY ExistsConstraintLookup helper and scope-aware DeserializedResult *Lookup* methods for nested ExistsConstraint resolution and autocompletion 
+- WaspPy Database handling of InputTmpl, InputVariants, InputType, and InputValue
+- WaspPy Database helper method for obtaining ExistsConstraint discrete constants
+- Schema to database conversion logic for InputTmpl, InputVariants, and InputType
+- Schema to database conversion logic for generation of document root level class
 
 ### Fixed
 - docprint markdown documentation generation utility handling of explicit schema value child nodes
 - halite incomplete syntax recovery
+- nested path resolution in WASPPY Database ExistsConstraint lookup methods (InputObject.getExistsConstraintTargetGivenSource() and getExistsConstraintSourceGivenTarget()).
+- repeated-value storage in DeserializedResult.store() to produce flat lists rather than nested lists.
+- wildcard selection in DeserializedResult.select() to preserve the original user input order.
 
 ## [4.4.1] - 11-24-2025
 

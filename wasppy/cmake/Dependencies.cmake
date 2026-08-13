@@ -4,7 +4,7 @@
 ##---------------------------------------------------------------------------##
 
 TRIBITS_PACKAGE_DEFINE_DEPENDENCIES(
-LIB_REQUIRED_PACKAGES wasputils
+LIB_REQUIRED_PACKAGES wasputils wasphalite waspexpr
 LIB_OPTIONAL_PACKAGES
 TEST_REQUIRED_PACKAGES
 TEST_OPTIONAL_PACKAGES

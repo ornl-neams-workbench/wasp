@@ -44,6 +44,13 @@ TRIBITS_ADD_EXECUTABLE(exprlist
   INSTALLABLE
 )
 
+
+# Expose directories for the python wrappers to use
+target_include_directories( waspexpr
+  PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+  )
+
 #
 # Add test directory
 TRIBITS_ADD_TEST_DIRECTORIES(test)

@@ -52,6 +52,7 @@
 %apply int  & OUTPUT { int  & };
 %apply bool & OUTPUT { bool & };
 
+
 // Add handler to capture and provide details from Python thrown exceptions
 %exception {
     try { $action }
@@ -91,6 +92,7 @@
 #include "DDINodeView.h"
 #include "EDDInterpreter.h"
 #include "EDDINodeView.h"
+#include "HaliteInterpreter.h"
 #include "HITInterpreter.h"
 #include "HITNodeView.h"
 #include "SIRENInterpreter.h"
@@ -103,6 +105,36 @@
 #include "ThreadConnection.h"
 #include "IOStreamConnection.h"
 %}
+
+// result, elog, and alog are typemapped to OUTPUT not input
+%inline %{
+bool expand_template(const std::string& template_file,
+                     const std::string& json_parameter_file,
+                     bool defaultVars,
+                     bool defaultFuncs,
+                     const std::string& ldelim,
+                     const std::string& rdelim,
+                     const std::string& hop,
+                     std::ostream& result_stream,
+                     std::ostream& elog_stream,
+                     std::ostream& alog_stream)
+{
+
+    bool ok = wasp::expand_template(result_stream,
+                                    elog_stream,
+                                    alog_stream,
+                                    template_file,
+                                    json_parameter_file,
+                                    defaultVars,
+                                    defaultFuncs,
+                                    ldelim,
+                                    rdelim,
+                                    hop);
+
+    return ok;
+}
+%}
+
 
 // Instantiate templates used by wasp
 %template(StringDataObject) std::pair<std::string,wasp::DataObject>;

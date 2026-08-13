@@ -2,6 +2,8 @@ pytest{
 
     MinOccurs=1
     MaxOccurs=1
+    InputTmpl="document"
+    InputType="container"
 
     object_one{
         
@@ -11,6 +13,8 @@ pytest{
         color{
             MinOccurs=1
             MaxOccurs=1
+            InputTmpl="choice_template"
+            InputType="palette"
             ValType=String
             ValEnums=[ "red" "blue" "green" "orange" ]
         }
@@ -24,6 +28,7 @@ pytest{
 
                 MinOccurs=1
                 MaxOccurs=NoLimit
+                InputVariants=[ "foo_type_one" "foo_type_two" ]
 
                 id{
                     MinOccurs=1

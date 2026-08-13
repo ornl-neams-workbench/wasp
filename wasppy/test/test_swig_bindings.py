@@ -725,6 +725,7 @@ queries{
         self.assertEqual(definition['salts']['salt']['MolecularWeight']['value'], definition.select("salts/salt/MolecularWeight/value")[0])
         self.assertEqual(definition['salts']['salt']['MolecularWeight']['value'], definition.select("*/*/MolecularWeight/value")[0])
         self.assertEqual(definition['salts']['salt']['MolecularWeight']['value'], definition.select("*/*/MolecularWeight/*")[0])
+        self.assertEqual(definition, definition.select("")[0])
         self.assertTrue(definition)
 
         db = definition.deserialize(interpreter.root(), interpreter)
@@ -1111,6 +1112,13 @@ input.son:2.17-4.0: document has 0 of: [x/id=bar, y/id=foo] - exactly 1 must occ
         self.assertEqual("data = bob", interpreter.root()['data'][0].data())
 
     def test_sch2db(self):
+        '''Verify generated database source and its runtime assistance metadata.
+
+        The snapshot assertion detects textual changes to the generated Python.
+        A minimal schema is then generated and executed to verify that the
+        resulting InputObject definitions expose template, type, enumeration,
+        and default metadata correctly.
+        '''
         self.assertTrue(schema := Interpreter(Syntax.SON, path="test/schema.sch"))
         dbpy_captured = StringIO()
         with redirect_stdout(dbpy_captured):
@@ -1119,6 +1127,86 @@ input.son:2.17-4.0: document has 0 of: [x/id=bar, y/id=foo] - exactly 1 must occ
             dbpy_expected = dbpy_file.read()
         self.maxDiff = None
         self.assertEqual(dbpy_expected, dbpy_captured.getvalue())
+
+        assistance_schema = Interpreter(Syntax.SON, data='''
+            document {
+                InputTmpl="document"
+                InputType="container"
+
+                choice {
+                    MaxOccurs=1
+                    InputTmpl="choice_template"
+                    InputType="palette"
+                    ValType=String
+                    ValEnums=[ "red" "blue" ]
+                }
+
+                count {
+                    InputVariants=[ "count_one" "count_two" ]
+                    value {
+                        MaxOccurs=1
+                        InputDefault=0
+                        ValType=Int
+                    }
+                }
+            }
+        ''')
+        self.assertTrue(assistance_schema)
+        assistance_db = StringIO()
+        with redirect_stdout(assistance_db):
+            write_database(assistance_schema.root())
+
+        generated_namespace = {}
+        # Execute source generated solely from the hard-coded schema above so
+        # its classes can be instantiated and tested as runtime definitions.
+        exec(assistance_db.getvalue(), generated_namespace)
+        definition = generated_namespace["_document"]().definition()["document"]
+        self.assertEqual(definition.inputTmpl(), "document")
+        self.assertEqual(definition.inputType(), "container")
+
+        choice_definition = definition["choice"]
+        self.assertEqual(choice_definition.inputTmpl(), "choice_template")
+        self.assertEqual(choice_definition.inputType(), "palette")
+        self.assertEqual(definition.inputValue("choice"), "red")
+        self.assertEqual(definition.inputValue("count"), 0)
+
+        count_definition = definition["count"]
+        self.assertEqual(None, count_definition.inputTmpl())
+        self.assertEqual(None, count_definition.inputType())
+        self.assertEqual(["count_one", "count_two"], count_definition.inputVars())
+
+    def test_expand_template(self):
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_file = os.path.join(tmpdir, "template.inp")
+
+            with open(template_file, "w") as f:
+                f.write("value = {{ x }}\n")
+
+            # params_file = os.path.join(tmpdir, "params.json")
+            # with open(params_file, "w") as f:
+            #     f.write('{ "x": 42 }\n')
+            params = '{"x":42}'
+            result = ostringstream()
+            error_log = ostringstream()
+            activity_log = ostringstream()
+            ok  = expand_template(
+                template_file,
+                params, #params_file,
+                True,   # defaultVars
+                True,   # defaultFuncs
+                "{{",
+                "}}",
+                "",
+                result, 
+                error_log, 
+                activity_log
+            )
+
+            self.assertTrue(ok)
+            self.assertEqual("value = 42", str(result.str()).strip())
+            self.assertEqual("", error_log.str())
+            self.assertEqual("", activity_log.str())
 
 if __name__ == '__main__':
      unittest.main()

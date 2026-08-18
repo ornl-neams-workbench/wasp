@@ -38,6 +38,7 @@ ctest -VV --output-on-failure ^
       -D ExperimentalStart ^
       -D ExperimentalBuild ^
       -D ExperimentalTest 
+SET "TEST_STATUS=%ERRORLEVEL%"
 
 REM This command will "repair" the wheel and overwrite the existing wheel.
 SET "WHEELHOUSE=%BLD_DIR%\wasppy\wheelhouse"
@@ -64,3 +65,5 @@ IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
        --wheel-dir "%WHEELHOUSE%" ^
        --test-dir "%SRC_DIR%\wasppy\test"
 IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
+
+EXIT /B %TEST_STATUS%

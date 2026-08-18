@@ -63,10 +63,11 @@ cmake -DBUILDNAME="$(uname -s)-${COMPILER_LABEL}-Release-${BUILD_REF}" \
 
 export CMAKE_BUILD_PARALLEL_LEVEL="${BUILD_JOBS}"
 
+TEST_STATUS=0
 ctest --output-on-failure \
       -D ExperimentalStart \
       -D ExperimentalBuild \
-      -D ExperimentalTest 
+      -D ExperimentalTest || TEST_STATUS=$?
 
 # clean up prior config for the next bundle config
 rm -rf CMake*
@@ -120,3 +121,5 @@ conda create \
 cp WASP-*-Linux.sh "${PROJECT_DIR}/"
 cp "${WHEELHOUSE}"/*.whl "${PROJECT_DIR}/"
 cp waspConfig_install.cmake "${PROJECT_DIR}/"
+
+exit "${TEST_STATUS}"

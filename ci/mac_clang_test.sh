@@ -22,10 +22,11 @@ cmake -DBUILDNAME="$(uname -s)-Release-${CI_COMMIT_REF_NAME}" \
 
 export CMAKE_BUILD_PARALLEL_LEVEL=8
 
+TEST_STATUS=0
 ctest --output-on-failure \
       -D ExperimentalStart \
       -D ExperimentalBuild \
-      -D ExperimentalTest 
+      -D ExperimentalTest || TEST_STATUS=$?
 
 WHEELHOUSE=${CI_PROJECT_DIR}/build/wasppy/wheelhouse
 mkdir -p "${WHEELHOUSE}"
@@ -52,3 +53,5 @@ conda create \
       --test-dir "${CI_PROJECT_DIR}/wasppy/test" \
       --require-arch arm64 \
       --require-arch x86_64
+
+exit "${TEST_STATUS}"

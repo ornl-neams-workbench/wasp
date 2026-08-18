@@ -1,18 +1,112 @@
 from wasp import *
 from io import StringIO
 
+
+class ExistsConstraintLookup:
+    '''Container for ExistsContraint Lookup designed to facilitate follow on selections'''
+
+    def __init__(self, scope, source, target, constraint):
+        self.scope = scope            # DeserializedResult where constraint resides
+        self.source = source          # path relative to scope
+        self.target = target          # path relative to scope
+        self.constraint = constraint  # originating ExistsConstraint
+
 class DeserializedResult:
     '''Stores both input node (providence), action results (user data), and value default
     '''
     def __init__(self, node:WaspNode, interpreter:Interpreter, action=None):
         self.action = action
+        self.definition = None # InputObject from which this result is defined
         self.node = node
+        self.parent = None
         self.interpreter = interpreter
         self.userData:'dict{str:list(DeserializedResult)}' = {}
 
     def isTerminal(self):
         '''Determine if this deserialized result is terminal. I.e., it has no children data'''
         return len(self.node) == 0
+
+    def path(self):
+        '''Obtain the path in the tree of DeserializedResult for this result'''
+        parts = []
+        current = self
+
+        while current is not None and current.parent is not None:
+            parts.append(current.node.name())
+            current = current.parent
+
+        return "/".join(reversed(parts))
+
+    def _relativePathFrom(self, ancestor):
+        '''Private method to obtain the relative path in the tree'''
+        ancestor_path = ancestor.path()
+        self_path = self.path()
+
+        if not ancestor_path:
+            return self_path
+
+        prefix = ancestor_path + "/"
+        if self_path.startswith(prefix):
+            return self_path[len(prefix):]
+
+        return None
+
+    def getExistsConstraintTargetLookups(self):
+        '''Obtain the ExistsConstraintLookup target for this result
+        i.e., I am a source; where are my valid targets?
+        Returns a list of ExistsConstraintLookup or None
+        '''
+        results = []
+        current = self
+
+        while current is not None:
+            relative_source = self._relativePathFrom(current)
+
+            if relative_source is not None and current.definition is not None:
+                for constraint in current.definition._exists or []:
+                    if relative_source in constraint._source:
+                        for target in constraint._target:
+                            results.append(
+                                ExistsConstraintLookup(
+                                    scope=current,
+                                    source=relative_source,
+                                    target=target,
+                                    constraint=constraint,
+                                )
+                            )
+
+            current = current.parent
+
+        return results if results else None
+
+
+    def getExistsConstraintSourceLookups(self):
+        '''Obtain the ExistsConstraintLookup source for this result
+        I.e., I am a target; what sources refer to me?
+        Returns a list of ExistsConstraintLookup or None
+        '''
+        results = []
+        current = self
+
+        while current is not None:
+            relative_target = self._relativePathFrom(current)
+
+            if relative_target is not None and current.definition is not None:
+                for constraint in current.definition._exists or []:
+                    if relative_target in constraint._target:
+                        for source in constraint._source:
+                            results.append(
+                                ExistsConstraintLookup(
+                                    scope=current,
+                                    source=source,
+                                    target=relative_target,
+                                    constraint=constraint,
+                                )
+                            )
+
+            current = current.parent
+
+        return results if results else None
 
     @staticmethod
     def fromDefault(node:WaspNode, interpreter:Interpreter, default, key="value"):
@@ -66,6 +160,7 @@ class DeserializedResult:
             if  maxOccurs is not None and occurrence > maxOccurs:
                 result.interpreter.createErrorDiagnostic(result.node, "has " + str(occurrence) + " occurrences which exceeds max occurs of " + str(maxOccurs) + "!")
 
+        result.parent = self
         return result
 
     def select(self, context:str):
@@ -75,38 +170,40 @@ class DeserializedResult:
         '''
         lineage = context.split("/")
         current = [self]
-        next = []
 
         for name in lineage:
-            while len(current) > 0:
-                # wild card ignores
-                if name == "*":
-                    # Append all
-                    for result in current[-1].userData.values():
-                        if type(result) is list: next.extend(reversed(result))
-                        else: next.append(result)
-                elif name in current[-1].userData:
-                    # Append only those that name match (non-null result)
-                    result = current[-1].userData[name]
-                    if result and type(result) is list:
-                        next.extend(reversed(result))
-                    elif result: next.append(result)
-                current.pop()
-            # Reverse order to preserve user-input order
-            next.reverse()
-            # Update current result being searched to be those identified
-            current = next
             next = []
+
+            for item in current:
+                if name == "*":
+                    for result in item.userData.values():
+                        if type(result) is list:
+                            next.extend(result)
+                        else:
+                            next.append(result)
+                elif name in item.userData:
+                    result = item.userData[name]
+                    if result and type(result) is list:
+                        next.extend(result)
+                    elif result:
+                        next.append(result)
+
+            current = next
 
         return current if len(current) > 0 else None
 
     def store(self, value, key=None):
-        if key is None: # default to ':=' scalar store
+        if key is None:
             key = ":="
-        if key in self.userData and type(self.userData) is not list:
-            self.userData[key] = [self.userData[key], value]
+
+        if key in self.userData:
+            if type(self.userData[key]) is list:
+                self.userData[key].append(value)
+            else:
+                self.userData[key] = [self.userData[key], value]
         else:
             self.userData[key] = value
+
         return value
 
     def storedResult(self, key=None):
@@ -196,6 +293,9 @@ class InputObject:
             MaxValInc:float - the maximum inclusive value for this input object
             MinValExc:float - the minimum exclusive value for this input object
             MinValInc:float - the minimum inclusive value for this input object
+            InputTmpl:str - name of template to use for autocomplete
+            InputType:str - type passed to template for autocomplete
+            InputVars:list(str) - template variants for autocomplete
         '''
 
         self._action = kwargs.pop("Action", None)
@@ -214,6 +314,9 @@ class InputObject:
         self._exactly   = None
         self._unique    = None # list(list(str)): list of path context to data which must be unique
         self._exists    = None
+        self._inputTmpl = kwargs.pop("InputTmpl", None)
+        self._inputType = kwargs.pop("InputType", None)
+        self._inputVars = kwargs.pop("InputVars", None)
 
         assert len(kwargs) == 0, "Unexpected additional parameters to InputObject: " + str(kwargs)
 
@@ -266,7 +369,8 @@ class InputObject:
            context:str - the path to a child context. E.g., 'x/y/z' where z must be a terminal object
            return:list|None - the list of input object selection
         '''
-        lineage = context.split("/")
+        # filter empty strings from split so empty path returns this object
+        lineage = list(filter(None, context.split("/")))
         current = [self]
         next = []
         for name in lineage:
@@ -360,35 +464,73 @@ class InputObject:
             self._exactly = []
         self._exactly.append(exactly)
 
+    def getExistsConstraintDiscretesGivenSource(self, source_path:'str'):
+        '''Given the candidate source path, obtain the discrete constants
+           Returns list(str): list of ExistsConstraint discrete constants
+           Returns None: if no ExistsConstraint discrete values are found
+        '''
+        source_parts = list(filter(None, source_path.split("/")))
+        discretes = []
+
+        if self._exists:
+            for ec in self._exists:
+                if source_path in ec._source and ec._discrete:
+                    discretes.extend(ec._discrete)
+
+        # for every InputObject child part
+        # - if child of given name does not exist, return None or current list
+        # - if child exists, search if it has ExistsContaint with given source
+        # - if constraint exists, capture any discrete constant values defined
+
+        current_path = ""
+        current_object = self
+
+        for child_name in source_parts:
+            if child_name not in current_object:
+                return discretes if discretes else None
+
+            current_object = current_object[child_name]
+            current_path += child_name + "/"
+            relative_source_path = source_path.removeprefix(current_path)
+
+            if current_object._exists:
+                for ec in current_object._exists:
+                    if relative_source_path in ec._source and ec._discrete:
+                        discretes.extend(ec._discrete)
+
+        return discretes if discretes else None
+
     def getExistsConstraintTargetGivenSource(self, source_path:'str'):
         '''Given the candidate source path (e.g., where an id is used), obtain the target paths (e.g., where the id is defined)
            Returns list(str): list of ExistsConstraint target paths relative to this InputObject
            Returns None: if no ExistsConstraint with given source is found
 
         '''
-        # Get all node path parts, minus empty strings (can occur if '/' is prefix or suffix)
         source_parts = list(filter(None, source_path.split("/")))
-        # capture current object's ExistsConstraint, if present
-        current_target = []
-        if self._exists: [current_target.extend(ec._target) for ec in self._exists if source_path in ec._source]
-        # For every part (child InputObject)
-        # if child with given name doesn't exist, return current list or None
-        # if child exists, search if the child contains ExistsContaint with given target
-        # - if constraint exists, capture absolute path to constaint target (path-to-current-object + target_path)
+        targets = []
+
+        if self._exists:
+            for ec in self._exists:
+                if source_path in ec._source:
+                    targets.extend(ec._target)
+
         current_path = ""
-        current_object = self 
-        targets = current_target if len(current_target) > 0 else None
+        current_object = self
+
         for child_name in source_parts:
-            # child isn't named in current object
             if child_name not in current_object:
-                return targets # either None or what we found in parent objects
+                return targets if targets else None
+
             current_object = current_object[child_name]
-            current_target = []
-            current_path += child_name+"/"
+            current_path += child_name + "/"
             relative_source_path = source_path.removeprefix(current_path)
-            if current_object._exists: [current_target.extend([relative_source_path+"/"+t  for t in ec._target]) for ec in current_object._exists if relative_source_path in ec._source]
-            if len(current_target) > 0: targets.extend(current_target)
-        return targets
+
+            if current_object._exists:
+                for ec in current_object._exists:
+                    if relative_source_path in ec._source:
+                        targets.extend([current_path + t for t in ec._target])
+
+        return targets if targets else None
     
     def getExistsConstraintSourceGivenTarget(self, target_path:'str'):
         '''Given the candidate target path (e.g., where an id is defined), obtain the source paths (e.g., where the id is used)
@@ -396,29 +538,31 @@ class InputObject:
            Returns None: if no ExistsConstraint with given target is found
 
         '''
-        # Get all node path parts, minus empty strings (can occur if '/' is prefix or suffix)
         target_parts = list(filter(None, target_path.split("/")))
-        # capture current object's ExistsConstraint, if present
-        current_source = []
-        if self._exists: [current_source.extend(ec._source) for ec in self._exists if target_path in ec._target]
-        # For every part (child InputObject)
-        # if child with given name doesn't exist, return current list or None
-        # if child exists, search if the child contains ExistsContaint with given source
-        # - if constraint exists, capture absolute path to constaint source (path-to-current-object + source_path)
+        sources = []
+
+        if self._exists:
+            for ec in self._exists:
+                if target_path in ec._target:
+                    sources.extend(ec._source)
+
         current_path = ""
-        current_object = self 
-        sources = current_source if len(current_source) > 0 else None
+        current_object = self
+
         for child_name in target_parts:
-            # child isn't named in current object
             if child_name not in current_object:
-                return sources # either None or what we found in parent objects
+                return sources if sources else None
+
             current_object = current_object[child_name]
-            current_source = []
-            current_path += child_name+"/"
+            current_path += child_name + "/"
             relative_target_path = target_path.removeprefix(current_path)
-            if current_object._exists: [current_source.extend([relative_target_path+"/"+s  for s in ec._source]) for ec in current_object._exists if relative_target_path in ec._target]
-            if len(current_source) > 0: sources.extend(current_source)
-        return sources
+
+            if current_object._exists:
+                for ec in current_object._exists:
+                    if relative_target_path in ec._target:
+                        sources.extend([current_path + s for s in ec._source])
+
+        return sources if sources else None
 
     def addExistsConstraint(self, ec:'ExistsConstraint'):
         '''Add an ExistsConstraint to this object
@@ -476,11 +620,15 @@ class InputObject:
             Desc - description of the child
             MaxOccurs - maximum occurrence of the child
             MinOccurs - minimum occurrence of the child
+            InputTmpl - name of template to use for autocomplete
+            InputType - type passed to template for autocomplete
+            InputVars - template variant values for autocomplete
         '''
         self._pre_add(inputKey, **kwargs)
         if "MaxOccurs" in kwargs: self._maxOccurs[inputKey] = kwargs.pop("MaxOccurs")
         if "MinOccurs" in kwargs: self._minOccurs[inputKey] = kwargs.pop("MinOccurs")
         if "Default" in kwargs: self._defaults[inputKey] = kwargs.pop("Default")
+
         inputObject = InputObject(**kwargs)
         return self.add(inputKey, inputObject)
 
@@ -680,8 +828,9 @@ class InputObject:
         return self._description
 
     def deserialize(self, node, interpreter):
-        '''Deserialize the current node according to this inputObject '''
+        '''Deserialize the current node according to this inputObject definition'''
         thisResult = DeserializedResult(node, interpreter)
+        thisResult.definition = self
         for c in node:
             if self._children is not None and c.name() in self._children:
                 childResult = self._children[c.name()].deserialize(c, interpreter)
@@ -723,6 +872,51 @@ class InputObject:
 
     def enumerations(self):
         return self._enums
+
+    def inputTmpl(self):
+        return self._inputTmpl
+
+    def inputType(self):
+        return self._inputType
+
+    def inputVars(self):
+        return self._inputVars
+
+    def inputValue(self, childKey):
+        '''Obtain the suggested input value for a named child.
+
+           Values are selected in precedence order from the child's explicit
+           default, first enumeration, or value type placeholder. Explicit
+           defaults are preserved even when falsey. If none of that metadata
+           is available, the string "0" is returned.
+
+           childKey:str - name of the child whose input value is requested
+           Returns the configured default value or a generated string value.
+        '''
+
+        # get current child def with key then get its value def
+        child_def = self[childKey]
+        child_value_def = child_def["value"] if child_def else None
+
+        # check for default, enums, and type to set input value
+        input_value = "0"
+
+        # default gets queried from parent of current child def
+        default_val = self.default(childKey)
+        if default_val is not None:
+            input_value = default_val
+
+        # enumerations list is on value under current child def
+        elif child_value_def and (enums := child_value_def.enumerations()):
+            input_value = enums[0]
+
+        # type store action is on value under current child def
+        elif child_value_def and (action := child_value_def.action()):
+            if action is storeStr:     input_value = "insert_string_here"
+            elif action is storeInt:   input_value = "1"
+            elif action is storeFloat: input_value = "0.0"
+
+        return input_value
 
     def maxOccurs(self, childKey):
         return self._getattr('maxOccurs', childKey)
@@ -903,6 +1097,3 @@ def storeFloat(result):
 
 def storeStr(result):
     result.store(str(result.node))
-
-
-

@@ -22,7 +22,7 @@ mac_clang_testing:
       - build/wasppy/dist/*.whl
       - build/wasppy/wheelhouse/*.whl
 
-doc_gen:
+.doc_gen:
   tags:
     - pandoc, mac
   script:

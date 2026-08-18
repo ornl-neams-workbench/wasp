@@ -17,6 +17,7 @@
 #include <set>
 #include <algorithm>
 #include <utility>
+#include "waspcore/utils.h"
 #include "waspsiren/SIRENInterpreter.h"
 #include "waspsiren/SIRENResultSet.h"
 
@@ -519,59 +520,41 @@ class InputDefinition{
             else return false;
         }
 
+        /**
+         * Determine whether a SIREN path is syntactically valid and can select
+         * a structure described by the schema at the supplied context node.
+         * Predicates are parsed but their values are evaluated only later,
+         * against input data during HIVE validation.
+         */
         template<class SchemaAdapter>
-        bool isValidPath(const std::string& path, SchemaAdapter node){
+        bool isValidPath(const std::string& path, SchemaAdapter node)
+        {
+            if (path.empty() || node.is_null())
+                return false;
 
-            std::string pathCopy = path;
-            auto tmpNode = node;
-            int levels = std::count(pathCopy.begin(), pathCopy.end(), '/') + 1;
-
-            // Check if path is absolute and need to rewind to document root
-            if (path.front() == '/')
+            DefaultSIRENInterpreter::SharedPtr selector;
+            const auto parsed = parsedSirenPaths.find(path);
+            if (parsed == parsedSirenPaths.end())
             {
-                while(tmpNode.has_parent())
-                {
-                    tmpNode = tmpNode.parent();
-                }
-                pathCopy.erase(0, 1); // remove leading separator for subsequent search logic
-                --levels; // decrement level accordingly
-            }
-
-            for(int i = 0; i < levels; i++){
-
-                std::string subPath = pathCopy.substr(0, pathCopy.find("/"));
-                pathCopy = pathCopy.substr(pathCopy.find("/") + 1);
-
-                if (std::count(subPath.begin(), subPath.end(), '[') == 1){
-                    if (std::count(subPath.begin(), subPath.end(), ']') != 1) return false;
-                    if (subPath.find("[") >= subPath.find("]")) return false;
-                    subPath = subPath.substr(0, subPath.find("["));
-                }
-                if (subPath == ".."){
-                    tmpNode = tmpNode.parent();
-                    if(tmpNode.is_null()) return false;
-                }
-                else if (std::count(subPath.begin(), subPath.end(), '.') != 0){
+                sirenPathErrors.str("");
+                sirenPathErrors.clear();
+                selector =
+                    std::make_shared<DefaultSIRENInterpreter>(sirenPathErrors);
+                if (!selector->parseString(path))
                     return false;
-                }
-                else{
-                    auto tmp = tmpNode.first_non_decorative_child_by_name(subPath);
-
-                    if (tmp.is_null()){
-                        tmp = tmpNode.first_non_decorative_child_by_name("*");
-
-                        if (tmp.is_null()){
-                            tmp = tmpNode.first_child_by_name(subPath);
-                        }
-                    }
-
-                    if (tmp.is_null()) return false;
-                    tmpNode = tmp;
-                }
-
+                parsedSirenPaths.insert(std::make_pair(path, selector));
             }
+            else
+                selector = parsed->second;
 
-            return true;
+            NodeView selection_root = selector->root();
+            if (selection_root.child_count() == 0)
+                return false;
+
+            std::vector<SchemaAdapter> input(1, node);
+            std::vector<SchemaAdapter> selected;
+            return selectSchemaNodes(selection_root.child_at(0), input,
+                                     selected) && !selected.empty();
         }
 
         template<class SchemaAdapter>
@@ -614,6 +597,288 @@ class InputDefinition{
 
     private:
 
+        template<class SchemaAdapter>
+        static void appendUnique(std::vector<SchemaAdapter>& nodes,
+                                 const SchemaAdapter&        node)
+        {
+            if (std::find(nodes.begin(), nodes.end(), node) == nodes.end())
+                nodes.push_back(node);
+        }
+
+        /**
+         * Collect schema children that could represent a SIREN name step.
+         * A schema child named "*" is used only when no exact name matches, or
+         * in addition to concrete matches when the query itself is a wildcard.
+         */
+        template<class SchemaAdapter>
+        static void selectSchemaChildren(
+            const std::string&                name,
+            const std::vector<SchemaAdapter>& parents,
+            std::vector<SchemaAdapter>&       selected)
+        {
+            selected.clear();
+            const bool query_is_wildcard =
+                name.find('*') != std::string::npos ||
+                name.find('?') != std::string::npos;
+
+            for (std::size_t i = 0; i < parents.size(); ++i)
+            {
+                bool matched = false;
+                const typename SchemaAdapter::Collection children =
+                    parents[i].non_decorative_children();
+                for (std::size_t j = 0; j < children.size(); ++j)
+                {
+                    if (std::string(children[j].name()) == "*")
+                        continue;
+                    if (wildcard_string_match(name.c_str(), children[j].name()))
+                    {
+                        selected.push_back(children[j]);
+                        matched = true;
+                    }
+                }
+
+                SchemaAdapter any =
+                    parents[i].first_non_decorative_child_by_name("*");
+                if (!any.is_null() && (!matched || query_is_wildcard))
+                    selected.push_back(any);
+
+                if (!matched && any.is_null() && !query_is_wildcard)
+                {
+                    SchemaAdapter decorative =
+                        parents[i].first_child_by_name(name);
+                    if (!decorative.is_null())
+                        selected.push_back(decorative);
+                }
+            }
+        }
+
+        template<class SchemaAdapter>
+        static void collectSchemaDescendants(
+            const std::vector<SchemaAdapter>& roots,
+            std::vector<SchemaAdapter>&       descendants)
+        {
+            descendants.clear();
+            std::vector<SchemaAdapter> pending;
+            for (std::size_t i = roots.size(); i > 0; --i)
+            {
+                const typename SchemaAdapter::Collection children =
+                    roots[i - 1].non_decorative_children();
+                for (std::size_t j = children.size(); j > 0; --j)
+                    pending.push_back(children[j - 1]);
+            }
+
+            while (!pending.empty())
+            {
+                SchemaAdapter current = pending.back();
+                pending.pop_back();
+                descendants.push_back(current);
+
+                const typename SchemaAdapter::Collection children =
+                    current.non_decorative_children();
+                for (std::size_t i = children.size(); i > 0; --i)
+                    pending.push_back(children[i - 1]);
+            }
+        }
+
+        template<class SchemaAdapter>
+        static void selectSchemaSiblings(
+            const NodeView&                   context,
+            const std::vector<SchemaAdapter>& input,
+            std::vector<SchemaAdapter>&       selected,
+            bool                              following)
+        {
+            selected.clear();
+            const std::string name = context.child_at(1).name();
+            const bool query_is_wildcard =
+                name.find('*') != std::string::npos ||
+                name.find('?') != std::string::npos;
+
+            for (std::size_t i = 0; i < input.size(); ++i)
+            {
+                if (!input[i].has_parent())
+                    continue;
+
+                bool seen = false;
+                bool matched = false;
+                SchemaAdapter schema_wildcard;
+                const typename SchemaAdapter::Collection siblings =
+                    input[i].parent().non_decorative_children();
+                for (std::size_t j = 0; j < siblings.size(); ++j)
+                {
+                    if (siblings[j] == input[i])
+                    {
+                        seen = true;
+                        continue;
+                    }
+                    const bool selected_side = following ? seen : !seen;
+                    if (!selected_side)
+                        continue;
+                    if (std::string(siblings[j].name()) == "*")
+                    {
+                        schema_wildcard = siblings[j];
+                        continue;
+                    }
+                    if (wildcard_string_match(name.c_str(), siblings[j].name()))
+                    {
+                        appendUnique(selected, siblings[j]);
+                        matched = true;
+                    }
+                }
+                if (!schema_wildcard.is_null() &&
+                    (!matched || query_is_wildcard))
+                    appendUnique(selected, schema_wildcard);
+            }
+        }
+
+        /**
+         * Traverse a parsed SIREN selection against the schema structure.
+         * Predicate expressions are intentionally not evaluated: they contain
+         * input values, while the schema contains definitions. The selected
+         * step itself is still checked for structural validity.
+         */
+        template<class SchemaAdapter>
+        static bool selectSchemaNodes(
+            const NodeView&                   context,
+            const std::vector<SchemaAdapter>& input,
+            std::vector<SchemaAdapter>&       selected)
+        {
+            selected.clear();
+
+            if (context.type() == wasp::UNION ||
+                context.type() == wasp::INTERSECT ||
+                context.type() == wasp::EXCEPT)
+            {
+                std::vector<SchemaAdapter> left;
+                std::vector<SchemaAdapter> right;
+                const bool left_valid =
+                    selectSchemaNodes(context.child_at(0), input, left);
+                const bool right_valid =
+                    selectSchemaNodes(context.child_at(2), input, right);
+                if (!left_valid || !right_valid)
+                    return false;
+
+                if (context.type() == wasp::UNION)
+                {
+                    selected = left;
+                    for (std::size_t i = 0; i < right.size(); ++i)
+                        appendUnique(selected, right[i]);
+                }
+                else if (context.type() == wasp::INTERSECT)
+                {
+                    for (std::size_t i = 0; i < left.size(); ++i)
+                        if (std::find(right.begin(), right.end(), left[i]) !=
+                            right.end())
+                            appendUnique(selected, left[i]);
+                }
+                else
+                {
+                    for (std::size_t i = 0; i < left.size(); ++i)
+                        if (std::find(right.begin(), right.end(), left[i]) ==
+                            right.end())
+                            appendUnique(selected, left[i]);
+                }
+                return !selected.empty();
+            }
+
+            switch (context.type())
+            {
+                case wasp::DOCUMENT_ROOT:
+                {
+                    std::vector<SchemaAdapter> roots;
+                    for (std::size_t i = 0; i < input.size(); ++i)
+                    {
+                        SchemaAdapter root = input[i];
+                        while (root.has_parent())
+                            root = root.parent();
+                        appendUnique(roots, root);
+                    }
+                    if (context.child_count() == 1)
+                    {
+                        selected.swap(roots);
+                        return !selected.empty();
+                    }
+                    return selectSchemaNodes(context.child_at(1), roots,
+                                             selected);
+                }
+                case wasp::SEPARATOR:
+                    selected = input;
+                    return !selected.empty();
+                case wasp::DECL:
+                    selectSchemaChildren(context.name(), input, selected);
+                    return !selected.empty();
+                case wasp::PARENT:
+                    for (std::size_t i = 0; i < input.size(); ++i)
+                        if (input[i].has_parent())
+                            appendUnique(selected, input[i].parent());
+                    return !selected.empty();
+                case wasp::OBJECT:
+                {
+                    std::vector<SchemaAdapter> left;
+                    if (!selectSchemaNodes(context.child_at(0), input, left))
+                        return false;
+                    return selectSchemaNodes(context.child_at(2), left,
+                                             selected);
+                }
+                case wasp::PREDICATED_CHILD:
+                    return selectSchemaNodes(context.child_at(0), input,
+                                             selected);
+                case wasp::FOLLOWING_SIBLING:
+                    selectSchemaSiblings(context, input, selected, true);
+                    return !selected.empty();
+                case wasp::PRECEDING_SIBLING:
+                    selectSchemaSiblings(context, input, selected, false);
+                    return !selected.empty();
+                case wasp::ANY:
+                {
+                    std::vector<SchemaAdapter> stage;
+                    std::size_t right_index = 0;
+                    if (context.child_count() == 0)
+                    {
+                        collectSchemaDescendants(input, selected);
+                        return !selected.empty();
+                    }
+                    if (context.child_at(0).type() == wasp::ANY)
+                    {
+                        std::vector<SchemaAdapter> roots;
+                        for (std::size_t i = 0; i < input.size(); ++i)
+                        {
+                            SchemaAdapter root = input[i];
+                            while (root.has_parent())
+                                root = root.parent();
+                            appendUnique(roots, root);
+                        }
+                        std::vector<SchemaAdapter> descendants;
+                        collectSchemaDescendants(roots, descendants);
+                        stage = roots;
+                        for (std::size_t i = 0; i < descendants.size(); ++i)
+                            stage.push_back(descendants[i]);
+                        right_index = 1;
+                    }
+                    else
+                    {
+                        if (!selectSchemaNodes(context.child_at(0), input,
+                                               stage))
+                            return false;
+                        std::vector<SchemaAdapter> descendants;
+                        collectSchemaDescendants(stage, descendants);
+                        if (context.child_count() == 2)
+                        {
+                            selected.swap(descendants);
+                            return !selected.empty();
+                        }
+                        for (std::size_t i = 0; i < descendants.size(); ++i)
+                            stage.push_back(descendants[i]);
+                        right_index = 2;
+                    }
+                    return right_index < context.child_count() &&
+                           selectSchemaNodes(context.child_at(right_index),
+                                             stage, selected);
+                }
+                default:
+                    return false;
+            }
+        }
+
         bool initialized;
         //std::string filename;
         IDObject * rootObject;
@@ -627,6 +892,11 @@ class InputDefinition{
         std::vector<std::string> IncDecOptions;
         std::vector<std::string> CCEOptions;
         std::set   <std::string> DecorativeNames;
+        // Keep the error stream alive longer than the cached interpreters,
+        // which retain it by reference.
+        std::stringstream sirenPathErrors;
+        std::map<std::string, DefaultSIRENInterpreter::SharedPtr>
+            parsedSirenPaths;
 };
 
 class MinOccursRule{

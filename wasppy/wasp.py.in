@@ -11,8 +11,9 @@ from wasp import (
         DDINodeView,
         EDDINodeView,
         HIVE, Definition, Diagnostic,
-        string, ostringstream, istringstream
+        string, ostringstream, istringstream, expand_template
         )
+
 import math
 from enum import Enum
 

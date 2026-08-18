@@ -163,4 +163,13 @@ bool Context::function_exists(const std::string& name) const
     return m_functions.find(name) != m_functions.end();
 }
 
+double wasp_min(double a, double b)
+{
+    return std::min(a, b);
+}
+double wasp_max(double a, double b)
+{
+    return std::max(a,b);
+}
+
 }  // end of namespace

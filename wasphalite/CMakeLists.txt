@@ -53,6 +53,12 @@ INSTALL(FILES
   DESTINATION
   include/wasphalite)
 
+# Expose directories for the python wrappers to use
+target_include_directories( wasphalite
+  PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+  )
+
 #
 # Add test directory for this package
 #

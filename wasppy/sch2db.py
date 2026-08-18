@@ -40,6 +40,9 @@ def is_exactlyone(node):
 def is_atleastone(node):
     return node.name() == 'ChildAtLeastOne'
 
+def is_endofschema(node):
+    return node.name() == 'EndOfSchema'
+
 def is_val(node):
     return node.name() == 'value'
 
@@ -112,6 +115,21 @@ def get_occ_attrs(node):
             if is_int(rule_val):
                 occ_attrs += ', ' + rule + '=' + rule_val
     return occ_attrs
+
+def get_tmpl_attrs(node):
+    tmpl_attrs = ''
+    for rule in ['InputTmpl', 'InputType']:
+        if len(node[rule]) > 0:
+            rule_val = str(node[rule][0])
+            tmpl_attrs += ', ' + rule + '="' + rule_val + '"'
+    if len(node.InputVariants) > 0:
+        val_list = ''
+        for rule_child in node.InputVariants[0]:
+            if not rule_child.isDecorative():
+                val_list += '"' + str(rule_child) + '", '
+        if len(val_list) > 0:
+            tmpl_attrs += ', InputVars=[' + val_list[:-2] + ']'
+    return tmpl_attrs
 
 def get_val_occ_attrs(node):
     if len(node.value) > 0: return get_occ_attrs(node.value[0])
@@ -260,6 +278,10 @@ def write_initialize_method(node):
     indent_level += 1
     print(indent() + 'self._definition = None')
     for child in node:
+
+        # skip enum lists and EndOfSchema since schema is traversed from root
+        if is_list(child) or is_endofschema(child): continue
+
         if not is_dec_or_rule(child):
             print(indent() + 'self.' + child.name() + ' = None')
     indent_level -= 1
@@ -273,6 +295,9 @@ def write_createfrom_method(node):
     print(indent() + 'result = self.__class__()')
 
     for child in node:
+
+        # skip enum lists and EndOfSchema since schema is traversed from root
+        if is_list(child) or is_endofschema(child): continue
 
         if is_id(child) or is_param_val(child):
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -341,9 +366,12 @@ def write_definition_method(node, target_rules):
     print(indent() + 'def definition(self):')
     indent_level += 1
     print(indent() + 'if self._definition is not None: return self._definition')
-    print(indent() + '_obj = InputObject(' + get_desc_attr(node)[2:] + ')')
+    print(indent() + '_obj = InputObject(' + (get_desc_attr(node) + get_tmpl_attrs(node))[2:] + ')')
 
     for child in node:
+
+        # skip enum lists and EndOfSchema since schema is traversed from root
+        if is_list(child) or is_endofschema(child): continue
 
         if is_id(child) or is_param_val(child):
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -356,11 +384,11 @@ def write_definition_method(node, target_rules):
 
         elif is_param(child):
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            # _obj.create("param_name", (Min,Max)Occurs=X, Default=Z, Desc="Description") \
+            # _obj.create("param_name", (Min,Max)Occurs=X, Input(Tmpl,Type)=Y, Default=Z, Desc="Description") \
             #     .create("value", (Min,Max)Occurs=X, (Min,Max)Val(Exc,Inc)=Y, Action=store(Int,Float,Str))
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             print(indent() + '_obj.create("' + child.name()
-                  + '"' + get_occ_attrs(child) + get_def_attr(child)
+                  + '"' + get_occ_attrs(child) + get_tmpl_attrs(child) + get_def_attr(child)
                   + get_desc_attr(child) + ') \\')
             indent_level += 1
             print(indent() + '.create("value"'
@@ -679,9 +707,9 @@ def write_database(schema_root):
     print('from wasp import *')
     print('from Database import *')
     target_rules = gather_target_rules(schema_root)
+    write_class(schema_root, target_rules)
     for child in schema_root:
-        if is_object(child): write_class(child, target_rules)
-        elif is_list(child): write_enums(child)
+        if is_list(child): write_enums(child)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

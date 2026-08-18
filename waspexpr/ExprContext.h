@@ -1631,8 +1631,13 @@ WASP_REAL_FUNCTION_2ARG(
     RealFunction,
     std::floor((a1.number() * std::pow(10, std::floor(a2.number())) + 0.5)) /
         std::pow(10, std::floor(a2.number())))
-WASP_REAL_FUNCTION_2ARG(FMin, RealFunction, std::min(a1.number(), a2.number()))
-WASP_REAL_FUNCTION_2ARG(FMax, RealFunction, std::max(a1.number(), a2.number()))
+
+// Python bindings on Windows do not play well with macros and min/max
+// spoof them via a wrapper function.
+double WASP_PUBLIC wasp_min(double a, double b);
+double WASP_PUBLIC wasp_max(double a, double b);
+WASP_REAL_FUNCTION_2ARG(FMin, RealFunction, wasp_min(a1.number(), a2.number()))
+WASP_REAL_FUNCTION_2ARG(FMax, RealFunction, wasp_max(a1.number(), a2.number()))
 
 #define WASP_INTEGER_FUNCTION_2ARG(NAME, XTENS, CALL)                          \
     class WASP_PUBLIC NAME : public XTENS                                      \

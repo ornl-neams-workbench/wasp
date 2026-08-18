@@ -81,6 +81,9 @@ IF(WASP_ENABLE_SWIG)
     "${wasp_SOURCE_DIR}/waspeddi/EDDInterpreter.i.h"
     "${wasp_SOURCE_DIR}/waspeddi/EDDINodeView.h"
     "${wasp_SOURCE_DIR}/waspeddi/EDDINodeView.i.h"
+    "${wasp_SOURCE_DIR}/waspexpr/ExprContext.h"
+    "${wasp_SOURCE_DIR}/wasphalite/HaliteInterpreter.h"
+    "${wasp_SOURCE_DIR}/wasphalite/HaliteInterpreter.i.h"
     "${wasp_SOURCE_DIR}/wasphit/HITInterpreter.h"
     "${wasp_SOURCE_DIR}/wasphit/HITInterpreter.i.h"
     "${wasp_SOURCE_DIR}/wasphit/HITNodeView.h"
@@ -114,6 +117,8 @@ IF(WASP_ENABLE_SWIG)
       -I${wasp_SOURCE_DIR}/waspson
       -I${wasp_SOURCE_DIR}/waspddi
       -I${wasp_SOURCE_DIR}/waspeddi
+      -I${wasp_SOURCE_DIR}/waspexpr
+      -I${wasp_SOURCE_DIR}/wasphalite
       -I${wasp_SOURCE_DIR}/wasphit
       -I${wasp_SOURCE_DIR}/waspsiren
       -I${wasp_SOURCE_DIR}/wasphive
@@ -145,6 +150,8 @@ IF(WASP_ENABLE_SWIG)
       "$<TARGET_PROPERTY:waspson,INCLUDE_DIRECTORIES>"
       "$<TARGET_PROPERTY:waspddi,INCLUDE_DIRECTORIES>"
       "$<TARGET_PROPERTY:waspeddi,INCLUDE_DIRECTORIES>"
+      "$<TARGET_PROPERTY:waspexpr,INCLUDE_DIRECTORIES>"
+      "$<TARGET_PROPERTY:wasphalite,INCLUDE_DIRECTORIES>"
       "$<TARGET_PROPERTY:wasphit,INCLUDE_DIRECTORIES>"
       "$<TARGET_PROPERTY:waspsiren,INCLUDE_DIRECTORIES>"
       "$<TARGET_PROPERTY:wasphive,INCLUDE_DIRECTORIES>"
@@ -156,6 +163,8 @@ IF(WASP_ENABLE_SWIG)
     wasplsp
     wasphive
     waspsiren
+    wasphalite
+    waspexpr
     wasphit
     waspeddi
     waspddi
@@ -272,6 +281,11 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test/test_swig_bindings.py ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/test/test_swig_bindings.py)
 
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test/test_database_coverage.py
+  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test/test_database_coverage.py ${CMAKE_CURRENT_BINARY_DIR}/test/test_database_coverage.py
+  MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/test/test_database_coverage.py)
+
 
 # file(READ) does not register its input as a CMake configuration dependency.
 # Ensure edits to the setup template regenerate setup.py during a normal build.
@@ -292,6 +306,7 @@ set (wheel_file_deps
       ${CMAKE_CURRENT_BINARY_DIR}/Database.py
       ${CMAKE_CURRENT_BINARY_DIR}/sch2db.py
       ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
+      ${CMAKE_CURRENT_BINARY_DIR}/test/test_database_coverage.py
       ${CMAKE_CURRENT_BINARY_DIR}/MANIFEST.in
       ${CMAKE_CURRENT_BINARY_DIR}/README.md
       ${CMAKE_CURRENT_BINARY_DIR}/LICENSE
@@ -354,6 +369,9 @@ TRIBITS_ADD_ADVANCED_TEST( test_swig_all
     CMND "${Python3_EXECUTABLE}"
     ARGS -m unittest test/test_lsp_server_running.py -v
   TEST_4
+    CMND "${Python3_EXECUTABLE}"
+    ARGS -m unittest test/test_database_coverage.py -v
+  TEST_5
     CMND "${Python3_EXECUTABLE}"
     ARGS -m pip uninstall --yes ornl-wasp
   TIMEOUT 3000

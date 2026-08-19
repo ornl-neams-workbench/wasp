@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
-## [5.0.0] - 08-18-2026
+## [5.0.0] - 08-19-2026
 
 ### Added
 - Filler numeric data array interpolator package. See [waspfiller/README.md](waspfiller/README.md).

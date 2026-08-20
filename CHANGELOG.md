@@ -5,17 +5,29 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
-### Added 
+## [5.0.0] - 08-19-2026
+
+### Added
 - Filler numeric data array interpolator package. See [waspfiller/README.md](waspfiller/README.md).
 - Error recovery for included files that have syntax errors instead of discarding
 - Expanded SIREN XPath-inspired navigation, predicates, functions, arithmetic, set operations, wildcards, and documentation. See [waspsiren/README.md](waspsiren/README.md).
 - HIVE schema-path validation for supported SIREN expressions.
-- HALITE expand_template to wasppy 
-- WASPPY ExistsConstraintLookup helper and scope-aware DeserializedResult *Lookup* methods for nested ExistsConstraint resolution and autocompletion 
+- HALITE expand_template to wasppy
+- AbstractInterpreter::dump_diagnostics(std::ostream&) convenience API
+- Prebuilt WASPPY wheels for Linux x86-64, Windows x86-64, and macOS universal2
+- WASPPY stable-ABI support for CPython 3.10 and newer
+- WASPPY wheel installation, development, and chemistry example documentation
+- WASPPY ExistsConstraintLookup helper and scope-aware DeserializedResult *Lookup* methods for nested ExistsConstraint resolution and autocompletion
 - WaspPy Database handling of InputTmpl, InputVariants, InputType, and InputValue
 - WaspPy Database helper method for obtaining ExistsConstraint discrete constants
 - Schema to database conversion logic for InputTmpl, InputVariants, and InputType
 - Schema to database conversion logic for generation of document root level class
+
+### Changed
+- Minimum required CMake version increased from 3.20 to 3.26
+- Minimum supported Python version increased from 3.8 to 3.10
+- Git submodule URLs changed to relative repository URLs to support mirrors
+- WASPPY extension compilation moved under CMake, with setuptools packaging the prebuilt extension
 
 ### Fixed
 - docprint markdown documentation generation utility handling of explicit schema value child nodes

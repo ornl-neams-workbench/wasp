@@ -1198,8 +1198,8 @@ input.son:2.17-4.0: document has 0 of: [x/id=bar, y/id=foo] - exactly 1 must occ
                 "{{",
                 "}}",
                 "",
-                result, 
-                error_log, 
+                result,
+                error_log,
                 activity_log
             )
 

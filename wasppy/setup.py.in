@@ -4,77 +4,74 @@
 setup.py file for WASP
 """
 
+from pathlib import Path
+from shutil import copy2
 from setuptools import setup, Extension
-import glob, os, platform
-
-def get_extra_link_args():
-    link_args = []
-    if platform.system() != "Windows":
-        link_args.append("-Wl,-rpath,$ORIGIN/lib/.")
-    if platform.system() == "Darwin":
-        link_args.append("-Wl,-headerpad_max_install_names")
-    return link_args
-
-#Source files for the wrapper only
-wasp_sources = glob.glob("wasp_wrap.cxx")
+from setuptools.command.build_ext import build_ext
 
 # read the contents of your README file
-from pathlib import Path
 this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
+long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
-wasp_extra_compile_args = ["/std:c++14"] if os.name == "nt" else ["-std=c++11"]
-
-#TODO some of this can probably go away if we implement interfaces for each
-#package individually. This could make things cleaner and easier to work on
-incl_dirs = "$<TARGET_PROPERTY:waspcore,INCLUDE_DIRECTORIES>".split(";")
-incl_dirs.extend("$<TARGET_PROPERTY:wasphalite,INCLUDE_DIRECTORIES>".split(";"))
-incl_dirs.extend("$<TARGET_PROPERTY:waspson,INCLUDE_DIRECTORIES>".split(";"))
-incl_dirs.extend("$<TARGET_PROPERTY:waspddi,INCLUDE_DIRECTORIES>".split(";"))
-incl_dirs.extend("$<TARGET_PROPERTY:waspeddi,INCLUDE_DIRECTORIES>".split(";"))
-incl_dirs.extend("$<TARGET_PROPERTY:waspexpr,INCLUDE_DIRECTORIES>".split(";"))
-incl_dirs.extend("$<TARGET_PROPERTY:wasphit,INCLUDE_DIRECTORIES>".split(";"))
-incl_dirs.extend("$<TARGET_PROPERTY:waspsiren,INCLUDE_DIRECTORIES>".split(";"))
-incl_dirs.extend("$<TARGET_PROPERTY:wasphive,INCLUDE_DIRECTORIES>".split(";"))
-incl_dirs.extend("$<TARGET_PROPERTY:wasplsp,INCLUDE_DIRECTORIES>".split(";"))
-incl_dirs.extend("$<TARGET_PROPERTY:wasppy,INCLUDE_DIRECTORIES>".split(";"))
+prebuilt_extension = Path(r"$<TARGET_FILE:_wasp>")
 
 
-#Just links all the included wasp objects into a single library with the wrapper
-#It may be better to eventually include the libraries as proper shared objects,
-#this is just going to be faster
-ext_obj_list = "$<TARGET_OBJECTS:waspcore>".split(";")
-ext_obj_list.extend("$<TARGET_OBJECTS:waspson>".split(";"))
-ext_obj_list.extend("$<TARGET_OBJECTS:waspddi>".split(";"))
-ext_obj_list.extend("$<TARGET_OBJECTS:waspeddi>".split(";"))
-ext_obj_list.extend("$<TARGET_OBJECTS:wasphit>".split(";"))
-ext_obj_list.extend("$<TARGET_OBJECTS:wasphalite>".split(";"))
-ext_obj_list.extend("$<TARGET_OBJECTS:waspexpr>".split(";"))
-ext_obj_list.extend("$<TARGET_OBJECTS:waspsiren>".split(";"))
-ext_obj_list.extend("$<TARGET_OBJECTS:wasphive>".split(";"))
-ext_obj_list.extend("$<TARGET_OBJECTS:waspjson>".split(";"))
-ext_obj_list.extend("$<TARGET_OBJECTS:wasplsp>".split(";"))
+class CMakeBuildExt(build_ext):
+    """Install the extension already compiled and linked by CMake."""
+
+    def build_extension(self, ext):
+        destination = Path(self.get_ext_fullpath(ext.name))
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        copy2(prebuilt_extension, destination)
 
 wasp_module = Extension('_wasp',
-                           sources=wasp_sources,
-                           include_dirs=incl_dirs,
-                           extra_objects=ext_obj_list,
-                           define_macros=[("Py_LIMITED_API", "0x03080000")],
+                           sources=[],
                            py_limited_api=True, 
-                           language="c++",
-                           extra_compile_args = wasp_extra_compile_args,
-                           extra_link_args    = get_extra_link_args(),
                            )
 
 setup (name = 'ornl-wasp',
        version = "${${PROJECT_NAME}_VERSION}",
-       description = """${${PROJECT_NAME}_FULL_VERSION}""",
+       description = "Python bindings for parsing and validating WASP input formats",
        author ="Shane Henderson, Robert A. Lefebvre, Brandon R. Langley",
        author_email="hendersonsc@ornl.gov, lefebvrera@ornl.gov",
        url="https://code.ornl.gov/neams-workbench/wasp",
+       project_urls = {
+           "Documentation": "https://code.ornl.gov/neams-workbench/wasp/-/blob/master/wasppy/README.md",
+           "Source": "https://code.ornl.gov/neams-workbench/wasp",
+           "Issues": "https://code.ornl.gov/neams-workbench/wasp/-/issues",
+           "Changelog": "https://code.ornl.gov/neams-workbench/wasp/-/blob/master/CHANGELOG.md",
+       },
+       keywords = [
+           "parser",
+           "validation",
+           "SON",
+           "HIT",
+           "DDI",
+           "EDDI",
+           "ORNL",
+       ],
+       classifiers = [
+           "Intended Audience :: Developers",
+           "Intended Audience :: Science/Research",
+           "Operating System :: MacOS :: MacOS X",
+           "Operating System :: Microsoft :: Windows",
+           "Operating System :: POSIX :: Linux",
+           "Programming Language :: C++",
+           "Programming Language :: Python :: 3",
+           "Programming Language :: Python :: 3.10",
+           "Programming Language :: Python :: 3.11",
+           "Programming Language :: Python :: 3.12",
+           "Programming Language :: Python :: 3.13",
+           "Programming Language :: Python :: 3.14",
+           "Topic :: Scientific/Engineering",
+           "Topic :: Software Development :: Libraries :: Python Modules",
+           "Topic :: Text Processing",
+       ],
        ext_modules = [wasp_module],
+       cmdclass = {"build_ext": CMakeBuildExt},
        py_modules = ["wasp", "Database", "sch2db"],
+       python_requires = ">=3.10",
        long_description=long_description,
        long_description_content_type='text/markdown',
-       license_files = "LICENSE"
+       license_files = ["LICENSE"]
        )

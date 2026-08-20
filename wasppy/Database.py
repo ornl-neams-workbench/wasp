@@ -5,7 +5,7 @@ from io import StringIO
 class ExistsConstraintLookup:
     '''Container for ExistsContraint Lookup designed to facilitate follow on selections'''
 
-    def __init__(self, scope, source, target, constraint):        
+    def __init__(self, scope, source, target, constraint):
         self.scope = scope            # DeserializedResult where constraint resides
         self.source = source          # path relative to scope
         self.target = target          # path relative to scope
@@ -36,9 +36,9 @@ class DeserializedResult:
             current = current.parent
 
         return "/".join(reversed(parts))
-    
+
     def _relativePathFrom(self, ancestor):
-        '''Private method to obtain the relative path in the tree''' 
+        '''Private method to obtain the relative path in the tree'''
         ancestor_path = ancestor.path()
         self_path = self.path()
 
@@ -1097,4 +1097,3 @@ def storeFloat(result):
 
 def storeStr(result):
     result.store(str(result.node))
-

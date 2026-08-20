@@ -15,10 +15,12 @@ mac_clang_testing:
   script:
     - . ci/mac_clang_test.sh
   artifacts:
+    when: always
     paths:
       - "WASP*Darwin.sh"
       - waspConfig_install.cmake
       - build/wasppy/dist/*.whl
+      - build/wasppy/wheelhouse/*.whl
 
 .doc_gen:
   tags:
@@ -45,9 +47,11 @@ linux_gcc_testing:
   script:
     - ci/linux_gcc_test.sh
   artifacts:
+    when: always
     paths:
       - "WASP*Linux.sh"
       - build/wasppy/dist/*.whl
+      - build/wasppy/wheelhouse/*.whl
       - waspConfig_install.cmake
 
 linux_gcc_analysis:
@@ -70,6 +74,7 @@ windows_shared_vs2022_testing:
   script:
     - .\ci\vs2022_shared_test.bat
   artifacts:
+    when: always
     paths:
       - build/wasppy/dist/*.whl
-
+      - build/wasppy/wheelhouse/*.whl

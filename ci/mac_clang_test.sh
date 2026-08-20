@@ -1,3 +1,5 @@
+set -eo pipefail
+
 mkdir build
 cd build
 
@@ -20,15 +22,36 @@ cmake -DBUILDNAME="$(uname -s)-Release-${CI_COMMIT_REF_NAME}" \
 
 export CMAKE_BUILD_PARALLEL_LEVEL=8
 
+TEST_STATUS=0
 ctest --output-on-failure \
       -D ExperimentalStart \
       -D ExperimentalBuild \
-      -D ExperimentalTest 
+      -D ExperimentalTest || TEST_STATUS=$?
 
-delocate-wheel -w ${CI_PROJECT_DIR}/build/wasppy/dist ${CI_PROJECT_DIR}/build/wasppy/dist/ornl_wasp*.whl
+WHEELHOUSE=${CI_PROJECT_DIR}/build/wasppy/wheelhouse
+mkdir -p "${WHEELHOUSE}"
+delocate-wheel \
+      -w "${WHEELHOUSE}" \
+      "${CI_PROJECT_DIR}"/build/wasppy/dist/ornl_wasp*.whl
+delocate-listdeps "${WHEELHOUSE}"/*.whl
+python -m twine check "${WHEELHOUSE}"/*.whl
+python "${CI_PROJECT_DIR}/ci/verify_wheel.py" \
+      --wheel-dir "${WHEELHOUSE}" \
+      --test-dir "${CI_PROJECT_DIR}/wasppy/test" \
+      --require-arch arm64 \
+      --require-arch x86_64
 
-# On CI machines the plat name is changed because of OS version... revert to 
-WHL=${CI_PROJECT_DIR}/build/wasppy/dist/ornl_wasp-4.4.1-cp38-abi3-macosx_11_0_universal2.whl
-if [ -f ${WHL} ]; then
-mv -v ${WHL} ${CI_PROJECT_DIR}/build/wasppy/dist/ornl_wasp-4.4.1-cp38-abi3-macosx_10_6_universal2.whl
-fi
+PYTHON314_ENV=${CI_PROJECT_DIR}/build/python314
+conda create \
+      --yes \
+      --prefix "${PYTHON314_ENV}" \
+      --channel conda-forge \
+      --override-channels \
+      python=3.14
+"${PYTHON314_ENV}/bin/python" "${CI_PROJECT_DIR}/ci/verify_wheel.py" \
+      --wheel-dir "${WHEELHOUSE}" \
+      --test-dir "${CI_PROJECT_DIR}/wasppy/test" \
+      --require-arch arm64 \
+      --require-arch x86_64
+
+exit "${TEST_STATUS}"

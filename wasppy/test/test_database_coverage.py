@@ -505,8 +505,8 @@ class DatabaseCoverageTest(unittest.TestCase):
         targets = lookup.scope.select(lookup.target)
         self.assertIsNotNone(targets)
         self.assertEqual(len(targets), 1)
-        self.assertIs(targets[0], defined_id_dr)    
-    
+        self.assertIs(targets[0], defined_id_dr)
+
     def test_deserialized_exists_source_lookup_returns_scoped_result(self):
         """
         Verify that getExistsConstraintSourceLookups() returns the
@@ -545,7 +545,7 @@ class DatabaseCoverageTest(unittest.TestCase):
         Selecting "use_id" from that scope should resolve to the
         sibling node under 'inner'.
         """
-        
+
         db = self.db
         interpreter = FakeInterpreter()
 
@@ -668,6 +668,6 @@ class DatabaseCoverageTest(unittest.TestCase):
         targets = lookup.scope.select(lookup.target)
         self.assertEqual(len(targets), 1)
         self.assertIs(targets[0], inner_defined_id_dr)
-        self.assertIsNot(targets[0], root_defined_id_dr)        
+        self.assertIsNot(targets[0], root_defined_id_dr)
 if __name__ == "__main__":
     unittest.main(verbosity=2)

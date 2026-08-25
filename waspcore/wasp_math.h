@@ -7,7 +7,8 @@
  *
  * This header provides high-precision utility functions for converting input data
  * — such as atom fractions, weight fractions, material mass densities, and atom densities —
- * into per-nuclide atomic densities expressed in grams per barn-centimeter (g/b-cm).
+ * into per-nuclide atomic densities expressed in atoms per barn-centimeter
+ * (atoms/b-cm).
  *
  * These routines are suitable for use in general materials analysis workflows.
  *
@@ -20,7 +21,7 @@
  * - Per-nuclide atom densities (atoms/cm³)
  *
  * ## Key Concepts
- * - `D_i` is defined as the nuclide atomic density in units of g/b-cm.
+ * - `D_i` is defined as the nuclide atomic density in units of atoms/b-cm.
  * - A barn is 1e-24 cm²; b-cm is thus 1e-24 cm³.
  * - Input fraction vectors are automatically normalized to 1.0.
  * - Molar masses (g/mol) are required for all conversions involving mass.
@@ -90,7 +91,7 @@ weight_to_atom_fraction(const std::vector<double>& weight_fractions,
     for (size_t i = 0; i < weight_fractions.size(); ++i)
         denom += weight_fractions[i] / molar_masses[i];
 
-    wasp_check(denom <= 0.0);
+    wasp_require(denom > 0.0);
 
     for (size_t i = 0; i < weight_fractions.size(); ++i)
         atom_fractions[i] = (weight_fractions[i] / molar_masses[i]) / denom;
@@ -102,7 +103,10 @@ weight_to_atom_fraction(const std::vector<double>& weight_fractions,
 // ---------------------- Conversion Routines ------------------------
 
 /**
- * @brief Atom fractions + mass density → D_i (nuclide atomic density, g/b-cm)
+ * @brief Atom fractions + mass density → D_i (atoms/b-cm)
+ *
+ * For normalized atom fraction x_i, density rho, and mixture-average molar
+ * mass Abar, D_i = x_i * rho * N_A * 1e-24 / Abar.
  */
 inline WASP_PUBLIC std::vector<double>
                    compute_di_from_atom_fraction_mass_density(
@@ -115,30 +119,37 @@ inline WASP_PUBLIC std::vector<double>
     std::vector<double> di(atom_fractions.size());
 
     for (size_t i = 0; i < di.size(); ++i)
-        di[i] = atom_fractions[i] * mass_density_g_cm3 * molar_masses[i] /
-                abar / barn_to_cm2;
+        di[i] = atom_fractions[i] * mass_density_g_cm3 * avogadro *
+                barn_to_cm2 / abar;
 
     return di;
 }
 
 /**
- * @brief Weight fractions + mass density → D_i (nuclide atomic density, g/b-cm)
+ * @brief Weight fractions + mass density → D_i (atoms/b-cm)
+ *
+ * For normalized weight fraction w_i, density rho, and nuclide molar mass
+ * A_i, D_i = w_i * rho * N_A * 1e-24 / A_i.
  */
 inline WASP_PUBLIC std::vector<double>
                    compute_di_from_weight_fraction_mass_density(
-                       std::vector<double> weight_fractions, double mass_density_g_cm3)
+                       std::vector<double>        weight_fractions,
+                       const std::vector<double>& molar_masses,
+                       double                     mass_density_g_cm3)
 {
+    wasp_require(weight_fractions.size() == molar_masses.size());
     normalize(weight_fractions);
     std::vector<double> di(weight_fractions.size());
 
     for (size_t i = 0; i < di.size(); ++i)
-        di[i] = weight_fractions[i] * mass_density_g_cm3 / barn_to_cm2;
+        di[i] = weight_fractions[i] * mass_density_g_cm3 * avogadro *
+                barn_to_cm2 / molar_masses[i];
 
     return di;
 }
 
 /**
- * @brief Atom fractions + atomic density → D_i (nuclide atomic density, g/b-cm)
+ * @brief Atom fractions + atomic density → D_i (atoms/b-cm)
  */
 inline WASP_PUBLIC std::vector<double>
                    compute_di_from_atom_fraction_atomic_density(
@@ -157,7 +168,7 @@ inline WASP_PUBLIC std::vector<double>
 
 /**
  * @brief Weight fractions + atomic density → D_i (nuclide atomic density,
- * g/b-cm)
+ * atoms/b-cm)
  */
 inline WASP_PUBLIC std::vector<double>
                    compute_di_from_weight_fraction_atomic_density(
@@ -173,7 +184,7 @@ inline WASP_PUBLIC std::vector<double>
 }
 
 /**
- * @brief Atom densities → D_i (nuclide atomic density, g/b-cm)
+ * @brief Atom number densities (atoms/cm³) → nuclide mass densities (g/b-cm)
  */
 inline WASP_PUBLIC std::vector<double>
 compute_di_from_atom_density(const std::vector<double>& atom_densities,

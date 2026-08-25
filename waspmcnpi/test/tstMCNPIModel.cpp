@@ -1,5 +1,6 @@
 #include "waspmcnpi/MCNPInterpreter.h"
 #include "waspmcnpi/Model.h"
+#include "waspcore/wasp_math.h"
 #include "gtest/gtest.h"
 #include <iostream>
 #include <string>
@@ -1017,6 +1018,10 @@ c ------------------------------------------------------------------------------
     ASSERT_TRUE(mcnpi.parse(input));
     mcnpi::Model model;
     ASSERT_TRUE(model.build(mcnpi.root(), std::cerr));
+    EXPECT_EQ("01c", model.material_zaid_library(1, 0));
+    EXPECT_EQ("01c", model.material_zaid_library(1, 5));
+    EXPECT_TRUE(model.material_zaid_library(1, 6).empty());
+    EXPECT_TRUE(model.material_zaid_library(999, 0).empty());
 
     std::stringstream actual_out;
     model.describe_materials_json(actual_out);
@@ -1066,6 +1071,168 @@ c ------------------------------------------------------------------------------
 }
 )INP";
     EXPECT_EQ(exp_out.str(), actual_out.str());
+}
+
+TEST(MCNPModel, output_mass_fractions_with_mass_density_json)
+{
+    std::stringstream input;
+    input << R"INP(MCNP material using mass fractions
+1 1 -1.0 -1
+
+1 so 10
+
+m1 1001.70c -0.1119 8016.70c -0.8881
+)INP";
+
+    DefaultMCNPInterpreter mcnpi;
+    ASSERT_TRUE(mcnpi.parse(input));
+
+    std::map<int, double> molar_masses = {
+        {1001, 1.00782503223}, {8016, 15.99491461957}};
+    mcnpi::Model model;
+    model.set_zaid_relative_atomic_mass_map(&molar_masses);
+    ASSERT_TRUE(model.build(mcnpi.root(), std::cerr));
+
+    const auto expected_densities =
+        compute_di_from_weight_fraction_mass_density(
+            {0.1119, 0.8881},
+            {molar_masses.at(1001), molar_masses.at(8016)}, 1.0);
+    ASSERT_EQ(1u, model.cell_count());
+    EXPECT_NEAR(1.0, model.cell_density(0), 1.0e-12);
+    EXPECT_EQ((std::vector<int>{1001, 8016}),
+              model.cell_nuclide_zaids(0));
+    ASSERT_EQ(2u, model.cell_nuclide_densities(0).size());
+    EXPECT_NEAR(expected_densities[0], model.cell_nuclide_densities(0)[0],
+                1.0e-12);
+    EXPECT_NEAR(expected_densities[1], model.cell_nuclide_densities(0)[1],
+                1.0e-12);
+    EXPECT_EQ("70c", model.material_zaid_library(1, 0));
+    EXPECT_EQ("70c", model.material_zaid_library(1, 1));
+
+    std::stringstream output;
+    model.describe_materials_json(output);
+    const std::string json = output.str();
+
+    EXPECT_EQ(std::string::npos, json.find("\"adens\" : -"));
+}
+
+TEST(MCNPModel, atom_fractions_with_mass_density)
+{
+    std::stringstream input(R"INP(MCNP atom fractions and mass density
+1 1 -1.0 -1
+
+1 so 10
+
+m1 1001.70c 2.0 8016.70c 1.0
+)INP");
+    DefaultMCNPInterpreter mcnpi;
+    ASSERT_TRUE(mcnpi.parse(input));
+
+    std::map<int, double> molar_masses = {
+        {1001, 1.00782503223}, {8016, 15.99491461957}};
+    mcnpi::Model model;
+    model.set_zaid_relative_atomic_mass_map(&molar_masses);
+    std::stringstream errors;
+    ASSERT_TRUE(model.build(mcnpi.root(), errors)) << errors.str();
+
+    const auto expected = compute_di_from_atom_fraction_mass_density(
+        {2.0, 1.0}, {molar_masses.at(1001), molar_masses.at(8016)}, 1.0);
+    ASSERT_EQ(2u, model.cell_nuclide_densities(0).size());
+    EXPECT_NEAR(expected[0], model.cell_nuclide_densities(0)[0], 1.0e-12);
+    EXPECT_NEAR(expected[1], model.cell_nuclide_densities(0)[1], 1.0e-12);
+    EXPECT_NEAR(1.0, model.cell_density(0), 1.0e-12);
+}
+
+TEST(MCNPModel, mass_fractions_with_atomic_density)
+{
+    std::stringstream input(R"INP(MCNP mass fractions and atomic density
+1 1 0.1 -1
+
+1 so 10
+
+m1 1001.70c -0.1119 8016.70c -0.8881
+)INP");
+    DefaultMCNPInterpreter mcnpi;
+    ASSERT_TRUE(mcnpi.parse(input));
+
+    std::map<int, double> molar_masses = {
+        {1001, 1.00782503223}, {8016, 15.99491461957}};
+    const std::vector<double> masses = {
+        molar_masses.at(1001), molar_masses.at(8016)};
+    mcnpi::Model model;
+    model.set_zaid_relative_atomic_mass_map(&molar_masses);
+    std::stringstream errors;
+    ASSERT_TRUE(model.build(mcnpi.root(), errors)) << errors.str();
+
+    const auto expected = compute_di_from_weight_fraction_atomic_density(
+        {0.1119, 0.8881}, masses, 0.1);
+    ASSERT_EQ(2u, model.cell_nuclide_densities(0).size());
+    EXPECT_NEAR(expected[0], model.cell_nuclide_densities(0)[0], 1.0e-12);
+    EXPECT_NEAR(expected[1], model.cell_nuclide_densities(0)[1], 1.0e-12);
+    EXPECT_NEAR(compute_mass_density_from_atoms_bcm(expected, masses),
+                model.cell_density(0), 1.0e-12);
+}
+
+TEST(MCNPModel, material_build_errors)
+{
+    struct ErrorCase
+    {
+        std::string input;
+        std::string expected;
+        bool set_complete_mass_map = false;
+    };
+    const std::vector<ErrorCase> cases = {
+        {"test\n1 2 0.1 -1\n\n1 so 1\n",
+         "references material 2 which is not defined"},
+        {"test\n1 0 -1\n\n1 so 1\n\nm1\n",
+         "material has no ZAIDs specified"},
+        {"test\n1 0 -1\n\n1 so 1\n\nm1 1001 1\nm1 8016 1\n",
+         "material with id 1 already exists"},
+        {"test\n1 1 -1.0 -1\n\n1 so 1\n\nm1 1001 1 8016 1\n",
+         "required molar mass data library has not been set"},
+        {"test\n1 1 0.1 -1\n\n1 so 1\n\nm1 1001 0.5 8016 -0.5\n",
+         "mixes atom and mass fractions", true},
+        {"test\n1 1 0.1 -1\n\n1 so 1\n\nm1 1001 -0.5 8016 0.5\n",
+         "mixes atom and mass fractions", true},
+        {"test\n1 1 0.1 -1\n\n1 so 1\n\nm1 1001 0 8016 1\n",
+         "contains a zero fraction"}};
+
+    for (const auto& test_case : cases)
+    {
+        SCOPED_TRACE(test_case.input);
+        std::stringstream input(test_case.input);
+        DefaultMCNPInterpreter mcnpi;
+        ASSERT_TRUE(mcnpi.parse(input));
+        std::map<int, double> masses = {
+            {1001, 1.00782503223}, {8016, 15.99491461957}};
+        mcnpi::Model model;
+        if (test_case.set_complete_mass_map)
+            model.set_zaid_relative_atomic_mass_map(&masses);
+        std::stringstream errors;
+        EXPECT_FALSE(model.build(mcnpi.root(), errors));
+        EXPECT_NE(std::string::npos, errors.str().find(test_case.expected))
+            << errors.str();
+    }
+}
+
+TEST(MCNPModel, missing_zaid_mass_is_reported)
+{
+    std::stringstream input(R"INP(test
+1 1 -1.0 -1
+
+1 so 1
+
+m1 1001 1 8016 1
+)INP");
+    DefaultMCNPInterpreter mcnpi;
+    ASSERT_TRUE(mcnpi.parse(input));
+    std::map<int, double> incomplete_masses = {{1001, 1.00782503223}};
+    mcnpi::Model model;
+    model.set_zaid_relative_atomic_mass_map(&incomplete_masses);
+    std::stringstream errors;
+    EXPECT_FALSE(model.build(mcnpi.root(), errors));
+    EXPECT_NE(std::string::npos,
+              errors.str().find("ZAID mass map is missing 8016"));
 }
 
 TEST(MCNPModel, output_two_materials_json)

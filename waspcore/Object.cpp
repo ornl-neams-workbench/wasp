@@ -22,27 +22,23 @@ Value::Value(Value&& orig)
     orig.m_allocated = false;
     orig.m_type      = TYPE_NULL;
 }
-Value::Value(bool v)
+Value::Value(bool v) : m_allocated(false), m_type(TYPE_BOOLEAN)
 {
     m_data.m_bool = v;
-    m_type        = TYPE_BOOLEAN;
 }
-Value::Value(int v)
+Value::Value(int v) : m_allocated(false), m_type(TYPE_INTEGER)
 {
     m_data.m_int = v;
-    m_type       = TYPE_INTEGER;
 }
 
-Value::Value(size_t v)
+Value::Value(size_t v) : m_allocated(false), m_type(TYPE_SIZE_T)
 {
     m_data.m_size_t = v;
-    m_type       = TYPE_SIZE_T;
 }
 
-Value::Value(double v)
+Value::Value(double v) : m_allocated(false), m_type(TYPE_DOUBLE)
 {
     m_data.m_double = v;
-    m_type          = TYPE_DOUBLE;
 }
 Value::Value(const char* v)
 {

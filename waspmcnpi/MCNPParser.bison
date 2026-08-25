@@ -19,7 +19,7 @@
 %output "MCNPParser.cpp"
 /* add debug output code to generated parser. disable this for release
  * versions. */
-%debug
+/* %debug */
 
 /* start symbol is named "start" */
 %start start

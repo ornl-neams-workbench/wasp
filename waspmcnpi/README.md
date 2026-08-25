@@ -1,5 +1,24 @@
 This input interpreter is based on the format documented at 
 
+## Material-density conversion
+
+`mcnpimaterials` converts MCNP material entries into absolute nuclide atom
+densities in atoms/b-cm. MCNP cell-density signs are interpreted before the
+conversion:
+
+- A negative cell density is a mass density; its magnitude is in g/cm³.
+- Negative material entries are mass fractions. For nuclide `i`, WASP computes
+  `D_i = w_i rho N_A 10^-24 / A_i`.
+- Positive material entries are atom fractions. For a mass-density cell, WASP
+  computes `D_i = x_i rho N_A 10^-24 / Abar`.
+
+Here `w_i` and `x_i` are normalized fractions, `A_i` is the nuclide molar mass,
+`Abar` is the atom-fraction-weighted average molar mass, and `N_A` is Avogadro's
+constant. JSON output reports physical mass density in g/cm³ and non-negative
+absolute nuclide atom densities in atoms/b-cm. Conversions that
+involve mass require the ZAID-to-molar-mass JSON supplied to
+`mcnpimaterials`.
+
 It is tested against 4000+ different inputs and currently supports parsing the following records:
 
 | Card Name            | Description                                                                                                                                   | Supported | Note                                                             |

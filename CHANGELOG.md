@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [5.0.x] 
+
+### Fixed
+- MCNP material conversion now produces positive nuclide atom densities for
+  negative cell mass densities. Atom- and weight-fraction conversions now use
+  the nuclide molar masses, Avogadro's constant, and the barn-to-cubic-centimeter
+  conversion consistently, and the reported material density remains in g/cm³.
+- Fixed memory access issue in mcnpimaterials resulting in access violations on 
+  Windows.
 
 ## [5.0.0] - 08-19-2026
 

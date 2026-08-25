@@ -147,6 +147,22 @@ namespace mcnpi
         out << std::endl;
     }
 
+    std::string Model::material_zaid_library(size_t material_id,
+                                             size_t zaid_offset) const
+    {
+        const auto material_iter = m_material_id_index.find(material_id);
+        if (material_iter == m_material_id_index.end())
+        {
+            return "";
+        }
+        const Material& material = m_materials.at(material_iter->second);
+        if (zaid_offset >= material.zaid_count)
+        {
+            return "";
+        }
+        return m_material_zaids.at(material.zaid_index + zaid_offset).abx;
+    }
+
     bool Model::build_transforms(const NodeView& document_root, std::ostream& error)
     {
         bool success = true;
@@ -685,17 +701,41 @@ namespace mcnpi
         c.nuclide_zaids.resize(material.zaid_count); 
         std::vector<double> zaid_values(material.zaid_count);
         std::vector<double> molar_masses(material.zaid_count);
-        size_t zaid_index_end = material.zaid_index+material.zaid_count;
 
-        // Use first zaid value as indicator of weight/mass or atom fraction input
+        // Use first ZAID value as the material-wide atom/mass fraction mode.
         bool is_nuclide_mass_fraction = m_material_zaids[material.zaid_index].value < 0;
 
-        // We need zaid molar masses if involving material atom fractions or cell atomic density
+        for (std::size_t idx = 0; idx < material.zaid_count; ++idx)
+        {
+            const Material_Zaid_Entry& entry =
+                m_material_zaids[material.zaid_index + idx];
+            const bool entry_is_mass_fraction = entry.value < 0;
+            if (entry.value == 0)
+            {
+                error << "*** Error - line: " << cell_mixture_node.line()
+                      << ", column: " << cell_mixture_node.column()
+                      << " material " << c.mat_id
+                      << " contains a zero fraction!"
+                      << std::endl;
+                return false;
+            }
+            if (entry_is_mass_fraction != is_nuclide_mass_fraction)
+            {
+                error << "*** Error - line: " << cell_mixture_node.line()
+                      << ", column: " << cell_mixture_node.column()
+                      << " material " << c.mat_id
+                      << " mixes atom and mass fractions!"
+                      << std::endl;
+                return false;
+            }
+        }
+
+        // Molar masses are required for mass fractions or a cell mass density.
         if ((is_nuclide_mass_fraction || is_cell_mass_density)  && m_zaid_mass_map == nullptr)
         {
              error << "*** Internal Error - line: " << cell_mixture_node.line()
                 << ", column: " << cell_mixture_node.column()
-                << " cannot be converted because the required molar mass data library has not be set!"
+                << " cannot be converted because the required molar mass data library has not been set!"
                 << std::endl;
             return false;
         }
@@ -705,13 +745,10 @@ namespace mcnpi
             const Material_Zaid_Entry mza = m_material_zaids[idx+material.zaid_index];
             if (is_nuclide_mass_fraction)
             {
-                // weight fractions must uniformly be specified (all < 0)
-                wasp_check (mza.value < 0);
                 // capture positive value
                 zaid_values[idx] = -mza.value;
             }
             else {
-                wasp_check(mza.value > 0);
                 zaid_values[idx] = mza.value;
             }
             c.nuclide_zaids[idx] = mza.zaid;
@@ -719,22 +756,41 @@ namespace mcnpi
             // capture molar mass for given zaid, if provided
             if (m_zaid_mass_map)
             {
-                wasp_insist(m_zaid_mass_map->find(mza.zaid) != m_zaid_mass_map->end(), "zaid mass map is missing " << mza.zaid << "!");
-                molar_masses[idx] = m_zaid_mass_map->at(mza.zaid);
+                const auto mass_iter = m_zaid_mass_map->find(mza.zaid);
+                if (mass_iter == m_zaid_mass_map->end())
+                {
+                    error << "*** Error - line: " << cell_mixture_node.line()
+                          << ", column: " << cell_mixture_node.column()
+                          << " ZAID mass map is missing " << mza.zaid << "!"
+                          << std::endl;
+                    return false;
+                }
+                molar_masses[idx] = mass_iter->second;
             }
         }
         
 
-        if (is_nuclide_mass_fraction)
+        if (is_cell_mass_density)
         {
-            if (is_cell_mass_density) c.nuclide_densities = compute_di_from_weight_fraction_mass_density(zaid_values, c.rho);
-            else c.nuclide_densities = compute_di_from_weight_fraction_atomic_density(zaid_values, molar_masses, c.rho);
+            // MCNP stores mass density as a negative cell value. Its magnitude
+            // is the positive physical density in g/cm3, independently of
+            // whether the material card contains mass or atom fractions.
+            const double mass_density_g_cm3 = -c.rho;
+            if (is_nuclide_mass_fraction)
+                c.nuclide_densities = compute_di_from_weight_fraction_mass_density(
+                    zaid_values, molar_masses, mass_density_g_cm3);
+            else
+                c.nuclide_densities = compute_di_from_atom_fraction_mass_density(
+                    zaid_values, molar_masses, mass_density_g_cm3);
         }
-        else // atom fraction 
+        else if (is_nuclide_mass_fraction)
         {
-            if (is_cell_mass_density) c.nuclide_densities = compute_di_from_atom_fraction_mass_density(zaid_values, molar_masses, c.rho);
-            else c.nuclide_densities = compute_di_from_atom_fraction_atomic_density(zaid_values, c.rho);
+            c.nuclide_densities = compute_di_from_weight_fraction_atomic_density(
+                zaid_values, molar_masses, c.rho);
         }
+        else
+            c.nuclide_densities = compute_di_from_atom_fraction_atomic_density(
+                zaid_values, c.rho);
 
         // Ensure cell density is assigned g/cc, if molar masses provided
         if (m_zaid_mass_map)
@@ -947,7 +1003,7 @@ namespace mcnpi
             if(success)
             {
                 // Grab up any comment nodes preceding our current material node
-                while(!(iter->equal(mnode) || (iter == all_nodes.end())))
+                while(iter != all_nodes.end() && !iter->equal(mnode))
                 {  
                     if(iter->type() == mcnpi::NODE::COMMENT)
                     { 
@@ -1044,6 +1100,27 @@ namespace mcnpi
     {
         wasp_require(std::strcmp(zaid_node.name(),"zaid") == 0);
         Material_Zaid_Entry z;
+        auto set_abx = [&z, &zaid_node, &error](std::string abx)
+        {
+            // Store only the portion following the separator (for example,
+            // "80c" from ".80c") and leave room for the terminating NUL.
+            auto separator = abx.find('.');
+            if (separator != std::string::npos)
+            {
+                abx.erase(0, separator + 1);
+            }
+            if (abx.size() >= sizeof(z.abx))
+            {
+                error << "*** Error - line: " << zaid_node.line()
+                      << ", column: " << zaid_node.column()
+                      << " invalid ZAID library identifier '" << abx << "'!"
+                      << std::endl;
+                return false;
+            }
+            std::copy(abx.begin(), abx.end(), z.abx);
+            z.abx[abx.size()] = '\0';
+            return true;
+        };
         for (auto itr = zaid_node.begin(); itr != zaid_node.end(); itr.next())
         {
             auto child = itr.get();
@@ -1053,14 +1130,12 @@ namespace mcnpi
             {
                 z.zaid = std::stoi(data);
                 // if the zaid's parse includes the lib numeric component, capture
-                if (auto di = data.find('.') != std::string::npos)
+                auto di = data.find('.');
+                if (di != std::string::npos)
                 {
-                    // captures decimal
-                    auto sub = data.substr(di);
-                    if (sub.size() > 1)
+                    if (!set_abx(data.substr(di)))
                     {
-                        sub = sub.substr(1);
-                        std::strcpy(z.abx,sub.data());
+                        return false;
                     }
                 }
             }
@@ -1070,8 +1145,10 @@ namespace mcnpi
             }
             else if (name == "lib")
             {
-                // wasp_check(data.size() < 4);
-                std::strcpy(z.abx, data.data());
+                if (!set_abx(data))
+                {
+                    return false;
+                }
             }
             else if (name == "comment" || name == "LC")
             {

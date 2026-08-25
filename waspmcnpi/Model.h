@@ -134,6 +134,34 @@ public:
 
     size_t surface_count() const {return m_surfaces.size();}
     size_t cell_count() const {return m_cells.size();}
+    /**
+     * @return The reconstructed positive mass density when molar masses were
+     * provided; otherwise the original positive atomic density.
+     */
+    double cell_density(size_t cell_index) const
+    {
+        return m_cells.at(cell_index).rho;
+    }
+    /** @return The ZAIDs associated with a cell, in material-card order. */
+    const std::vector<int>& cell_nuclide_zaids(size_t cell_index) const
+    {
+        return m_cells.at(cell_index).nuclide_zaids;
+    }
+    /** @return Per-nuclide atomic densities in atoms/b-cm. */
+    const std::vector<double>&
+    cell_nuclide_densities(size_t cell_index) const
+    {
+        return m_cells.at(cell_index).nuclide_densities;
+    }
+    /**
+     * @brief Return a ZAID library identifier from a material.
+     * @param material_id MCNP material identifier.
+     * @param zaid_offset Zero-based ZAID offset within the material.
+     * @return The identifier without its leading period, e.g. "80c".
+     * Returns an empty string if the material or offset does not exist.
+     */
+    std::string material_zaid_library(size_t material_id,
+                                      size_t zaid_offset) const;
     // Obtain the type of the surface 
     Surface_Type surface_type(size_t surface_index) const;
     // Performs a binary search for surface with given id
@@ -227,7 +255,9 @@ private:
         size_t  id = 0;
         // material identifier - search m_materials for definitin
         size_t  mat_id = 0;
-        // density ( rho > 0 = atomic density g/b-cm, < 0 mass density (g/cc) )
+        // MCNP input density (rho > 0 = atoms/b-cm, rho < 0 = -g/cm3).
+        // With molar masses, reconstruction stores positive mass density in
+        // g/cm3; otherwise a positive atomic input remains in atoms/b-cm.
         double  rho = 0;
         // 0 - none, 1 - hexahedra (cuboidal), 2 - hexagonal
         int lattice_type = 0; 
@@ -240,7 +270,7 @@ private:
         // index into lattice fill data
         size_t fill_index = 0;
         
-        // material nuclide atomic densities (atomic density g/b-cm)
+        // Material nuclide atomic densities (atoms/b-cm).
         // ordered by the zaid specified by material referenced by mat_id
         std::vector<int> nuclide_zaids;
         std::vector<double> nuclide_densities;
@@ -265,6 +295,7 @@ private:
     {
         size_t zaid=0;
         double value=0;
+        // Three-character library identifier (for example, "80c") plus NUL.
         char abx[4] = "";
     };
     std::vector<Material_Zaid_Entry> m_material_zaids;

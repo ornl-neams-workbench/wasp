@@ -53,7 +53,6 @@
 #  endif
 # endif
 
-#line 36 "Snippet.bison"
 #line 35 "MCNPParser.bison"
 namespace wasp {
 #line 59 "../waspcore/location.hh"
@@ -300,7 +299,6 @@ namespace wasp {
     return ostr;
   }
 
-#line 36 "Snippet.bison"
 #line 35 "MCNPParser.bison"
 } // wasp
 #line 305 "../waspcore/location.hh"

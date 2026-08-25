@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    if (argc == 2)
+    if (argc != 3)
     {
         std::cout << "Workbench Analysis Sequence Processor (WASP)" << std::endl
                   << argv[0] << " : MCNP to JSON (materials) Converter"

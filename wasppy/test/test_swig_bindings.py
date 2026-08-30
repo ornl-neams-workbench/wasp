@@ -5,6 +5,10 @@ from sch2db import write_database
 from io import StringIO
 from contextlib import redirect_stdout
 import math
+import textwrap
+import tempfile
+from pathlib import Path
+import db2doc
 
 class LinearModel:
     Definition = None
@@ -1128,6 +1132,15 @@ input.son:2.17-4.0: document has 0 of: [x/id=bar, y/id=foo] - exactly 1 must occ
         self.maxDiff = None
         self.assertEqual(dbpy_expected, dbpy_captured.getvalue())
 
+        schema_namespace = {}
+        exec(dbpy_captured.getvalue(), schema_namespace)
+        schema_definition = schema_namespace["_document"]().definition()
+        bars_definition = schema_definition["pytest"]["object_one"]["bars"]
+        self.assertEqual(
+            ["typeone/id", "typetwo/id", "typethree/id", "typefour/id"],
+            bars_definition._unique[0]
+        )
+
         assistance_schema = Interpreter(Syntax.SON, data='''
             document {
                 InputTmpl="document"
@@ -1149,7 +1162,48 @@ input.son:2.17-4.0: document has 0 of: [x/id=bar, y/id=foo] - exactly 1 must occ
                         ValType=Int
                     }
                 }
+
+                constrained {
+                    MinOccurs="../min_count"
+                    MaxOccurs="../max_count"
+                    value {
+                        MinValInc="../../min_inc"
+                        MinValExc="../../min_exc"
+                        MaxValInc="../../max_inc"
+                        MaxValExc="../../max_exc"
+                        ValType=Real
+                        IncreaseOver("..")=Strict
+                    }
+                }
+
+                decreasing {
+                    MaxOccurs=1
+                    value {
+                        ValType=Real
+                        DecreaseOver("..")=Mono
+                    }
+                }
+
+                choice_only {
+                    MaxOccurs=1
+                    value {
+                        ValType=String
+                        ExistsIn=[ EXTRA:red EXTRAREF:AssistanceChoices ]
+                    }
+                }
+
+                unique_group {
+                    ChildUniqueness=[ "item/id" ]
+                    item {
+                        id {
+                            MaxOccurs=1
+                            ValType=String
+                        }
+                    }
+                }
             }
+
+            AssistanceChoices=[ "green" "blue" ]
         ''')
         self.assertTrue(assistance_schema)
         assistance_db = StringIO()
@@ -1174,6 +1228,24 @@ input.son:2.17-4.0: document has 0 of: [x/id=bar, y/id=foo] - exactly 1 must occ
         self.assertEqual(None, count_definition.inputTmpl())
         self.assertEqual(None, count_definition.inputType())
         self.assertEqual(["count_one", "count_two"], count_definition.inputVars())
+
+        constrained_definition = definition["constrained"]
+        constrained_value = constrained_definition["value"]
+        self.assertEqual("../min_count", definition._minOccursPath["constrained"])
+        self.assertEqual("../max_count", definition._maxOccursPath["constrained"])
+        self.assertEqual("../../min_inc", constrained_value._minValIncPath)
+        self.assertEqual("../../min_exc", constrained_value._minValExcPath)
+        self.assertEqual("../../max_inc", constrained_value._maxValIncPath)
+        self.assertEqual("../../max_exc", constrained_value._maxValExcPath)
+        self.assertEqual(("..", "Strict"), constrained_value._increaseOver)
+        self.assertEqual(("..", "Mono"), definition["decreasing"]["value"]._decreaseOver)
+        self.assertEqual(
+            ["red", "green", "blue"],
+            definition["choice_only"]["value"].enumerations()
+        )
+        self.assertEqual(
+            ["item/id"], definition["unique_group"]._unique[0]
+        )
 
     def test_expand_template(self):
         import tempfile, os
@@ -1207,6 +1279,188 @@ input.son:2.17-4.0: document has 0 of: [x/id=bar, y/id=foo] - exactly 1 must occ
             self.assertEqual("value = 42", str(result.str()).strip())
             self.assertEqual("", error_log.str())
             self.assertEqual("", activity_log.str())
+
+class Db2DocTest(unittest.TestCase):
+
+    inputDatabase = textwrap.dedent(r'''
+        from wasp import *
+        from Database import *
+
+        class _document:
+            def definition(self):
+                root = InputObject()
+                section = InputObject(Desc="Example section")
+                section.create("id", MinOccurs=1, MaxOccurs=1, Action=storeStr)
+                section.create(
+                    "count", MinOccurs=1, MaxOccurs=1,
+                    InputType="flagvalue", Desc="Item count"
+                ).create(
+                    "value", MinOccurs=1, MaxOccurs=1,
+                    MinValInc=1, MaxValInc=9, Action=storeInt
+                )
+                section.create(
+                    "items", MinOccurs=0, MaxOccurs=1, Desc="Items"
+                ).create(
+                    "value", MinOccursPath="../../count", MaxOccursPath="../../count",
+                    IncreaseOver=("..", "Strict"), Enums=["first", *Names], Action=storeStr
+                )
+                section.create(
+                    "bounded", MinOccurs=1, MaxOccurs=1, InputType="flagvalue"
+                ).create(
+                    "value", MinOccurs=1, MaxOccurs=1,
+                    MinValInc=0, MaxValIncPath="../../count", Action=storeInt
+                )
+                section.create(
+                    "descending", MinOccurs=0, MaxOccurs=1
+                ).create(
+                    "value", MinOccurs=1, DecreaseOver=("..", "Mono"), Action=storeFloat
+                )
+                section.create(
+                    "use", MinOccurs=0, MaxOccurs=1, InputType="flagvalue"
+                ).create("value", MinOccurs=1, MaxOccurs=1, Action=storeStr)
+                section.create(
+                    "defined", MinOccurs=0, MaxOccurs=1, InputType="flagvalue"
+                ).create("value", MinOccurs=1, MaxOccurs=1, Action=storeStr)
+                section.addExistsConstraint(ExistsConstraint(
+                    ["use/value"], target=["defined/value"],
+                    discrete=["constant", *Extras]
+                ))
+                root.add("section", section, MinOccurs=1, MaxOccurs=1)
+                return root
+
+        Names = ["john", "carl"]
+        Extras = ["nick"]
+        ''')
+
+    @classmethod
+    def setUpClass(cls):
+        cls.temporary_directory = tempfile.TemporaryDirectory()
+        cls.database = Path(cls.temporary_directory.name) / "input_database.py"
+        cls.database.write_text(cls.inputDatabase, encoding="utf-8")
+        cls.markdown = db2doc.generate_markdown(cls.database)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.temporary_directory.cleanup()
+
+    def generate_markdown(self, source, filename):
+        database = Path(self.temporary_directory.name) / filename
+        database.write_text(textwrap.dedent(source), encoding="utf-8")
+        return db2doc.generate_markdown(database)
+
+    def test_structure_and_numeric_range(self):
+        self.assertIn("- [section](#section)", self.markdown)
+        self.assertIn("##### How Many: 1", self.markdown)
+        self.assertIn(
+            "count<a name=\"sectioncount\"></a>|KeyedValue|1|Integer|"
+            "__Range__<br>\\[1,9\\]|Item count|",
+            self.markdown)
+
+    def test_path_occurrence_and_range_links(self):
+        self.assertIn(
+            "items<a name=\"sectionitems\"></a>|Array of Size<br>"
+            "[count](#sectioncount)<br>Increasing Values|0 or 1|String|",
+            self.markdown)
+        self.assertIn(
+            "bounded<a name=\"sectionbounded\"></a>|KeyedValue|1|Integer|"
+            "__Range__<br>\\[0,[count](#sectioncount)\\]||",
+            self.markdown)
+        self.assertIn(
+            "descending<a name=\"sectiondescending\"></a>|Array of Size<br>"
+            "1 or more<br>Decreasing Values|0 or 1|Real|",
+            self.markdown)
+
+    def test_explicit_and_referenced_choices(self):
+        self.assertIn(
+            "__Choices__<br>first<br>REF:[Names](#ref-names)<br>",
+            self.markdown)
+        self.assertIn("### <a name=\"ref-names\"></a>Names\njohn carl ", self.markdown)
+
+    def test_exists_choices_and_key(self):
+        self.assertIn(
+            "__Choices__<br>constant<br>REF:[Extras](#ref-extras)<br><br>"
+            "__InputKeys__<br>[section defined](#sectiondefined)<br>",
+            self.markdown)
+        self.assertIn("### <a name=\"ref-extras\"></a>Extras\nnick ", self.markdown)
+
+    def test_output_matches_docprint_final_blank_line(self):
+        self.assertTrue(self.markdown.endswith("\n\n"))
+        self.assertFalse(self.markdown.endswith("\n\n\n"))
+
+    def test_uses_database_input_object_directly(self):
+        namespace, unused_references = db2doc._load_database(self.database)
+        definition = db2doc._root_definition(namespace)
+        self.assertIs(type(definition), InputObject)
+        self.assertIs(type(definition["section"]), InputObject)
+
+    def test_top_level_tuple_preserves_database_semantics(self):
+        markdown = self.generate_markdown(r'''
+            from wasp import *
+            from Database import *
+
+            Pair = ("left", "right")
+            Labels = {Pair: "paired"}
+
+            class _document:
+                def definition(self):
+                    root = InputObject()
+                    root.create(
+                        "selection", MinOccurs=1, MaxOccurs=1,
+                        Desc=Labels[Pair], Action=storeStr
+                    )
+                    return root
+            ''', "tuple_constant_database.py")
+
+        self.assertIn("paired", markdown)
+
+    def test_computed_reference_list_has_a_documented_target(self):
+        markdown = self.generate_markdown(r'''
+            from wasp import *
+            from Database import *
+
+            def available_names():
+                return ["john", "carl"]
+
+            Names = available_names()
+
+            class _document:
+                def definition(self):
+                    root = InputObject()
+                    root.create(
+                        "name", MinOccurs=1, MaxOccurs=1,
+                        Enums=[*Names], Action=storeStr
+                    )
+                    return root
+            ''', "computed_reference_database.py")
+
+        self.assertIn("REF:[Names](#ref-names)", markdown)
+        self.assertIn('### <a name="ref-names"></a>Names\njohn carl ', markdown)
+
+    def test_database_executes_as_a_registered_module(self):
+        markdown = self.generate_markdown(r'''
+            from __future__ import annotations
+
+            from dataclasses import dataclass
+            from wasp import *
+            from Database import *
+
+            @dataclass
+            class Options:
+                description: str = "selected through dataclass options"
+
+            OptionsValue = Options()
+
+            class _document:
+                def definition(self):
+                    root = InputObject()
+                    root.create(
+                        "selection", MinOccurs=1, MaxOccurs=1,
+                        Desc=OptionsValue.description, Action=storeStr
+                    )
+                    return root
+            ''', "dataclass_database.py")
+
+        self.assertIn("selected through dataclass options", markdown)
 
 if __name__ == '__main__':
      unittest.main()

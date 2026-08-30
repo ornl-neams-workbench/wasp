@@ -290,9 +290,15 @@ class InputObject:
             Desc: str - the description of this input object
             Enums:list(str) - enumerated values allowed
             MaxValExc:float - the maximum exclusive value for this input object
+            MaxValExcPath:str - path to the maximum exclusive value for this input object
             MaxValInc:float - the maximum inclusive value for this input object
+            MaxValIncPath:str - path to the maximum inclusive value for this input object
             MinValExc:float - the minimum exclusive value for this input object
+            MinValExcPath:str - path to the minimum exclusive value for this input object
             MinValInc:float - the minimum inclusive value for this input object
+            MinValIncPath:str - path to the minimum inclusive value for this input object
+            IncreaseOver:tuple(str,str) - context and type for increasing values
+            DecreaseOver:tuple(str,str) - context and type for decreasing values
             InputTmpl:str - name of template to use for autocomplete
             InputType:str - type passed to template for autocomplete
             InputVars:list(str) - template variants for autocomplete
@@ -304,11 +310,19 @@ class InputObject:
         self._description  = kwargs.pop("Desc", None)
         self._enums = kwargs.pop("Enums", None)
         self._maxOccurs = None # dict(childKey:maxOccurs)
+        self._maxOccursPath = None # dict(childKey:maxOccursPath)
         self._maxValExc = kwargs.pop("MaxValExc", None)
+        self._maxValExcPath = kwargs.pop("MaxValExcPath", None)
         self._maxValInc = kwargs.pop("MaxValInc", None)
+        self._maxValIncPath = kwargs.pop("MaxValIncPath", None)
         self._minOccurs = None # dict(childKey:minOccurs)
+        self._minOccursPath = None # dict(childKey:minOccursPath)
         self._minValExc = kwargs.pop("MinValExc", None)
+        self._minValExcPath = kwargs.pop("MinValExcPath", None)
         self._minValInc = kwargs.pop("MinValInc", None)
+        self._minValIncPath = kwargs.pop("MinValIncPath", None)
+        self._increaseOver = kwargs.pop("IncreaseOver", None)
+        self._decreaseOver = kwargs.pop("DecreaseOver", None)
         self._atmost    = None
         self._atleast   = None
         self._exactly   = None
@@ -336,7 +350,9 @@ class InputObject:
             self._children = {}
             self._defaults = {}
             self._maxOccurs = {}
+            self._maxOccursPath = {}
             self._minOccurs = {}
+            self._minOccursPath = {}
 
         assert inputKey not in self._children
 
@@ -346,7 +362,9 @@ class InputObject:
         '''
         self._pre_add(inputKey, **kwargs)
         if "MaxOccurs" in kwargs: self._maxOccurs[inputKey] = kwargs.pop("MaxOccurs")
+        if "MaxOccursPath" in kwargs: self._maxOccursPath[inputKey] = kwargs.pop("MaxOccursPath")
         if "MinOccurs" in kwargs: self._minOccurs[inputKey] = kwargs.pop("MinOccurs")
+        if "MinOccursPath" in kwargs: self._minOccursPath[inputKey] = kwargs.pop("MinOccursPath")
         if "Default" in kwargs: self._defaults[inputKey] = kwargs.pop("Default")
         self._children[inputKey] = inputObject
         return self._children[inputKey]
@@ -626,7 +644,9 @@ class InputObject:
         '''
         self._pre_add(inputKey, **kwargs)
         if "MaxOccurs" in kwargs: self._maxOccurs[inputKey] = kwargs.pop("MaxOccurs")
+        if "MaxOccursPath" in kwargs: self._maxOccursPath[inputKey] = kwargs.pop("MaxOccursPath")
         if "MinOccurs" in kwargs: self._minOccurs[inputKey] = kwargs.pop("MinOccurs")
+        if "MinOccursPath" in kwargs: self._minOccursPath[inputKey] = kwargs.pop("MinOccursPath")
         if "Default" in kwargs: self._defaults[inputKey] = kwargs.pop("Default")
 
         inputObject = InputObject(**kwargs)

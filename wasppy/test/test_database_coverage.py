@@ -160,6 +160,37 @@ class DatabaseCoverageTest(unittest.TestCase):
         self.assertIn("occurrence exceeds maximum allowed occurrence of 1", messages)
         self.assertEqual(result["with_default"].valuelist(), [1, 2])
 
+    def test_documentation_path_and_order_metadata(self):
+        db = self.db
+        schema = db.InputObject()
+        added = db.InputObject(
+            MinValIncPath="../min_inc", MinValExcPath="../min_exc",
+            MaxValIncPath="../max_inc", MaxValExcPath="../max_exc",
+            IncreaseOver=("..", "Strict"), DecreaseOver=("../..", "Mono")
+        )
+        schema.add(
+            "added", added,
+            MinOccursPath="../min_count", MaxOccursPath="../max_count"
+        )
+        created = schema.create(
+            "created", MinOccursPath="../created_min",
+            MaxOccursPath="../created_max"
+        )
+
+        self.assertIsNone(schema.minOccurs("added"))
+        self.assertIsNone(schema.maxOccurs("added"))
+        self.assertEqual(schema._minOccursPath["added"], "../min_count")
+        self.assertEqual(schema._maxOccursPath["added"], "../max_count")
+        self.assertEqual(schema._minOccursPath["created"], "../created_min")
+        self.assertEqual(schema._maxOccursPath["created"], "../created_max")
+        self.assertEqual(added._minValIncPath, "../min_inc")
+        self.assertEqual(added._minValExcPath, "../min_exc")
+        self.assertEqual(added._maxValIncPath, "../max_inc")
+        self.assertEqual(added._maxValExcPath, "../max_exc")
+        self.assertEqual(added._increaseOver, ("..", "Strict"))
+        self.assertEqual(added._decreaseOver, ("../..", "Mono"))
+        self.assertIsInstance(created, db.InputObject)
+
     def test_input_value_preserves_falsey_defaults(self):
         db = self.db
         for default in (0, False, ""):

@@ -277,6 +277,11 @@ add_custom_command(
   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/sch2db.py)
 
 add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/db2doc.py
+  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/db2doc.py ${CMAKE_CURRENT_BINARY_DIR}/db2doc.py
+  MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/db2doc.py)
+
+add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test/test_swig_bindings.py ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/test/test_swig_bindings.py)
@@ -305,6 +310,7 @@ endif()
 set (wheel_file_deps 
       ${CMAKE_CURRENT_BINARY_DIR}/Database.py
       ${CMAKE_CURRENT_BINARY_DIR}/sch2db.py
+      ${CMAKE_CURRENT_BINARY_DIR}/db2doc.py
       ${CMAKE_CURRENT_BINARY_DIR}/test/test_swig_bindings.py
       ${CMAKE_CURRENT_BINARY_DIR}/test/test_database_coverage.py
       ${CMAKE_CURRENT_BINARY_DIR}/MANIFEST.in

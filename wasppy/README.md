@@ -20,6 +20,7 @@ WASPPY combines generated and hand-written Python code with a native extension:
 | `_wasp` | Native extension linked from the CMake-built WASP libraries |
 | `Database.py` | Programmatic input-definition API |
 | `sch2db.py` | Schema-to-database conversion support |
+| `db2doc.py` | Database-to-documentation generation support |
 | `test/` | Binding, API, and wheel tests |
 
 CMake compiles the WASP libraries and links their objects into `_wasp`. The

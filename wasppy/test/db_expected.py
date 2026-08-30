@@ -371,10 +371,10 @@ class _document:
                     _obj.add("typetwo", self._typetwo().definition())
                     _obj.add("typethree", self._typethree().definition())
                     _obj.add("typefour", self._typefour().definition())
-                    _obj.addUniqueConstraint([ "typeone/value", \
-                                               "typetwo/value", \
-                                               "typethree/value", \
-                                               "typefour/value" ])
+                    _obj.addUniqueConstraint([ "typeone/id", \
+                                               "typetwo/id", \
+                                               "typethree/id", \
+                                               "typefour/id" ])
                     _obj.addAtLeastConstraint(SourcePredicatedTarget( \
                         target={ "typeone":None, \
                                  "typetwo":None, \

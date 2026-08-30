@@ -114,6 +114,8 @@ def get_occ_attrs(node):
             rule_val = str(node[rule][0])
             if is_int(rule_val):
                 occ_attrs += ', ' + rule + '=' + rule_val
+            elif rule_val != 'NoLimit':
+                occ_attrs += ', ' + rule + 'Path="' + rule_val + '"'
     return occ_attrs
 
 def get_tmpl_attrs(node):
@@ -142,7 +144,21 @@ def get_range_attr(node, rule):
     elif len(node[rule]) > 0:
         rule_val = str(node[rule][0])
     if is_number(rule_val): return ', ' + rule + '=' + rule_val
-    else:                   return ''
+    elif rule_val and rule_val != 'NoLimit':
+        return ', ' + rule + 'Path="' + rule_val + '"'
+    else: return ''
+
+def get_order_attr(node, rule):
+    rule_node = None
+    if len(node.value) > 0 and len(node.value[0][rule]) > 0:
+        rule_node = node.value[0][rule][0]
+    elif len(node[rule]) > 0:
+        rule_node = node[rule][0]
+    if rule_node:
+        rule_path = str(rule_node._nodeview.id())
+        rule_type = str(rule_node)
+        return ', ' + rule + '=("' + rule_path + '", "' + rule_type + '")'
+    else: return ''
 
 def get_enums_attr(node):
     rule_val = None
@@ -150,15 +166,24 @@ def get_enums_attr(node):
         rule_val = node.value[0].ValEnums[0]
     elif len(node.ValEnums) > 0:
         rule_val = node.ValEnums[0]
-    enums_attr = ''
+    val_list = ''
     if rule_val:
-        enums_attr = ', Enums=['
         for enum in rule_val:
             if not enum.isDecorative():
-                if enum.name() == "REF": enums_attr += '*' + str(enum) + ', '
-                else:                    enums_attr += '"' + str(enum) + '", '
-        enums_attr = enums_attr[:-2] + ']'
-    return enums_attr
+                if enum.name() == "REF": val_list += '*' + str(enum) + ', '
+                else:                    val_list += '"' + str(enum) + '", '
+    exists_rule = None
+    if len(node.value) > 0 and len(node.value[0].ExistsIn) > 0:
+        exists_rule = node.value[0].ExistsIn[0]
+    elif len(node.ExistsIn) > 0:
+        exists_rule = node.ExistsIn[0]
+    if exists_rule and len(exists_rule.child_by_name('value')) == 0:
+        for extra in exists_rule.child_by_name('EXTRA'):
+            val_list += '"' + str(extra) + '", '
+        for ref in exists_rule.child_by_name('EXTRAREF'):
+            val_list += '*' + str(ref) + ', '
+    if val_list: return ', Enums=[' + val_list[:-2] + ']'
+    else:        return ''
 
 def get_val_attrs(node):
     val_attrs = ''
@@ -166,6 +191,8 @@ def get_val_attrs(node):
     val_attrs += get_range_attr(node, 'MinValExc')
     val_attrs += get_range_attr(node, 'MaxValInc')
     val_attrs += get_range_attr(node, 'MaxValExc')
+    val_attrs += get_order_attr(node, 'IncreaseOver')
+    val_attrs += get_order_attr(node, 'DecreaseOver')
     val_attrs += get_enums_attr(node)
     return val_attrs
 
@@ -672,11 +699,12 @@ def gather_target_rules(node, target_rules = defaultdict(lambda: defaultdict(lis
             sch_extras  = [str(val) for val in child.child_by_name('EXTRA')]
             sch_refs    = [str(val) for val in child.child_by_name('EXTRAREF')]
             exists = target_rules['exists']
-            convert_exists_and_store(sch_context, sch_targets, sch_extras, sch_refs, exists)
+            if sch_targets:
+                convert_exists_and_store(sch_context, sch_targets, sch_extras, sch_refs, exists)
 
         elif is_uniqueness(child):
             sch_context = node._nodeview.path()
-            sch_targets = [str(val) for val in child.child_by_name('value')]
+            sch_targets = [val.data().strip(' "\'\n\t') for val in child.child_by_name('value')]
             uniques = target_rules['uniques']
             convert_unique_and_store(sch_context, sch_targets, node, uniques)
 

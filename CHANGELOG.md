@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [5.0.x] 
 
+### Added
+- Schema to database conversion logic that translates data used for documentation
+- WaspPy Database storage and access that handles new data used for documentation
+- Python script that generates Markdown documentation from input database objects
+
 ### Fixed
 - MCNP material conversion now produces positive nuclide atom densities for
   negative cell mass densities. Atom- and weight-fraction conversions now use

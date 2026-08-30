@@ -140,6 +140,7 @@ from pathlib import Path
 import Database
 import _wasp
 import sch2db
+import db2doc
 import wasp
 
 extension = Path(_wasp.__file__).resolve()

@@ -8,8 +8,8 @@ MACRO(TRIBITS_PROJECT_DEFINE_PACKAGING)
   SET(CPACK_PACKAGE_VERSION "${wasp_VERSION}")
   SET(CPACK_PACKAGE_INSTALL_DIRECTORY "WASP")
   # The utilities are statically linked for these distribution packages, so
-  # the library, header, documentation, and support-script components are not
-  # needed at runtime.
+  # library, header, documentation, and unrelated support-script components
+  # are not needed at runtime.
   SET(CPACK_COMPONENTS_ALL wasputils)
   CONFIGURE_FILE(
     "${PROJECT_SOURCE_DIR}/LICENSE"

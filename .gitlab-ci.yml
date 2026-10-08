@@ -1,5 +1,10 @@
 variables:
   GIT_SUBMODULE_STRATEGY: normal
+
+stages:
+  - test
+  - package
+
 .stage_artifacts: &stage_artifacts
   artifacts:
     paths:
@@ -78,3 +83,49 @@ windows_shared_vs2022_testing:
     paths:
       - build/wasppy/dist/*.whl
       - build/wasppy/wheelhouse/*.whl
+
+.cpack_artifacts: &cpack_artifacts
+  stage: package
+  artifacts:
+    name: "wasp-${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - dist/cpack/
+    expire_in: 1 week
+
+linux_cpack:
+  <<: *cpack_artifacts
+  tags:
+    - linux
+    - pbs
+  variables:
+    WASP_CPACK_GENERATOR: STGZ
+    WASP_CPACK_PLATFORM: Linux-x86_64
+    WASP_MINICONDA_INSTALLER_URL: https://code-int.ornl.gov/lefebvre/miniconda/-/raw/main/Miniconda3-py310_24.5.0-0-Linux-x86_64.sh
+  script:
+    - ci/unix_cpack.sh
+
+mac_cpack:
+  <<: *cpack_artifacts
+  tags:
+    - mac
+  variables:
+    WASP_CPACK_GENERATOR: productbuild
+    WASP_CPACK_PLATFORM: macOS-universal2
+    WASP_CPACK_ARCHITECTURES: "arm64;x86_64"
+    WASP_MINICONDA_INSTALLER_URL: https://code-int.ornl.gov/lefebvre/miniconda/-/raw/main/Miniconda3-py310_24.5.0-0-MacOSX-arm64.sh
+  script:
+    - ci/unix_cpack.sh
+
+windows_cpack:
+  <<: *cpack_artifacts
+  tags:
+    - vs2022
+  before_script:
+    - echo Cleaning up existing submodule directory...
+    - git submodule deinit -f --all
+    - IF EXIST TriBITS (
+        rmdir /S /Q TriBITS
+      )
+    - git submodule update --init --recursive
+  script:
+    - .\ci\vs2022_cpack.bat

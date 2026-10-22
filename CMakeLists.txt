@@ -125,6 +125,7 @@ IF (NOT TRIBITS_PROCESSING_PACKAGE)
   TRIBITS_PROJECT_ENABLE_ALL()
 ELSE()
   # This CMakeLists.txt file is being processed as the TriBITS package file.
+  INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/Version.cmake")
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
   # include binary directory for configured includes
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})

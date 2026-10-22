@@ -29,7 +29,9 @@ second copy of the C++ sources.
 
 The extension uses Python's stable ABI with Python 3.10 as its minimum version.
 Release wheels are platform-specific: Linux x86-64, Windows x86-64, and macOS
-universal2 (`arm64` and `x86_64`).
+universal2 (`arm64` and `x86_64`) when built standalone. When WASP is built as
+a package inside Workbench/SCALE, the wheel uses the architecture selected by
+the parent build.
 
 ## Configure and build
 
@@ -74,8 +76,8 @@ checks its metadata and native extension, imports the public modules from
 outside the source tree, runs a parser smoke test, and executes the packaged
 binding test suite.
 
-On macOS, a universal2 build must contain both requested architectures in the
-extension. Configure with:
+For standalone macOS builds, the universal2 extension must contain both
+requested architectures. Configure with:
 
 ```shell
 cmake -S . -B build \
@@ -84,8 +86,9 @@ cmake -S . -B build \
   -DWASP_ENABLE_SWIG=ON
 ```
 
-The build fails rather than silently publishing a single-architecture wheel if
-either architecture is missing.
+The standalone build fails rather than silently publishing a single-architecture
+wheel if either architecture is missing. Parent builds skip the universal2 check 
+and package the extension for their configured architecture.
 
 ## Python interfaces
 

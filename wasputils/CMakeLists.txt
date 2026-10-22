@@ -291,8 +291,8 @@ ENDIF()
 # full wasppy bindings remain a separate package and are not required here.
 INSTALL(
   FILES
-    "${PROJECT_SOURCE_DIR}/wasppy/__init__.py"
-    "${PROJECT_SOURCE_DIR}/wasppy/wasp2py.py"
+    "${wasp_SOURCE_DIR}/wasppy/__init__.py"
+    "${wasp_SOURCE_DIR}/wasppy/wasp2py.py"
   DESTINATION wasppy
   COMPONENT wasputils
 )

@@ -321,7 +321,7 @@ set (wheel_file_deps
 # Package the CMake-built extension.  Setuptools copies it into the wheel and
 # does not compile or link C++ code.
 SET(WASP_WHEEL_BUILD_ARGS --wheel --no-isolation)
-IF(APPLE)
+IF(APPLE AND WASP_STANDALONE_BUILD)
   LIST(FIND CMAKE_OSX_ARCHITECTURES "arm64" WASP_ARM64_INDEX)
   LIST(FIND CMAKE_OSX_ARCHITECTURES "x86_64" WASP_X86_64_INDEX)
   IF(WASP_ARM64_INDEX EQUAL -1 OR WASP_X86_64_INDEX EQUAL -1)

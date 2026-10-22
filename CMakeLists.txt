@@ -52,6 +52,7 @@ SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 IF (NOT TRIBITS_PROCESSING_PACKAGE)
   # This CMakeLists.txt file is being processed as the wasp TriBITS projects's base
   # CMakeLists.txt file!  (See comments at bottom of this file.)
+  SET(WASP_STANDALONE_BUILD ON)
   CMAKE_MINIMUM_REQUIRED(VERSION 3.26 FATAL_ERROR)
   INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/ProjectName.cmake")
   PROJECT(${PROJECT_NAME} NONE)
@@ -125,6 +126,8 @@ IF (NOT TRIBITS_PROCESSING_PACKAGE)
   TRIBITS_PROJECT_ENABLE_ALL()
 ELSE()
   # This CMakeLists.txt file is being processed as the TriBITS package file.
+  SET(WASP_STANDALONE_BUILD OFF)
+  INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/Version.cmake")
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
   # include binary directory for configured includes
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})

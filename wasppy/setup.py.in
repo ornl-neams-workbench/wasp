@@ -30,7 +30,7 @@ wasp_module = Extension('_wasp',
                            )
 
 setup (name = 'ornl-wasp',
-       version = "${${PROJECT_NAME}_VERSION}",
+       version = "${WASP_VERSION}",
        description = "Python bindings for parsing and validating WASP input formats",
        author ="Shane Henderson, Robert A. Lefebvre, Brandon R. Langley",
        author_email="hendersonsc@ornl.gov, lefebvrera@ornl.gov",
